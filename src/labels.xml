@@ -1,0 +1,339 @@
+<config>
+  <label>
+    <id>0</id>
+    <name>no label</name>
+    <description>all points with no special label.</description>
+    <color>0 0 0</color>
+  </label>
+  
+  <!-- main stem labels: shades of red -->
+  <label>
+    <id>001</id>
+    <name>main stem</name>
+    <description>main stem</description>
+    <color>255 0 0</color>
+  </label>
+  <label>
+    <id>002</id>
+    <name>main stem</name>
+    <description>main stem</description>
+    <color>255 100 100</color>
+  </label>
+  <label>
+    <id>003</id>
+    <name>main stem</name>
+    <description>main stem</description>
+    <color>233 100 212</color>
+  </label>
+  <label>
+    <id>004</id>
+    <name>main stem</name>
+    <description>main stem</description>
+    <color>200 20 133</color>
+  </label>
+  
+  <!-- branch depth 1 labels: shades of blue -->
+  <label>
+    <id>101</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 0 153</color>
+  </label>
+  <label>
+    <id>102</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 102 153</color>
+  </label>
+  <label>
+    <id>103</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 0 255</color>
+  </label>
+  <label>
+    <id>104</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 102 255</color>
+  </label>
+  <label>
+    <id>105</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>102 102 255</color>
+  </label>
+   <label>
+    <id>106</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>153 204 255</color>
+  </label>
+  <label>
+    <id>107</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>102 153 255</color>
+  </label>
+  <label>
+    <id>108</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 204 255</color>
+  </label>
+   <label>
+    <id>109</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 204 204</color>
+  </label>
+  <label>
+    <id>110</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 255 255</color>
+  </label>
+  <label>
+    <id>111</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 0 153</color>
+  </label>
+  <label>
+    <id>112</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 102 153</color>
+  </label>
+  <label>
+    <id>113</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 0 255</color>
+  </label>
+  <label>
+    <id>114</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 102 255</color>
+  </label>
+  <label>
+    <id>115</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>102 102 255</color>
+  </label>
+  <label>
+    <id>116</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>153 204 255</color>
+  </label>
+  <label>
+    <id>117</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>102 153 255</color>
+  </label>
+  <label>
+    <id>118</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 204 255</color>
+  </label>
+   <label>
+    <id>119</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 204 204</color>
+  </label>
+  <label>
+    <id>120</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 255 255</color>
+  </label>
+  <label>
+    <id>121</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 0 153</color>
+  </label>
+  <label>
+    <id>122</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 102 153</color>
+  </label>
+  <label>
+    <id>123</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 0 255</color>
+  </label>
+  <label>
+    <id>124</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 102 255</color>
+  </label>
+  <label>
+    <id>125</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>102 102 255</color>
+  </label>
+  <label>
+    <id>126</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>153 204 255</color>
+  </label>
+  <label>
+    <id>127</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>102 153 255</color>
+  </label>
+  <label>
+    <id>128</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 204 255</color>
+  </label>
+   <label>
+    <id>129</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 204 204</color>
+  </label>
+  <label>
+    <id>130</id>
+    <name>branch level 1</name>
+    <description>branch level 1</description>
+    <color>0 255 255</color>
+  </label>
+  
+  <!-- branch depth 2 labels: shades of green -->
+  <label>
+    <id>201</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>0 102 0</color>
+  </label>
+  <label>
+    <id>202</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>0 153 102</color>
+  </label>
+  <label>
+    <id>203</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>0 204 0</color>
+  </label>
+  <label>
+    <id>204</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>153 204 0</color>
+  </label>
+  <label>
+    <id>205</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>102 153 102</color>
+  </label>
+   <label>
+    <id>206</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>0 102 102</color>
+  </label>
+  <label>
+    <id>207</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>102 204 102</color>
+  </label>
+  <label>
+    <id>208</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>153 255 153</color>
+  </label>
+   <label>
+    <id>209</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>0 255 0</color>
+  </label>
+  <label>
+    <id>210</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>153 255 0</color>
+  </label>
+  <label>
+    <id>211</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>0 102 0</color>
+  </label>
+  <label>
+    <id>212</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>0 153 102</color>
+  </label>
+  <label>
+    <id>213</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>0 204 0</color>
+  </label>
+  <label>
+    <id>214</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>153 204 0</color>
+  </label>
+  <label>
+    <id>215</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>102 153 102</color>
+  </label>
+   <label>
+    <id>216</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>0 102 102</color>
+  </label>
+  <label>
+    <id>217</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>102 214 102</color>
+  </label>
+  <label>
+    <id>218</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>153 255 153</color>
+  </label>
+   <label>
+    <id>219</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>0 255 0</color>
+  </label>
+  <label>
+    <id>220</id>
+    <name>branch level 2</name>
+    <description>branch level 2</description>
+    <color>153 255 0</color>
+  </label>
+ 
+</config>

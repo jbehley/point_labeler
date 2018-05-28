@@ -92,4 +92,6 @@ install_manifest.txt
 ### gedit backup ###
 *~
 
+.settings
+
 build
