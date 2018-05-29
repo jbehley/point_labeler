@@ -1,39 +1,48 @@
-PROJECT(labeler)
+PROJECT(point_labeler)
 
 cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_C_FLAGS "-Wall -O3 -g")
 set(CMAKE_CXX_FLAGS "-Wall -O3 -g")
 
-find_library(PTHREAD pthread)
-find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(GLUT REQUIRED)
-find_package(Qt4 REQUIRED) # find and setup Qt4 for this project
+find_package(Qt5Xml REQUIRED)
+find_package(Qt5Gui REQUIRED) 
+find_package(Qt5OpenGL REQUIRED)
+find_package(GLEW REQUIRED)
+find_package(Boost REQUIRED COMPONENTS filesystem system)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} )
+find_package(catkin COMPONENTS 
+     glow)
+
+if(catkin_FOUND)
+  message("Found catkin")
+  catkin_package(
+    CATKIN_DEPENDS
+      glow
+    DEPENDS
+      Boost
+  )
+endif()
+
+message("headers = ${QT5_INCLUDE_DIRS}")
+include_directories(${catkin_INCLUDE_DIRS} src/ ${QT5_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS} /usr/include/eigen3)
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON) # needs to be activated for qt generated files in build directory.
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_CXX_FLAGS "-std=c++11 -O3  -Wall ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-UDEBUG_GL -UDEBUG -DNDEBUG -g2 ${CMAKE_CXX_FLAGS}")
+
+# since now everything resides in "bin", we have to copy some stuff.
+  
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 
-SET(QT_USE_QTOPENGL true)
-SET(QT_USE_QTXML true)
-include(${QT_USE_FILE})
+QT5_WRAP_UI(UI_HDRS 
+  src/MainFrame.ui)
 
-set(labeler_HDRS
-	src/data/CoordinateSystems.h
-	src/data/ColorGL.h
-	src/data/Cylinder.h
-	src/data/draw_utils.h
-	src/data/geometry.h
-	src/data/label_utils.h
-	src/data/Math.h
-	src/data/misc.h
-	src/data/transform.h
-	src/data/ViewFrustum.h
-	src/widget/CameraGL.h
-)
-
-set(labeler_SRCS
+add_executable(labeler 
+  ${UI_HDRS}
   src/data/ColorGL.cpp
   src/data/draw_utils.cpp
   src/data/label_utils.cpp
@@ -43,31 +52,13 @@ set(labeler_SRCS
   src/data/ViewFrustum.cpp
   src/widget/CameraGL.cpp
   src/labeler.cpp
+  src/widget/LabelButton.h
+  src/widget/Mainframe.h
+  src/widget/Viewport.h
+  src/widget/LabelButton.cpp
+  src/widget/Mainframe.cpp
+  src/widget/Viewport.cpp
 )
 
-set(labeler_qt4_SRCS
-	src/widget/LabelButton.cpp
-	src/widget/Mainframe.cpp
-	src/widget/Viewport.cpp
-)
-
-SET(labeler_qt4_UIS
-	src/MainFrame.ui
-)
-
-QT4_WRAP_UI(labeler_qt4_UIS_H ${labeler_qt4_UIS})
-
-
-SET(labeler_qt4_MOC_HDRS
-	src/widget/LabelButton.h
-	src/widget/Mainframe.h
-	src/widget/Viewport.h
-)
-
-# After this call, foo_MOC_SRCS = moc_Class1.cxx moc_Class2.cxx moc_Class3.cxx.
-QT4_WRAP_CPP(labeler_qt4_MOC_SRCS ${labeler_qt4_MOC_HDRS})
-
-add_executable(labeler ${labeler_SRCS} ${labeler_HDRS} ${labeler_qt4_SRCS} ${labeler_qt4_HDRS} ${labeler_qt4_UIS_H} ${labeler_qt4_MOC_SRCS})
-
-target_link_libraries(labeler GL GLU glut m ${QT_LIBRARIES})
+target_link_libraries(labeler ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
 

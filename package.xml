@@ -1,0 +1,19 @@
+<package>
+  <name>point_labeler</name>
+  <version>0.0.1</version>
+  <description>Annotate point clouds.</description>
+  <maintainer email="jens.behley@igg.uni-bonn.de">Jens Behley</maintainer>
+  <license>MIT</license>
+
+  <author>Jens Behley</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>glow</build_depend>
+  
+  <run_depend>glow</run_depend>
+  
+  <export>
+    <git_url target="glow" url="git@gitlab.ipb.uni-bonn.de:jbehley/glow.git"/>
+  </export>
+</package>

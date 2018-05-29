@@ -3,10 +3,10 @@
 #ifndef MAINFRAME_H_
 #define MAINFRAME_H_
 
-#include <QtGui/QMainWindow>
+#include <QtWidgets/QMainWindow>
 #include <QtCore/QSignalMapper>
-#include "../ui_MainFrame.h"
-#include "../data/geometry.h"
+#include "ui_MainFrame.h"
+#include "data/geometry.h"
 #include <stdint.h>
 #include "LabelButton.h"
 

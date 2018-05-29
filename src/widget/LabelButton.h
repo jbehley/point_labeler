@@ -5,7 +5,7 @@
 
 #include "../data/ColorGL.h"
 
-#include <QtGui/QToolButton>
+#include <QtWidgets/QToolButton>
 
 class LabelButton: public QToolButton
 {

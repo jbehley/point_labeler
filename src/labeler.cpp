@@ -1,4 +1,4 @@
-#include <QtGui/QApplication>
+#include <QtWidgets/QApplication>
 #include "widget/Mainframe.h"
 
 int main(int argc, char** argv)

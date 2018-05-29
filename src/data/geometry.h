@@ -151,7 +151,7 @@ struct Vector3f
     }
     bool HasNaNs() const
     {
-      return isnan(x) || isnan(y) || isnan(z);
+      return std::isnan(x) || std::isnan(y) || std::isnan(z);
     }
     explicit Vector3f(const Point3f &p);
 #ifndef NDEBUG
@@ -209,7 +209,7 @@ struct Vector3f
 
     Vector3f &operator*=(float f)
     {
-      assert(!isnan(f));
+      assert(!std::isnan(f));
       x *= f;
       y *= f;
       z *= f;
@@ -395,7 +395,7 @@ struct Point3f
     }
     bool HasNaNs() const
     {
-      return isnan(x) || isnan(y) || isnan(z);
+      return std::isnan(x) || std::isnan(y) || std::isnan(z);
     }
 
     bool operator==(const Point3f &p) const
@@ -466,7 +466,7 @@ struct Normal3f
     }
     bool HasNaNs() const
     {
-      return isnan(x) || isnan(y) || isnan(z);
+      return std::isnan(x) || std::isnan(y) || std::isnan(z);
     }
     Normal3f operator*(float f) const
     {
@@ -578,7 +578,7 @@ struct Ray
     }
     bool HasNaNs() const
     {
-      return (o.HasNaNs() || d.HasNaNs() || isnan(mint) || isnan(maxt));
+      return (o.HasNaNs() || d.HasNaNs() || std::isnan(mint) || std::isnan(maxt));
     }
 
     // Ray Public Data

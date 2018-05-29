@@ -6,7 +6,7 @@
 
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
-#include <QtGui/QFileDialog>
+#include <QtWidgets/QFileDialog>
 
 #include "../data/misc.h"
 #include "../data/label_utils.h"
@@ -14,7 +14,7 @@
 #include "../data/geometry.h"
 #include "../data/transform.h"
 
-#include <QtGui/QMessageBox>
+#include <QtWidgets/QMessageBox>
 
 Mainframe::Mainframe() :
   mChangesSinceLastSave(false)
