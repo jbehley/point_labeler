@@ -1,0 +1,284 @@
+	<!-- mapilary labels, see https://research.mapillary.com/img/publications/ICCV17a.pdf  
+   and supplement: https://research.mapillary.com/img/publications/ICCV17a_supp.pdf -->
+<config>
+  <label>
+    <id>0</id>
+    <name>unlabeled</name>
+    <description>all points with no special label.</description>
+    <color>0 0 0</color>
+		<root>void</root>
+		<macro></macro>
+		<category>unlabeled</category>
+  </label>
+
+  <label>
+    <id>250</id>
+    <name>car mount</name>
+    <description>Mount used to hold the camera  while  capturing.</description>
+    <color>0 0 0</color>
+		<root>void</root>
+		<macro></macro>
+		<category>car mount</category>
+  </label>
+
+  <label>
+    <id>251</id>
+    <name>ego vehicle</name>
+    <description>Ego-vehicle, e.g.  car hood, dashboard, driving mirror.</description>
+    <color>0 0 0</color>
+		<root>void</root>
+		<macro></macro>
+		<category>ego vehicle</category>
+  </label>
+
+
+	
+  <label>
+		<id>10</id>
+		<name>car</name>
+		<description>This includes cars, jeeps, SUVs, vans with a continuous body shape (i.e. the driver cabin and cargo compartment are one)</description>
+		<color>0 0 255</color>
+		<root>object</root>
+		<macro>vehicle</macro>
+		<category>car</category>
+	</label>
+  <label>
+		<id>11</id>
+		<name>bicycle</name>
+		<description>Includes bicycles without the cyclist or possibly other passengers. The cyclist and passengers recieve the label cyclist.</description>
+		<color>0 0 255</color>
+		<root>object</root>
+		<macro>vehicle</macro>
+		<category>bicycle</category>
+	</label>
+  <label>
+		<id>12</id>
+		<name>boat</name>
+		<description>Vehicle suitable for riding/sailing on water.</description>
+		<color>0 0 255</color>
+		<root>object</root>
+		<macro>vehicle</macro>
+		<category>boat</category>
+	</label>
+  <label>
+		<id>13</id>
+		<name>bus</name>
+		<description>Includes buses that are intended for 9+ persons for public or long-distance transport.</description>
+		<color>0 0 255</color>
+		<root>object</root>
+		<macro>vehicle</macro>
+		<category>bus</category>
+	</label>
+  <label>
+		<id>14</id>
+		<name>caravan</name>
+		<description>Vehicle that (appear  to) contain living quarters. This also includes trailers that are used for living and has priority ofver the trailer  class.</description>
+		<color>0 0 255</color>
+		<root>object</root>
+		<macro>vehicle</macro>
+		<category>caravan</category>
+	</label>
+  <label>
+		<id>15</id>
+		<name>motorcycle</name>
+		<description>This includes motorcycles, mopeds without the driver or other passengers. Both driver and passengers recieve the label motorcyclist.</description>
+		<color>0 0 255</color>
+		<root>object</root>
+		<macro>vehicle</macro>
+		<category>motorcycle</category>
+	</label>
+  <label>
+		<id>16</id>
+		<name>on rails</name>
+		<description>All vehicles moving on rails, e.g., trams, trains.</description>
+		<color>0 0 255</color>
+		<root>object</root>
+		<macro>vehicle</macro>
+		<category>on rails</category>
+	</label>
+  <label>
+	<id>17</id>
+		<name>trailer</name>
+		<description>Trailers that can be attached to any vehicle, but excludes trailers attached to trucks.  The latter belong to class truck.</description>
+		<color>0 0 255</color>
+		<root>object</root>
+		<macro>vehicle</macro>
+		<category>trailer</category>
+	</label>
+	<label>
+		<id>18</id>
+		<name>truck</name>
+		<description>This includes trucks, vans with a body that is separate from the driver cabin, pickup trucks, as well as their attached trailers.</description>
+		<color>0 0 255</color>
+		<root>object</root>
+		<macro>vehicle</macro>
+		<category>truck</category>
+	</label>
+	<label>
+		<id>19</id>
+		<name>wheeled-slow</name>
+		<description>Covers all slow moving wheeled  objects  like wheelchairs, mobility-scooters, scooters, prams or rickshaw. All of  which  can  potentially have riders (other rider) sitting on them, similar to cycles are driven by cyclists.</description>
+		<color>0 0 255</color>
+		<root>object</root>
+		<macro>vehicle</macro>
+		<category>wheeled-slow</category>
+	</label>
+	<label>
+		<id>20</id>
+		<name>other-vehicle</name>
+		<description>Fallback category for vehicles not explicitly defined otherwise in meta category level vehicle.</description>
+		<color>0 0 255</color>
+		<root>object</root>
+		<macro>vehicle</macro>
+		<category>other-vehicle</category>
+	</label>
+
+	<label>
+		<id>30</id>
+		<name>Person</name>
+		<description></description>
+		<color>255 0 0</color>
+		<root>human</root>
+		<macro></macro>
+		<category>Person</category>
+	</label>
+	<label>
+		<id>31</id>
+		<name>bicyclist</name>
+		<description></description>
+		<color>255 0 0</color>
+		<root>human</root>
+		<macro>rider</macro>
+		<category>bicyclist</category>
+	</label>
+	<label>
+		<id>32</id>
+		<name>motorcyclist</name>
+		<description></description>
+		<color>255 0 0</color>
+		<root>human</root>
+		<macro>rider</macro>
+		<category>motorcyclist</category>
+	</label>
+	<label>
+		<id>33</id>
+		<name>other rider</name>
+		<description></description>
+		<color>255 0 0</color>
+		<root>human</root>
+		<macro>rider</macro>
+		<category>other rider</category>
+	</label>
+
+	<label>
+		<id>40</id>
+		<name>road</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>flat</macro>
+		<category>road</category>
+	</label>
+	<label>
+		<id>41</id>
+		<name>bike lane</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>flat</macro>
+		<category>bike lane</category>
+	</label>
+	<label>
+		<id>42</id>
+		<name>crosswalk plain</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>flat</macro>
+		<category>crosswalk plain</category>
+	</label>
+	<label>
+		<id>43</id>
+		<name>curb cut</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>flat</macro>
+		<category>curb cut</category>
+	</label>
+ 	<label>
+		<id>44</id>
+		<name>parking</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>flat</macro>
+		<category>parking</category>
+	</label>
+ 	<label>
+		<id>45</id>
+		<name>pedestrian area</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>flat</macro>
+		<category>pedestrian area</category>
+	</label>
+ 	<label>
+		<id>46</id>
+		<name>rail track</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>flat</macro>
+		<category>rail track</category>
+	</label>
+ 	<label>
+		<id>47</id>
+		<name>service lane</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>flat</macro>
+		<category>serice lane</category>
+	</label>
+ 	<label>
+		<id>48</id>
+		<name>sidewalk</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>flat</macro>
+		<category>sidewalk</category>
+	</label>
+ 	<label>
+		<id>50</id>
+		<name>building</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>structure</macro>
+		<category>building</category>
+	</label>
+ 	<label>
+		<id>51</id>
+		<name>bridge</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>structure</macro>
+		<category>bridge</category>
+	</label>
+ 	<label>
+		<id>52</id>
+		<name>tunnel</name>
+		<description></description>
+		<color>150 150 150</color>
+		<root>construction</root>
+		<macro>structure</macro>
+		<category>tunnel</category>
+	</label>
+
+<!-- missing: nature, object, marking, barrier, animal -->
+
+</config>
