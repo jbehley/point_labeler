@@ -25,7 +25,6 @@ if(catkin_FOUND)
   )
 endif()
 
-message("headers = ${QT5_INCLUDE_DIRS}")
 include_directories(${catkin_INCLUDE_DIRS} src/ ${QT5_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS} /usr/include/eigen3)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON) # needs to be activated for qt generated files in build directory.
@@ -43,14 +42,10 @@ QT5_WRAP_UI(UI_HDRS
 
 add_executable(labeler 
   ${UI_HDRS}
-  src/data/ColorGL.cpp
-  src/data/draw_utils.cpp
   src/data/label_utils.cpp
   src/data/Math.cpp
   src/data/misc.cpp
-  src/data/transform.cpp
   src/data/ViewFrustum.cpp
-  src/widget/CameraGL.cpp
   src/labeler.cpp
   src/widget/LabelButton.h
   src/widget/Mainframe.h

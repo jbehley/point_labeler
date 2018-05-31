@@ -11,10 +11,9 @@
 #include "../data/label_utils.h"
 #include "../data/misc.h"
 
-#include "../data/geometry.h"
-#include "../data/transform.h"
-
 #include <QtWidgets/QMessageBox>
+
+using namespace glow;
 
 Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   ui.setupUi(this);
@@ -50,7 +49,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   /** load labels and colors **/
   std::map<uint32_t, std::string> label_names;
-  std::map<uint32_t, ColorGL> label_colors;
+  std::map<uint32_t, glow::GlColor> label_colors;
 
   getLabelNames("labels.xml", label_names);
   getLabelColors("labels.xml", label_colors);
@@ -108,7 +107,6 @@ void Mainframe::open() {
 
       ui.mViewportXYZ->setPoints(points, labels);
 
-      ui.mViewportXYZ->setCylinders(cylinders);
       QString title = "Point Labeler - ";
       title += QFileInfo(retValue).completeBaseName();
       setWindowTitle(title);
@@ -173,12 +171,6 @@ void Mainframe::changeMode(int mode) {
     ui.actionCylinderMode->setChecked(false);
   }
 }
-
-void Mainframe::changeCylinderRadius(double radius) {}
-
-void Mainframe::changeCylinderLabel() {}
-
-void Mainframe::changeSelectedCylinder() {}
 
 void Mainframe::cylinderPointLabeling() {
   std::cout << "labeling points inside cylinder" << std::endl;
@@ -247,37 +239,8 @@ void Mainframe::readXYZ(const std::string& filename) {
 
   /** substract the midpoint **/
   for (uint32_t i = 0; i < points.size(); ++i) {
-    points[i].x -= midpoint.x;
-    points[i].y -= midpoint.y;
-    points[i].z -= midpoint.z;
+    points[i] = Point3f(points[i] - midpoint);
   }
-
-  //  if (in_cylinders.is_open())
-  //  {
-  //    std::string line;
-  //    in_cylinders.peek();
-  //    while (!in_cylinders.eof())
-  //    {
-  //      Cylinder c;
-  //      std::getline(in_cylinders, line);
-  //      std::vector<std::string> tokens = split(line, ",");
-  //      if (tokens.size() < 8) continue; /** skip cylinder description without enough points **/
-  //      c.s.x = RoSe::StringCast<float>(tokens[0]) - midpoint.x;
-  //      c.s.y = RoSe::StringCast<float>(tokens[1]) - midpoint.y;
-  //      c.s.z = RoSe::StringCast<float>(tokens[2]) - midpoint.z;
-  //      c.startPointInitialized = true;
-  //
-  //      c.e.x = RoSe::StringCast<float>(tokens[3]) - midpoint.x;
-  //      c.e.y = RoSe::StringCast<float>(tokens[4]) - midpoint.y;
-  //      c.e.z = RoSe::StringCast<float>(tokens[5]) - midpoint.z;
-  //      c.endPointInitialized = true;
-  //
-  //      c.radius = RoSe::StringCast<float>(tokens[6]);
-  //      c.label = RoSe::StringCast<uint32_t>(tokens[7]);
-  //
-  //      cylinders.push_back(c);
-  //    }
-  //  }
 
   in.close();
   in_labels.close();
@@ -285,17 +248,11 @@ void Mainframe::readXYZ(const std::string& filename) {
   out_labels.close();
 }
 
-void Mainframe::addNewCylinder() {}
-
-void Mainframe::removeCylinder() {}
-
-void Mainframe::cylinderFinished() {}
-
 void Mainframe::generateLabelButtons() {
   const int BtnsPerRow = 5;
 
   std::map<uint32_t, std::string> label_names;
-  std::map<uint32_t, ColorGL> label_colors;
+  std::map<uint32_t, GlColor> label_colors;
 
   getLabelNames("labels.xml", label_names);
   getLabelColors("labels.xml", label_colors);
@@ -309,14 +266,14 @@ void Mainframe::generateLabelButtons() {
   ui.labelsGroupBox->setLayout(layout);
 
   std::map<uint32_t, std::string>::const_iterator namesIter = label_names.begin();
-  std::map<uint32_t, ColorGL>::const_iterator colorsIter = label_colors.begin();
+  std::map<uint32_t, GlColor>::const_iterator colorsIter = label_colors.begin();
 
   for (; namesIter != label_names.end(); ++namesIter, ++colorsIter, ++index) {
     const int id = namesIter->first;
     const std::string& name = namesIter->second;
-    const ColorGL& color = colorsIter->second;
+    const GlColor& color = colorsIter->second;
 
-    LabelButton* newButton = new LabelButton(ui.labelsGroupBox, color);
+    LabelButton* newButton = new LabelButton(ui.labelsGroupBox, QColor(color.R * 255, color.G * 255, color.B * 255));
     newButton->setAutoFillBackground(true);
     labelButtons.push_back(newButton);
     labelIds[newButton] = id;

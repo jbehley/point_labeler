@@ -7,6 +7,7 @@
 #include <QtCore/QSignalMapper>
 #include "ui_MainFrame.h"
 #include "data/geometry.h"
+#include "data/transform.h"
 #include <stdint.h>
 #include "LabelButton.h"
 
@@ -22,14 +23,10 @@ class Mainframe: public QMainWindow
     void save();
     void changeRadius(int radius);
     void changeMode(int mode);
-    void addNewCylinder();
-    void removeCylinder();
-    void cylinderFinished();
+
     void updateFiltering(bool value);
     void labelBtnReleased(QWidget*);
-    void changeCylinderRadius(double radius);
-    void changeCylinderLabel();
-    void changeSelectedCylinder();
+
     void cylinderPointLabeling();
 
   protected:
@@ -39,7 +36,6 @@ class Mainframe: public QMainWindow
 
     std::vector<Point3f> points;
     std::vector<uint32_t> labels;
-    std::vector<Cylinder> cylinders;
 
     std::vector<uint32_t> filteredLabels;
     std::string filename;

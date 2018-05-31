@@ -20,10 +20,10 @@
  * </config>
  */
 
-#include <string>
 #include <map>
+#include <string>
 
-#include "ColorGL.h"
+#include <glow/GlColor.h>
 
 /** \brief retrieve label names from given xml file.
  *  \brief param[in]    filename of the description file
@@ -35,7 +35,6 @@ void getLabelNames(const std::string& filename, std::map<uint32_t, std::string>&
  *  \brief param[in]    filename of the description file.
  *  \brief param[out]   map of labels to colors.
  */
-void getLabelColors(const std::string& filename, std::map<uint32_t, ColorGL>& label_colors);
-
+void getLabelColors(const std::string& filename, std::map<uint32_t, glow::GlColor>& label_colors);
 
 #endif /* LABEL_UTILS_H_ */

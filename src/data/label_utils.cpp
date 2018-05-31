@@ -34,7 +34,7 @@ void getLabelNames(const std::string& filename,
 }
 
 void getLabelColors(const std::string& filename,
-    std::map<uint32_t, ColorGL>& label_colors)
+    std::map<uint32_t, glow::GlColor>& label_colors)
 {
   QDomDocument doc("mydocument");
   QFile file(QString::fromStdString(filename));
@@ -63,6 +63,6 @@ void getLabelColors(const std::string& filename,
     int32_t G = tokens.at(1).toInt();
     int32_t B = tokens.at(2).toInt();
 
-    label_colors[id] = ColorGL::FromRGB(R, G, B);
+    label_colors[id] = glow::GlColor::FromRGB(R, G, B);
   }
 }

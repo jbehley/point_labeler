@@ -6,130 +6,123 @@
 #define POINTVIEW_H_
 
 #include <stdint.h>
-#include <vector>
 #include <list>
+#include <vector>
 
-#include <QtOpenGL/QGLWidget>
-#include <QtCore/QTimer>
+#include <glow/glbase.h>
+
 #include <QtCore/QTime>
+#include <QtCore/QTimer>
 #include <QtGui/QMouseEvent>
+#include <QtOpenGL/QGLWidget>
 
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include "CameraGL.h"
-#include "../data/geometry.h"
-#include "../data/ColorGL.h"
-#include "../data/Cylinder.h"
-#include "../data/ViewFrustum.h"
 
-class Viewport: public QGLWidget
-{
+#include <glow/GlColor.h>
+#include <glow/util/RoSeCamera.h>
+#include "data/ViewFrustum.h"
+#include "data/geometry.h"
+
+class Viewport : public QGLWidget {
   Q_OBJECT
-  public:
-    enum AXIS
-    {
-      XYZ, X, Y, Z
-    };
+ public:
+  enum AXIS { XYZ, X, Y, Z };
 
-    enum MODE
-    {
-      NONE, PAINT, CYLINDER
-    };
+  enum MODE { NONE, PAINT, CYLINDER };
 
-    enum FLAGS
-    {
-      FLAG_OVERWRITE = 1, FLAG_OTHER = 2
-    };
+  enum FLAGS { FLAG_OVERWRITE = 1, FLAG_OTHER = 2 };
 
-    Viewport(QWidget* parent = 0, Qt::WindowFlags f = 0);
-    ~Viewport();
+  Viewport(QWidget* parent = 0, Qt::WindowFlags f = 0);
+  ~Viewport();
 
-  signals:
-    void newCylinderFinished();
-    void cylinderChanged();
-    void labelingChanged();
+ signals:
+  void newCylinderFinished();
+  void cylinderChanged();
+  void labelingChanged();
 
-  public slots:
-    /** \brief set axis fixed **/
-    void setFixedAxis(AXIS axis);
-    void setPoints(const std::vector<Point3f>& points,
-        std::vector<uint32_t>& labels);
-    void setCylinders(std::vector<Cylinder>& cylinders);
+ public slots:
+  /** \brief set axis fixed **/
+  void setFixedAxis(AXIS axis);
+  void setPoints(const std::vector<Point3f>& points, std::vector<uint32_t>& labels);
 
-    void setSelectedCylinder(Cylinder* cylinder, bool isNew);
+  void setRadius(float value);
+  /** \brief label used when in PAINT **/
+  void setLabel(uint32_t label);
+  void setLabelColors(const std::map<uint32_t, glow::GlColor>& colors);
+  void setPointSize(int value);
 
-    void setRadius(float value);
-    /** \brief label used when in PAINT **/
-    void setLabel(uint32_t label);
-    void setLabelColors(const std::map<uint32_t, ColorGL>& colors);
-    void setPointSize(int value);
+  void setMode(MODE mode);
+  void setFlags(int32_t flags);
+  void setOverwrite(bool value);
 
-    void setMode(MODE mode);
-    void setFlags(int32_t flags);
-    void setOverwrite(bool value);
+  void setFilteredLabels(const std::vector<uint32_t>& labels);
 
-    void setFilteredLabels(const std::vector<uint32_t>& labels);
+ protected:
+  bool initContext() {
+    // enabling core profile
+    QGLFormat corefmt;
+    corefmt.setVersion(5, 0);  // getting highest compatible format...
+    corefmt.setProfile(QGLFormat::CoreProfile);
+    setFormat(corefmt);
 
-  protected slots:
-    void moveCamera();
+    // version info.
+    QGLFormat fmt = this->format();
+    std::cout << "OpenGL Context Version " << fmt.majorVersion() << "." << fmt.minorVersion() << " "
+              << ((fmt.profile() == QGLFormat::CoreProfile) ? "core profile" : "compatibility profile") << std::endl;
 
-  protected:
-    void initializeGL();
-    void resizeGL(int width, int height);
-    void paintGL();
+    makeCurrent();
+    glow::inititializeGLEW();
 
-    void mousePressEvent(QMouseEvent*);
-    void mouseReleaseEvent(QMouseEvent*);
-    void mouseMoveEvent(QMouseEvent*);
-    void keyPressEvent(QKeyEvent*);
+    return true;
+  }
 
-    void drawPoints(const std::vector<Point3f>& points,
-        const std::vector<uint32_t>& labels);
-    void drawCylinders(const std::vector<Cylinder>& cylinders);
-    void labelPoints(int32_t x, int32_t y, float radius, uint32_t label);
-    void updateProjections();
+  void initializeGL();
+  void resizeGL(int width, int height);
+  void paintGL();
 
-    std::vector<Point3f*>
-        getSelectedCylinderPoints(const QPoint& mousePosition);
-    /** \brief get 3d coordinates of a click.
-     *
-     *  \return true, if valid point has been clicked, false otherwise.
-     */
-    bool getClickedPoint(const QPoint& mousePosition, Point3f& clickedPoint);
+  void mousePressEvent(QMouseEvent*);
+  void mouseReleaseEvent(QMouseEvent*);
+  void mouseMoveEvent(QMouseEvent*);
+  void keyPressEvent(QKeyEvent*);
 
-    std::map<uint32_t, ColorGL> mLabelColors;
+  glow::GlCamera::KeyboardModifier resolveKeyboardModifier(Qt::KeyboardModifiers modifiers);
 
-    const std::vector<Point3f>* points;
-    std::vector<uint32_t>* labels;
-    std::vector<Cylinder>* cylinders;
-    std::vector<Point3f> projected_points;
+  glow::GlCamera::MouseButton resolveMouseButton(Qt::MouseButtons button);
 
-    CameraGL mCamera;
-    QTimer mMoveTimer;
-    QTime mLastTick;
-    float mHeadingStart, mTiltStart;
-    bool mSlideMode, mChangeCamera, changedView;
-    QPoint mMouseStart;
+  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
+  void labelPoints(int32_t x, int32_t y, float radius, uint32_t label);
+  void updateProjections();
 
-    AXIS mAxis;
-    MODE mMode;
-    int32_t mFlags;
+  /** \brief get 3d coordinates of a click.
+   *
+   *  \return true, if valid point has been clicked, false otherwise.
+   */
+  //  bool getClickedPoint(const QPoint& mousePosition, Point3f& clickedPoint);
 
-    float mPointSize, mCylinderPointSize;
-    uint32_t mCurrentLabel;
-    float mRadius;
-    std::vector<uint32_t> mFilteredLabels;
+  bool contextInitialized_;
+  std::map<uint32_t, glow::GlColor> mLabelColors;
 
-    /** selected endpoint **/
-    std::vector<Point3f*> selectedCylinderPoints;
-    Cylinder* selectedCylinder;
-    Cylinder* newCylinder;
-    bool startPointSet;
-    bool endPointSet;
-    bool pointInitialized;
-    std::vector<Point3f*> hoverCylinderPoints;
-    bool buttonPressed;
-    ViewFrustum vf;
+  const std::vector<Point3f>* points;
+  std::vector<uint32_t>* labels;
+  std::vector<Point3f> projected_points;
+
+  glow::RoSeCamera mCamera;
+
+  AXIS mAxis;
+  MODE mMode;
+  int32_t mFlags;
+
+  float mPointSize;
+  uint32_t mCurrentLabel;
+  float mRadius;
+  std::vector<uint32_t> mFilteredLabels;
+
+  /** selected endpoint **/
+
+  bool buttonPressed;
+  ViewFrustum vf;
+  QTimer timer_;
 };
 
 #endif /* POINTVIEW_H_ */

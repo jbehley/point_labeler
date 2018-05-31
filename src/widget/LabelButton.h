@@ -1,17 +1,16 @@
-/** \brief a label button which can also be toggled. **/
-
 #ifndef LABELBUTTON_H_
 #define LABELBUTTON_H_
 
-#include "../data/ColorGL.h"
+#include <glow/GlColor.h>
 
 #include <QtWidgets/QToolButton>
 
+/** \brief a label button which can also be toggled. **/
 class LabelButton: public QToolButton
 {
   Q_OBJECT
   public:
-    LabelButton(QWidget* parent, const ColorGL& color);
+    LabelButton(QWidget* parent, const QColor& color);
     ~LabelButton();
 
     bool isHighlighted() const;
@@ -24,7 +23,7 @@ class LabelButton: public QToolButton
     virtual void mouseReleaseEvent(QMouseEvent * e);
     virtual void paintEvent(QPaintEvent* e);
 
-    ColorGL color;
+    QColor color;
     bool mHighlighted, recentlyHighlighted;
 };
 

@@ -72,6 +72,9 @@
            <property name="spacing">
             <number>2</number>
            </property>
+           <item row="0" column="0">
+            <widget class="QComboBox" name="cmbMacroCategory"/>
+           </item>
           </layout>
          </widget>
         </item>
@@ -318,27 +321,22 @@
      </widget>
     </item>
     <item>
-     <layout class="QGridLayout" name="gridLayout">
-      <property name="sizeConstraint">
-       <enum>QLayout::SetDefaultConstraint</enum>
-      </property>
-      <property name="leftMargin">
-       <number>5</number>
-      </property>
-      <property name="topMargin">
-       <number>5</number>
-      </property>
-      <property name="rightMargin">
-       <number>5</number>
-      </property>
-      <property name="bottomMargin">
-       <number>5</number>
-      </property>
-      <property name="spacing">
-       <number>5</number>
-      </property>
-      <item row="0" column="0">
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
        <widget class="Viewport" name="mViewportXYZ" native="true"/>
+      </item>
+      <item>
+       <widget class="QSlider" name="sldTimeline">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="tickPosition">
+         <enum>QSlider::TicksBelow</enum>
+        </property>
+        <property name="tickInterval">
+         <number>100</number>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
