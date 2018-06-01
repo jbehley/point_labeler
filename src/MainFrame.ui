@@ -46,6 +46,21 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
+         <widget class="QComboBox" name="cmbMacroCategory">
+          <property name="focusPolicy">
+           <enum>Qt::WheelFocus</enum>
+          </property>
+          <property name="currentText">
+           <string>all</string>
+          </property>
+          <item>
+           <property name="text">
+            <string>all</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
          <widget class="QGroupBox" name="labelsGroupBox">
           <property name="title">
            <string>Labels</string>
@@ -72,9 +87,6 @@
            <property name="spacing">
             <number>2</number>
            </property>
-           <item row="0" column="0">
-            <widget class="QComboBox" name="cmbMacroCategory"/>
-           </item>
           </layout>
          </widget>
         </item>

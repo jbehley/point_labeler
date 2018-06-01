@@ -19,8 +19,13 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
+#include <glow/GlBuffer.h>
 #include <glow/GlColor.h>
+#include <glow/GlProgram.h>
+#include <glow/GlShaderCache.h>
+#include <glow/GlVertexArray.h>
 #include <glow/util/RoSeCamera.h>
+
 #include "data/ViewFrustum.h"
 #include "data/geometry.h"
 
@@ -77,6 +82,9 @@ class Viewport : public QGLWidget {
     return true;
   }
 
+  void initPrograms();
+  void initVertexBuffers();
+
   void initializeGL();
   void resizeGL(int width, int height);
   void paintGL();
@@ -113,7 +121,6 @@ class Viewport : public QGLWidget {
   MODE mMode;
   int32_t mFlags;
 
-  float mPointSize;
   uint32_t mCurrentLabel;
   float mRadius;
   std::vector<uint32_t> mFilteredLabels;
@@ -123,6 +130,28 @@ class Viewport : public QGLWidget {
   bool buttonPressed;
   ViewFrustum vf;
   QTimer timer_;
+
+  // shaders, etc.
+  glow::GlBuffer<glow::vec3> bufLabelColors{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<Point3f> bufPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<uint32_t> bufLabels_{glow::BufferTarget::ELEMENT_ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+
+  glow::GlVertexArray vao_no_points_;
+  glow::GlVertexArray vao_points_;
+
+  glow::GlProgram prgDrawPose_;
+  glow::GlProgram prgDrawPoints_;
+
+  int32_t pointSize_{1};
+  std::map<std::string, bool> drawing_options_;
+
+  glow::GlUniform<Eigen::Matrix4f> mvp_{"mvp", Eigen::Matrix4f::Identity()};
+  glow::GlUniform<Eigen::Matrix4f> mvp_inv_t_{"mvp_inv_t", Eigen::Matrix4f::Identity()};
+
+  Eigen::Matrix4f model_{Eigen::Matrix4f::Identity()};
+  Eigen::Matrix4f view_{Eigen::Matrix4f::Identity()};
+  Eigen::Matrix4f projection_{Eigen::Matrix4f::Identity()};
+  Eigen::Matrix4f conversion_{glow::RoSe2GL::matrix};
 };
 
 #endif /* POINTVIEW_H_ */

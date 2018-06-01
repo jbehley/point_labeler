@@ -40,8 +40,26 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 QT5_WRAP_UI(UI_HDRS 
   src/MainFrame.ui)
 
+set(VIZ_SHADER_SRC ${CMAKE_BINARY_DIR}/visualization_shaders.cpp)
+
+COMPILE_SHADERS(${VIZ_SHADER_SRC}
+  src/shaders/color.glsl
+  
+  src/shaders/empty.vert
+  src/shaders/empty.frag
+  src/shaders/quad.geom
+  src/shaders/passthrough.frag
+  
+  src/shaders/draw_pose.geom
+  
+  src/shaders/draw_points.vert
+  src/shaders/draw_points.frag
+)
+
 add_executable(labeler 
   ${UI_HDRS}
+  ${VIZ_SHADER_SRC}
+  
   src/data/label_utils.cpp
   src/data/Math.cpp
   src/data/misc.cpp

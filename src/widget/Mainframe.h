@@ -1,59 +1,72 @@
-/** \brief main widget with 4 viewports showing the point cloud from different perspectives. **/
-
 #ifndef MAINFRAME_H_
 #define MAINFRAME_H_
 
-#include <QtWidgets/QMainWindow>
+#include <stdint.h>
 #include <QtCore/QSignalMapper>
-#include "ui_MainFrame.h"
+#include <QtWidgets/QMainWindow>
+#include "LabelButton.h"
 #include "data/geometry.h"
 #include "data/transform.h"
-#include <stdint.h>
-#include "LabelButton.h"
+#include "ui_MainFrame.h"
 
-class Mainframe: public QMainWindow
-{
+#include <memory>
+
+typedef std::shared_ptr<std::vector<Point3f>> PointCloudPtr;
+typedef std::shared_ptr<std::vector<uint32_t>> LabelsPtr;
+
+/** \brief main widget showing the point cloud and tools to label a point cloud/multiple point clouds. **/
+class Mainframe : public QMainWindow {
   Q_OBJECT
-  public:
-    Mainframe();
-    ~Mainframe();
+ public:
+  Mainframe();
+  ~Mainframe();
 
-  public slots:
-    void open();
-    void save();
-    void changeRadius(int radius);
-    void changeMode(int mode);
+ public slots:
+  void open();
+  void save();
+  void changeRadius(int radius);
+  void changeMode(int mode);
 
-    void updateFiltering(bool value);
-    void labelBtnReleased(QWidget*);
+  void updateFiltering(bool value);
+  void labelBtnReleased(QWidget*);
 
-    void cylinderPointLabeling();
+ protected:
+  /** \brief set current scan and depending on mode the corresponding points of the viewport. **/
+  void setCurrentScanIdx(int32_t idx);
 
-  protected:
-    void readXYZ(const std::string& filename);
-    void generateLabelButtons();
-    void closeEvent(QCloseEvent *event);
+  //  void readXYZ(const std::string& filename);
 
-    std::vector<Point3f> points;
-    std::vector<uint32_t> labels;
+  void openKITTI(const std::string& directory);
 
-    std::vector<uint32_t> filteredLabels;
-    std::string filename;
+  void generateLabelButtons();
+  void closeEvent(QCloseEvent* event);
 
-  protected slots:
-    void unsavedChanges();
+  std::vector<Eigen::Matrix4f> poses_;
+  std::vector<std::string> velodyne_filenames_;
 
-  private:
-    Ui::MainWindow ui;
-    QSignalMapper* modeMapper, *labelButtonMapper, *radiusMapper;
-    std::vector<LabelButton*> labelButtons;
-    std::map<LabelButton*, uint32_t> labelIds;
-    std::map<int32_t, uint32_t> idxLabelMap;
-    std::map<uint32_t, int32_t> labelIdxMap;
-    bool mChangesSinceLastSave;
-    QString lastDirectory;
+  //    std::vector<Point3f> points;
+  //    std::vector<uint32_t> labels;
 
-    Point3f midpoint;
+  std::vector<PointCloudPtr> points_;
+  std::vector<LabelsPtr> labels_;
+
+  std::vector<uint32_t> filteredLabels;
+  std::string filename;
+
+ protected slots:
+  void unsavedChanges();
+
+ private:
+  Ui::MainWindow ui;
+  QSignalMapper* labelButtonMapper;
+  std::vector<LabelButton*> labelButtons;
+  std::map<LabelButton*, uint32_t> labelIds;
+  std::map<int32_t, uint32_t> idxLabelMap;
+  std::map<uint32_t, int32_t> labelIdxMap;
+  bool mChangesSinceLastSave;
+  QString lastDirectory;
+
+  Point3f midpoint;
 };
 
 #endif /* MAINFRAME_H_ */

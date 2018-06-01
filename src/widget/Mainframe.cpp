@@ -4,6 +4,7 @@
 #include <iostream>
 #include <map>
 
+#include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
 #include <QtWidgets/QFileDialog>
@@ -22,13 +23,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.actionSave, SIGNAL(triggered()), this, SLOT(save()));
 
   /** initialize the paint button mapping **/
-  modeMapper = new QSignalMapper(this);
-  modeMapper->setMapping(ui.actionPaintMode, Viewport::PAINT);
-  modeMapper->setMapping(ui.actionCylinderMode, Viewport::CYLINDER);
-
-  connect(ui.actionPaintMode, SIGNAL(triggered()), modeMapper, SLOT(map()));
-  connect(ui.actionCylinderMode, SIGNAL(triggered()), modeMapper, SLOT(map()));
-  connect(modeMapper, SIGNAL(mapped(int)), this, SLOT(changeMode(int)));
+  connect(ui.actionPaintMode, &QAction::triggered, [this]() { changeMode(Viewport::PAINT); });
 
   connect(ui.mViewportXYZ, SIGNAL(labelingChanged()), this, SLOT(unsavedChanges()));
 
@@ -36,15 +31,10 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.spinPointSize, SIGNAL(valueChanged(int)), ui.mViewportXYZ, SLOT(setPointSize(int)));
 
-  radiusMapper = new QSignalMapper(this);
-  radiusMapper->setMapping(ui.btnRadius5, 5);
-  radiusMapper->setMapping(ui.btnRadius10, 10);
-  radiusMapper->setMapping(ui.btnRadius20, 20);
-  connect(ui.btnRadius5, SIGNAL(released()), radiusMapper, SLOT(map()));
-  connect(ui.btnRadius10, SIGNAL(released()), radiusMapper, SLOT(map()));
-  connect(ui.btnRadius20, SIGNAL(released()), radiusMapper, SLOT(map()));
+  connect(ui.btnRadius5, &QToolButton::released, [this]() { changeRadius(5); });
+  connect(ui.btnRadius10, &QToolButton::released, [this]() { changeRadius(10); });
+  connect(ui.btnRadius20, &QToolButton::released, [this]() { changeRadius(20); });
 
-  connect(radiusMapper, SIGNAL(mapped(int)), this, SLOT(changeRadius(int)));
   connect(ui.mRadiusSlider, SIGNAL(valueChanged(int)), this, SLOT(changeRadius(int)));
 
   /** load labels and colors **/
@@ -88,48 +78,49 @@ void Mainframe::open() {
       return;
   }
 
-  QString retValue = QFileDialog::getOpenFileName(this, "Select Logfile", lastDirectory, "XYZ logfiles(*.xyz)");
+  QString retValue =
+      QFileDialog::getExistingDirectory(this, "Select scan directory", lastDirectory, QFileDialog::ShowDirsOnly);
 
   if (!retValue.isNull()) {
-    if (retValue.endsWith(".xyz")) {
-      QFileInfo info(retValue);
-      lastDirectory = info.absolutePath();
+    QDir base_dir(retValue);
 
-      filename = retValue.toStdString();
-      points.clear();
-      labels.clear();
+    if (!base_dir.exists("velodyne") || !base_dir.exists("poses")) return;
 
-      midpoint = Point3f(0, 0, 0);
+    velodyne_filenames_.clear();
 
-      readXYZ(filename);
+    QDir velodyne_dir(base_dir.filePath("velodyne"));
+    QStringList entries = velodyne_dir.entryList(QDir::Files, QDir::Name);
+    for (int32_t i = 0; i < entries.size(); ++i) {
+      velodyne_filenames_.push_back(entries.at(i).toStdString());
+    }
 
-      changeMode(Viewport::NONE);
+    QDir poses_dir(base_dir.filePath("poses"));
 
-      ui.mViewportXYZ->setPoints(points, labels);
+    lastDirectory = base_dir.absolutePath();
 
-      QString title = "Point Labeler - ";
-      title += QFileInfo(retValue).completeBaseName();
-      setWindowTitle(title);
+    changeMode(Viewport::NONE);
 
-      mChangesSinceLastSave = false;
-    } else
-      return;
+    QString title = "Point Labeler - ";
+    title += QFileInfo(retValue).completeBaseName();
+    setWindowTitle(title);
+
+    mChangesSinceLastSave = false;
   }
 }
 
 void Mainframe::save() {
   // TODO: write binary format and accombining header.
-  QFileInfo info(QString::fromStdString(filename));
-  QString labelName = info.absolutePath() + "/" + info.baseName();
-
-  std::string labels_file = labelName.toStdString();
-  labels_file += ".label.xyz";
-
-  /* (3) overwrite the complete label file with new label information. */
-  std::ofstream out(labels_file.c_str());
-  for (uint32_t i = 0; i < points.size() - 1; ++i) out << labels[i] << std::endl;
-  out << labels[labels.size() - 1];
-  out.close();
+  //  QFileInfo info(QString::fromStdString(filename));
+  //  QString labelName = info.absolutePath() + "/" + info.baseName();
+  //
+  //  std::string labels_file = labelName.toStdString();
+  //  labels_file += ".label.xyz";
+  //
+  //  /* (3) overwrite the complete label file with new label information. */
+  //  std::ofstream out(labels_file.c_str());
+  //  for (uint32_t i = 0; i < points.size() - 1; ++i) out << labels[i] << std::endl;
+  //  out << labels[labels.size() - 1];
+  //  out.close();
 
   mChangesSinceLastSave = false;
 }
@@ -172,81 +163,77 @@ void Mainframe::changeMode(int mode) {
   }
 }
 
-void Mainframe::cylinderPointLabeling() {
-  std::cout << "labeling points inside cylinder" << std::endl;
-}
-
-void Mainframe::readXYZ(const std::string& filename) {
-  std::ifstream in(filename.c_str());
-  if (!in.is_open()) throw "unable to open XYZ file.";
-
-  QFileInfo info(QString::fromStdString(filename));
-  QString labelName = info.absolutePath() + "/" + info.baseName();
-  std::string labels_file = labelName.toStdString();
-
-  labels_file += ".label.xyz";
-
-  //  std::string cylinder_file = RoSe::FileUtil::stripExtension(filename, 1);
-  //  cylinder_file += ".cylinder.xyz";
-
-  std::cout << "labels-filename: " << labels_file << std::endl;
-  //  std::cout << "cylinder_filename: " << cylinder_file << std::endl;
-
-  std::ifstream in_labels(labels_file.c_str());
-  std::ofstream out_labels;
-
-  bool generate_labels = false;
-  if (!in_labels.is_open()) {
-    std::cout << "labels file not found. generating labels file." << std::endl;
-    generate_labels = true;
-    out_labels.open(labels_file.c_str());
-    if (!out_labels.is_open()) throw "unable to generate label filename.";
-  }
-
-  //  std::ifstream in_cylinders(cylinder_file.c_str());
-
-  std::string line;
-  //  Point3f midpoint;
-
-  in.peek();
-  int idx = 0;
-  while (!in.eof() && in.good()) {
-    std::getline(in, line);
-    std::vector<std::string> tokens = split(line, ";");
-
-    if (tokens.size() < 3) continue;
-
-    float x = QString::fromStdString(tokens[0]).toFloat();
-    float y = QString::fromStdString(tokens[1]).toFloat();
-    float z = QString::fromStdString(tokens[2]).toFloat();
-
-    if (!generate_labels) {
-      std::getline(in_labels, line);
-      labels.push_back(QString::fromStdString(line).toInt());
-    } else {
-      out_labels << "0" << std::endl;
-      labels.push_back(0);
-    }
-
-    points.push_back(Point3f(x, y, z));
-    midpoint += points.back();
-
-    in.peek();
-    ++idx;
-  }
-
-  midpoint /= points.size();
-
-  /** substract the midpoint **/
-  for (uint32_t i = 0; i < points.size(); ++i) {
-    points[i] = Point3f(points[i] - midpoint);
-  }
-
-  in.close();
-  in_labels.close();
-  //  in_cylinders.close();
-  out_labels.close();
-}
+// void Mainframe::readXYZ(const std::string& filename) {
+//  std::ifstream in(filename.c_str());
+//  if (!in.is_open()) throw "unable to open XYZ file.";
+//
+//  QFileInfo info(QString::fromStdString(filename));
+//  QString labelName = info.absolutePath() + "/" + info.baseName();
+//  std::string labels_file = labelName.toStdString();
+//
+//  labels_file += ".label.xyz";
+//
+//  //  std::string cylinder_file = RoSe::FileUtil::stripExtension(filename, 1);
+//  //  cylinder_file += ".cylinder.xyz";
+//
+//  std::cout << "labels-filename: " << labels_file << std::endl;
+//  //  std::cout << "cylinder_filename: " << cylinder_file << std::endl;
+//
+//  std::ifstream in_labels(labels_file.c_str());
+//  std::ofstream out_labels;
+//
+//  bool generate_labels = false;
+//  if (!in_labels.is_open()) {
+//    std::cout << "labels file not found. generating labels file." << std::endl;
+//    generate_labels = true;
+//    out_labels.open(labels_file.c_str());
+//    if (!out_labels.is_open()) throw "unable to generate label filename.";
+//  }
+//
+//  //  std::ifstream in_cylinders(cylinder_file.c_str());
+//
+//  std::string line;
+//  //  Point3f midpoint;
+//
+//  in.peek();
+//  int idx = 0;
+//  while (!in.eof() && in.good()) {
+//    std::getline(in, line);
+//    std::vector<std::string> tokens = split(line, ";");
+//
+//    if (tokens.size() < 3) continue;
+//
+//    float x = QString::fromStdString(tokens[0]).toFloat();
+//    float y = QString::fromStdString(tokens[1]).toFloat();
+//    float z = QString::fromStdString(tokens[2]).toFloat();
+//
+//    if (!generate_labels) {
+//      std::getline(in_labels, line);
+//      labels.push_back(QString::fromStdString(line).toInt());
+//    } else {
+//      out_labels << "0" << std::endl;
+//      labels.push_back(0);
+//    }
+//
+//    points.push_back(Point3f(x, y, z));
+//    midpoint += points.back();
+//
+//    in.peek();
+//    ++idx;
+//  }
+//
+//  midpoint /= points.size();
+//
+//  /** substract the midpoint **/
+//  for (uint32_t i = 0; i < points.size(); ++i) {
+//    points[i] = Point3f(points[i] - midpoint);
+//  }
+//
+//  in.close();
+//  in_labels.close();
+//  //  in_cylinders.close();
+//  out_labels.close();
+//}
 
 void Mainframe::generateLabelButtons() {
   const int BtnsPerRow = 5;

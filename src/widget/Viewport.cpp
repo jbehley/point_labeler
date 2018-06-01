@@ -2,6 +2,7 @@
 #include "data/Math.h"
 #include "data/draw_utils.h"
 
+#include <glow/ScopedBinder.h>
 #include <glow/glutil.h>
 
 using namespace glow;
@@ -14,22 +15,38 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       mAxis(XYZ),
       mMode(NONE),
       mFlags(FLAG_OVERWRITE),
-      mPointSize(1.0f),
       mCurrentLabel(0),
       mRadius(5),
       buttonPressed(false) {
-  connect(&timer_, &QTimer::timeout, [this]() {
-    this->updateGL();
-  });
+  connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
   // mCamera.setPosition(-50, -50, -50);
   // mCamera.setYaw(Math::deg2rad(-125.0));
   // mCamera.setPitch(Math::deg2rad(-45.0));
 
-  setMouseTracking(true);
-  mCamera.lookAt(5.0f, 5.0f, 5.0f, 0.0f, 0.0f, 0.0f);
+  //  setMouseTracking(true);
+
+  drawing_options_["coordinate axis"] = true;
+
+  conversion_ = RoSe2GL::matrix;
+
+  initPrograms();
+  initVertexBuffers();
 }
 
 Viewport::~Viewport() {}
+
+void Viewport::initPrograms() {
+  prgDrawPoints_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/draw_points.vert"));
+  prgDrawPoints_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/draw_points.frag"));
+  prgDrawPoints_.link();
+
+  prgDrawPose_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/empty.vert"));
+  prgDrawPose_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/draw_pose.geom"));
+  prgDrawPose_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
+  prgDrawPose_.link();
+}
+
+void Viewport::initVertexBuffers() {}
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
 void Viewport::setFixedAxis(AXIS axis) {
@@ -52,10 +69,12 @@ void Viewport::setLabel(uint32_t label) {
 
 void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
   mLabelColors = colors;
+
+  // label colors are indexed for drawing by the index.
 }
 
 void Viewport::setPointSize(int value) {
-  mPointSize = value;
+  pointSize_ = value;
   updateGL();
 }
 
@@ -81,88 +100,77 @@ void Viewport::setFilteredLabels(const std::vector<uint32_t>& labels) {
 }
 
 void Viewport::initializeGL() {
-  static const float DIFFUSE[4] = {1.00f, 1.00f, 1.00f, 1.00f};
-  static const float AMBIENT[4] = {0.00f, 0.00f, 0.00f, 1.00f};
-  static const float SPECULAR[4] = {0.00f, 0.00f, 0.00f, 1.00f};
-
-  glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
-  glLightfv(GL_LIGHT0, GL_DIFFUSE, DIFFUSE);
-  glLightfv(GL_LIGHT0, GL_AMBIENT, AMBIENT);
-  glLightfv(GL_LIGHT0, GL_SPECULAR, SPECULAR);
-  glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0);
-  glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.002);  // (4 / maxdist)
-
-  //  glEnable(GL_POINT_SMOOTH);
-  glEnable(GL_LIGHT0);
-  glDisable(GL_LIGHTING);
-
-  glShadeModel(GL_SMOOTH);
-  glColorMaterial(GL_FRONT, GL_DIFFUSE);
-  glEnable(GL_COLOR_MATERIAL);
-
-  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-  glEnable(GL_LINE_SMOOTH);
-  glEnable(GL_POINT_SMOOTH);
-  //  glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
-
-  glEnable(GL_BLEND);
+  glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
   glEnable(GL_DEPTH_TEST);
-
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+  glDepthFunc(GL_LEQUAL);
   glEnable(GL_LINE_SMOOTH);
-  glEnable(GL_POINT_SMOOTH);
-  //  glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+
+  mCamera.lookAt(5.0f, 5.0f, 5.0f, 0.0f, 0.0f, 0.0f);
 }
 
-void Viewport::resizeGL(int width, int height) {
-  const double FOV = 45.0;
-  double ASPECT_RATIO = double(width) / double(height);
-  const double MIN_Z = 1.0, MAX_Z = 327.68;
-  const float LIGHT_POS[] = {0.0f, 1.0f, 0.0f, 1.0f};
+void Viewport::resizeGL(int w, int h) {
+  glViewport(0, 0, w, h);
 
-  glViewport(0, 0, width, height);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-  glLightfv(GL_LIGHT0, GL_POSITION, LIGHT_POS);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  gluPerspective(FOV, ASPECT_RATIO, MIN_Z, MAX_Z);
+  // set projection matrix
+  float fov = radians(45.0f);
+  float aspect = float(w) / float(h);
+
+  projection_ = glPerspective(fov, aspect, 0.1f, 2000.0f);
 }
 
 void Viewport::paintGL() {
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
+  glEnable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-  Eigen::Matrix4f view = mCamera.matrix();
-  glMultMatrixf(view.data());
+  glPointSize(pointSize_);
 
   vf.update();
-
-  /** update the projected coordinates. **/
+  /** update the projected coordinates. TODO: only if pose changes. **/
   updateProjections();
 
-  glPushMatrix();
+  model_ = Eigen::Matrix4f::Identity();
+  view_ = mCamera.matrix();
 
-  glMultMatrixf(glow::RoSe2GL::matrix.data());
+  mvp_ = projection_ * view_ * conversion_;
 
-  glBegin(GL_LINES);
-  glColor3f(1.0f, 0.0f, 0.0f);
-  glVertex3f(0.0f, 0.0f, 0.0f);
-  glVertex3f(5.0f, 0.0f, 0.0f);
-  glColor3f(0.0f, 1.0f, 0.0f);
-  glVertex3f(0.0f, 0.0f, 0.0f);
-  glVertex3f(0.0f, 5.0f, 0.0f);
-  glColor3f(0.0f, 0.0f, 1.0f);
-  glVertex3f(0.0f, 0.0f, 0.0f);
-  glVertex3f(0.0f, 0.0f, 5.0f);
-  glEnd();
+  if (drawing_options_["coordinate axis"]) {
+    // coordinateSytem_->pose = Eigen::Matrix4f::Identity();
+    ScopedBinder<GlProgram> program_binder(prgDrawPose_);
+    ScopedBinder<GlVertexArray> vao_binder(vao_no_points_);
 
-  glPopMatrix();
+    prgDrawPose_.setUniform(mvp_);
+    prgDrawPose_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
+    prgDrawPose_.setUniform(GlUniform<float>("size", 1.0f));
 
-  if (points != 0 && labels != 0) drawPoints(*points, *labels);
+    glDrawArrays(GL_POINTS, 0, 1);
+  }
+  //
+  //    glMatrixMode(GL_MODELVIEW);
+  //    glLoadIdentity();
+  //    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  //
+  //    Eigen::Matrix4f view = mCamera.matrix();
+  //    glMultMatrixf(view.data());
+  //
+  //
+  //  glPushMatrix();
+  //
+  //  glMultMatrixf(glow::RoSe2GL::matrix.data());
+  //
+  //  glBegin(GL_LINES);
+  //  glColor3f(1.0f, 0.0f, 0.0f);
+  //  glVertex3f(0.0f, 0.0f, 0.0f);
+  //  glVertex3f(5.0f, 0.0f, 0.0f);
+  //  glColor3f(0.0f, 1.0f, 0.0f);
+  //  glVertex3f(0.0f, 0.0f, 0.0f);
+  //  glVertex3f(0.0f, 5.0f, 0.0f);
+  //  glColor3f(0.0f, 0.0f, 1.0f);
+  //  glVertex3f(0.0f, 0.0f, 0.0f);
+  //  glVertex3f(0.0f, 0.0f, 5.0f);
+  //  glEnd();
+  //
+  //  glPopMatrix();
+  //
+  //  if (points != 0 && labels != 0) drawPoints(*points, *labels);
 }
 
 void Viewport::mousePressEvent(QMouseEvent* event) {
@@ -226,7 +234,8 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
   //  else if ((mCurrentPaintMode & PAINT_FILLPOLYGON) && (e->button()
   //      == Qt::RightButton))
   //  {
-  //    /** (1) determine winding order, really bullet proof is this method not, but it should work in most situations.
+  //    /** (1) determine winding order, really bullet proof is this method not, but it should work in most
+  //    situations.
   //    **/
   //    if (vertices.size() >= 3)
   //    {
@@ -309,7 +318,7 @@ void Viewport::drawPoints(const std::vector<Point3f>& points, const std::vector<
   glPushMatrix();
   glMultMatrixf(RoSe2GL::matrix.data());
 
-  glPointSize(mPointSize);
+  glPointSize(pointSize_);
   glColor3fv(GlColor::BLACK);
 
   glBegin(GL_POINTS);
@@ -721,7 +730,8 @@ void Viewport::updateProjections() {
 //      glGetDoublev(GL_MODELVIEW_MATRIX, modMatrix);
 //      glGetDoublev(GL_PROJECTION_MATRIX, projMatrix);
 //      double p[3];
-//      gluUnProject(pos.x(), (viewport[3] - pos.y()), lDepth[0], modMatrix, projMatrix, viewport, &p[0], &p[1], &p[2]);
+//      gluUnProject(pos.x(), (viewport[3] - pos.y()), lDepth[0], modMatrix, projMatrix, viewport, &p[0], &p[1],
+//      &p[2]);
 //
 //      /** change selected point to RoSe convention **/
 //      selectedPoint[0] = -p[2];
