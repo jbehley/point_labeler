@@ -36,6 +36,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.btnRadius20, &QToolButton::released, [this]() { changeRadius(20); });
 
   connect(ui.mRadiusSlider, SIGNAL(valueChanged(int)), this, SLOT(changeRadius(int)));
+  connect(ui.sldTimeline, &QSlider::valueChanged, [this](int value) { setCurrentScanIdx(value); });
 
   /** load labels and colors **/
   std::map<uint32_t, std::string> label_names;
@@ -52,31 +53,33 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 Mainframe::~Mainframe() {}
 
 void Mainframe::closeEvent(QCloseEvent* event) {
-  if (mChangesSinceLastSave) {
-    int ret = QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
-                                                                    "Do you want to save your changes?"),
-                                   QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
-    if (ret == QMessageBox::Save)
-      save();
-    else if (ret == QMessageBox::Cancel) {
-      event->ignore();
-      return;
-    }
-  }
+  //  if (mChangesSinceLastSave) {
+  //    int ret = QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+  //                                                                    "Do you want to save your changes?"),
+  //                                   QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+  //                                   QMessageBox::Save);
+  //    if (ret == QMessageBox::Save)
+  //      save();
+  //    else if (ret == QMessageBox::Cancel) {
+  //      event->ignore();
+  //      return;
+  //    }
+  //  }
 
   event->accept();
 }
 
 void Mainframe::open() {
-  if (mChangesSinceLastSave) {
-    int ret = QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
-                                                                    "Do you want to save your changes?"),
-                                   QMessageBox::Save | QMessageBox::Cancel | QMessageBox::Discard, QMessageBox::Save);
-    if (ret == QMessageBox::Save)
-      save();
-    else if (ret == QMessageBox::Cancel)
-      return;
-  }
+  //  if (mChangesSinceLastSave) {
+  //    int ret = QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+  //                                                                    "Do you want to save your changes?"),
+  //                                   QMessageBox::Save | QMessageBox::Cancel | QMessageBox::Discard,
+  //                                   QMessageBox::Save);
+  //    if (ret == QMessageBox::Save)
+  //      save();
+  //    else if (ret == QMessageBox::Cancel)
+  //      return;
+  //  }
 
   QString retValue =
       QFileDialog::getExistingDirectory(this, "Select scan directory", lastDirectory, QFileDialog::ShowDirsOnly);
@@ -84,17 +87,17 @@ void Mainframe::open() {
   if (!retValue.isNull()) {
     QDir base_dir(retValue);
 
-    if (!base_dir.exists("velodyne") || !base_dir.exists("poses")) return;
-
-    velodyne_filenames_.clear();
-
-    QDir velodyne_dir(base_dir.filePath("velodyne"));
-    QStringList entries = velodyne_dir.entryList(QDir::Files, QDir::Name);
-    for (int32_t i = 0; i < entries.size(); ++i) {
-      velodyne_filenames_.push_back(entries.at(i).toStdString());
+    if (!base_dir.exists("velodyne") || !base_dir.exists("poses.txt")) {
+      std::cout << "[ERROR] velodyne or poses.txt missing." << std::endl;
+      return;
     }
 
-    QDir poses_dir(base_dir.filePath("poses"));
+    reader_.initialize(retValue);
+
+    ui.sldTimeline->setMaximum(reader_.count());
+
+    if (ui.sldTimeline->value() == 0) setCurrentScanIdx(0);
+    ui.sldTimeline->setValue(0);
 
     lastDirectory = base_dir.absolutePath();
 
@@ -329,4 +332,14 @@ void Mainframe::labelBtnReleased(QWidget* w) {
 
 void Mainframe::unsavedChanges() {
   mChangesSinceLastSave = true;
+}
+
+void Mainframe::setCurrentScanIdx(int32_t idx) {
+  std::cout << "setting scan." << std::endl;
+
+  reader_.update(indexes_, labels_);
+
+  reader_.retrieve(idx, indexes_, points_, labels_);
+
+  ui.mViewportXYZ->setPoints(points_, labels_);
 }

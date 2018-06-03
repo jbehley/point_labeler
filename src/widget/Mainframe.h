@@ -8,11 +8,11 @@
 #include "data/geometry.h"
 #include "data/transform.h"
 #include "ui_MainFrame.h"
+#include "common.h"
+#include "KittiReader.h"
 
-#include <memory>
+// TODO: undo.
 
-typedef std::shared_ptr<std::vector<Point3f>> PointCloudPtr;
-typedef std::shared_ptr<std::vector<uint32_t>> LabelsPtr;
 
 /** \brief main widget showing the point cloud and tools to label a point cloud/multiple point clouds. **/
 class Mainframe : public QMainWindow {
@@ -34,20 +34,13 @@ class Mainframe : public QMainWindow {
   /** \brief set current scan and depending on mode the corresponding points of the viewport. **/
   void setCurrentScanIdx(int32_t idx);
 
-  //  void readXYZ(const std::string& filename);
-
-  void openKITTI(const std::string& directory);
-
   void generateLabelButtons();
   void closeEvent(QCloseEvent* event);
 
-  std::vector<Eigen::Matrix4f> poses_;
-  std::vector<std::string> velodyne_filenames_;
 
-  //    std::vector<Point3f> points;
-  //    std::vector<uint32_t> labels;
 
-  std::vector<PointCloudPtr> points_;
+  std::vector<uint32_t> indexes_;
+  std::vector<PointcloudPtr> points_;
   std::vector<LabelsPtr> labels_;
 
   std::vector<uint32_t> filteredLabels;
@@ -67,6 +60,8 @@ class Mainframe : public QMainWindow {
   QString lastDirectory;
 
   Point3f midpoint;
+
+  KittiReader reader_;
 };
 
 #endif /* MAINFRAME_H_ */

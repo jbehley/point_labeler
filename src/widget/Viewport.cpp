@@ -10,8 +10,6 @@ using namespace glow;
 Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
     : QGLWidget(parent, 0, f),
       contextInitialized_(initContext()),
-      points(0),
-      labels(0),
       mAxis(XYZ),
       mMode(NONE),
       mFlags(FLAG_OVERWRITE),
@@ -28,6 +26,13 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   drawing_options_["coordinate axis"] = true;
 
   conversion_ = RoSe2GL::matrix;
+
+  uint32_t max_size = 20 * 150000;  // 20 scans with 150.000 points.
+
+  bufPoints_.reserve(max_size);
+  bufRemissions_.reserve(max_size);
+  bufVisible_.reserve(max_size);
+  bufLabelColors_.reserve(max_size);
 
   initPrograms();
   initVertexBuffers();
@@ -46,17 +51,67 @@ void Viewport::initPrograms() {
   prgDrawPose_.link();
 }
 
-void Viewport::initVertexBuffers() {}
+void Viewport::initVertexBuffers() {
+  vao_points_.setVertexAttribute(0, bufPoints_, 4, glow::AttributeType::FLOAT, false, sizeof(Eigen::Vector4f), nullptr);
+  vao_points_.setVertexAttribute(1, bufRemissions_, 1, glow::AttributeType::FLOAT, false, sizeof(float), nullptr);
+  vao_points_.setVertexAttribute(2, bufLabelColors_, 4, glow::AttributeType::FLOAT, false, sizeof(GlColor), nullptr);
+  vao_points_.setVertexAttribute(3, bufVisible_, 1, glow::AttributeType::UNSIGNED_INT, false, sizeof(uint32_t),
+                                 nullptr);
+}
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
 void Viewport::setFixedAxis(AXIS axis) {
   mAxis = axis;
 }
 
-void Viewport::setPoints(const std::vector<Point3f>& p, std::vector<uint32_t>& l) {
-  points = &p;
-  labels = &l;
+void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<LabelsPtr>& l) {
+  // this must be happend gradually.
+
+  std::cout << "Setting points..." << std::flush;
+  points_ = p;
+  labels_ = l;
+
+  std::vector<Eigen::Vector4f> accumulPoints;
+  std::vector<float> accumlRemissions;
+  std::vector<GlColor> label_colors;
+
+  for (uint32_t t = 0; t < points_.size(); ++t) {
+    accumulPoints.reserve(accumulPoints.size() + points_[t]->size());
+    for (uint32_t i = 0; i < points_[t]->size(); ++i) {
+      Eigen::Vector4f p(points_[t]->points[i].x, points_[t]->points[i].y, points_[t]->points[i].z, 1.0f);
+      accumulPoints.push_back(points_[t]->pose * p);
+    }
+  }
+
+  accumlRemissions.resize(accumulPoints.size(), 1.0f);
+  uint32_t offset = 0;
+  for (uint32_t t = 0; t < points_.size(); ++t) {
+    if (points_[t]->hasRemissions()) {
+      for (uint32_t i = 0; i < points_[t]->size(); ++i) {
+        accumlRemissions[offset + i] = points_[t]->remissions[i];
+      }
+    }
+    offset += points_[t]->size();
+  }
+
+  label_colors.resize(accumulPoints.size());
+  offset = 0;
+  for (uint32_t t = 0; t < labels_.size(); ++t) {
+    for (uint32_t i = 0; i < labels_[t]->size(); ++i) {
+      label_colors[offset + i] = mLabelColors[(*labels_[t])[i]];
+    }
+    offset += labels_[t]->size();
+  }
+
+  std::vector<uint32_t> visible(accumulPoints.size(), 1);
+
+  bufPoints_.assign(accumulPoints);
+  bufRemissions_.assign(accumlRemissions);
+  bufLabelColors_.assign(label_colors);
+  bufVisible_.assign(visible);
+
   updateGL();
+  std::cout << "ended." << std::flush;
 }
 
 void Viewport::setRadius(float value) {
@@ -69,8 +124,6 @@ void Viewport::setLabel(uint32_t label) {
 
 void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
   mLabelColors = colors;
-
-  // label colors are indexed for drawing by the index.
 }
 
 void Viewport::setPointSize(int value) {
@@ -142,6 +195,15 @@ void Viewport::paintGL() {
     prgDrawPose_.setUniform(GlUniform<float>("size", 1.0f));
 
     glDrawArrays(GL_POINTS, 0, 1);
+  }
+
+  if (points_.size()) {
+    ScopedBinder<GlProgram> program_binder(prgDrawPoints_);
+    ScopedBinder<GlVertexArray> vao_binder(vao_points_);
+
+    prgDrawPoints_.setUniform(mvp_);
+
+    glDrawArrays(GL_POINTS, 0, bufPoints_.size());
   }
   //
   //    glMatrixMode(GL_MODELVIEW);
@@ -346,79 +408,83 @@ void Viewport::drawPoints(const std::vector<Point3f>& points, const std::vector<
 }
 
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label) {
-  if (points == 0 || labels == 0) return;
+  if (points_.size() == 0 || labels_.size() == 0) return;
 
   float radius2 = radius * radius;
 
   //  float min_distance2 = min_distance * min_distance;
   //  float max_distance2 = max_distance * max_distance;
 
-  for (uint32_t i = 0; i < points->size(); ++i) {
-    //    Point3f& p = scan[i].pos;
-    //    Point3f global_pos = scan.pose()(scan[i].pos);
-    //    float distance = p.x * p.x + p.y * p.y + p.z * p.z;
-    //
-    //    Label label = labels[i];
-    //    if (do_mapping && mapping.find(label) != mapping.end()) label = mapping[label];
-    //    if (do_filtering && filter.find(label) == filter.end()) continue;
-    //
-    //    if (mFilterPointsDistance && (distance > max_distance2 || distance < min_distance2)) continue;
-    //    if (!mShowLabeledPoints && label != 0) continue;
+  // TODO: use quadtree to accelerate search.
 
-    if (!vf.isInside((*points)[i].x, (*points)[i].y, (*points)[i].z)) continue;
+  for (uint32_t t = 0; t < points_.size(); ++t)
+    for (uint32_t i = 0; i < points_[t]->size(); ++i) {
+      //    Point3f& p = scan[i].pos;
+      //    Point3f global_pos = scan.pose()(scan[i].pos);
+      //    float distance = p.x * p.x + p.y * p.y + p.z * p.z;
+      //
+      //    Label label = labels[i];
+      //    if (do_mapping && mapping.find(label) != mapping.end()) label = mapping[label];
+      //    if (do_filtering && filter.find(label) == filter.end()) continue;
+      //
+      //    if (mFilterPointsDistance && (distance > max_distance2 || distance < min_distance2)) continue;
+      //    if (!mShowLabeledPoints && label != 0) continue;
 
-    bool found = false;
+      //      if (!vf.isInside((*points_[t])[i].x, (*points_[t])[i].y, (*points_[t])[i].z)) continue; // TODO::
+      //      Culling!
 
-    for (uint32_t j = 0; j < mFilteredLabels.size(); ++j)
-      if (mFilteredLabels[j] == (*labels)[i]) {
-        found = true;
-        break;
-      }
+      bool found = false;
 
-    if (!found && mFilteredLabels.size() > 0) continue;
+      for (uint32_t j = 0; j < mFilteredLabels.size(); ++j)
+        if (mFilteredLabels[j] == (*labels_[t])[i]) {
+          found = true;
+          break;
+        }
 
-    double dx = projected_points[i].x - x;
-    double dy = projected_points[i].y - y;
-    if (dx * dx + dy * dy < radius2) {
-      if (((*labels)[i] == 0) || (mFlags & FLAG_OVERWRITE)) {
-        (*labels)[i] = new_label;
+      if (!found && mFilteredLabels.size() > 0) continue;
+
+      double dx = projected_points[i].x - x;
+      double dy = projected_points[i].y - y;
+      if (dx * dx + dy * dy < radius2) {
+        if (((*labels_[t])[i] == 0) || (mFlags & FLAG_OVERWRITE)) {
+          (*labels_[t])[i] = new_label;
+        }
       }
     }
-  }
 
   emit labelingChanged();
 }
 
 void Viewport::updateProjections() {
-  if (points == 0 || labels == 0) return;
-
-  glPushMatrix();
-  glMultMatrixf(glow::RoSe2GL::matrix.data());
-
-  GLint viewport[4];
-  GLdouble modelMatrix[16];
-  GLdouble projectionMatrix[16];
-
-  glGetIntegerv(GL_VIEWPORT, viewport);
-  glGetDoublev(GL_MODELVIEW_MATRIX, modelMatrix);
-  glGetDoublev(GL_PROJECTION_MATRIX, projectionMatrix);
-
-  projected_points.resize(points->size());
-  for (uint32_t i = 0; i < points->size(); ++i) {
-    double dummy = 0.0;
-
-    const Point3f& p = (*points)[i];
-
-    double x, y;
-
-    gluProject(p.x, p.y, p.z, modelMatrix, projectionMatrix, viewport, &(x), &(y), &(dummy));
-    projected_points[i].x = x;
-    projected_points[i].y = y;
-    /** the coordinate systems origin is in the top-left corner! **/
-    projected_points[i].y = viewport[3] - projected_points[i].y;
-  }
-
-  glPopMatrix();
+  //  if (points == 0 || labels == 0) return;
+  //
+  //  glPushMatrix();
+  //  glMultMatrixf(glow::RoSe2GL::matrix.data());
+  //
+  //  GLint viewport[4];
+  //  GLdouble modelMatrix[16];
+  //  GLdouble projectionMatrix[16];
+  //
+  //  glGetIntegerv(GL_VIEWPORT, viewport);
+  //  glGetDoublev(GL_MODELVIEW_MATRIX, modelMatrix);
+  //  glGetDoublev(GL_PROJECTION_MATRIX, projectionMatrix);
+  //
+  //  projected_points.resize(points->size());
+  //  for (uint32_t i = 0; i < points->size(); ++i) {
+  //    double dummy = 0.0;
+  //
+  //    const Point3f& p = (*points)[i];
+  //
+  //    double x, y;
+  //
+  //    gluProject(p.x, p.y, p.z, modelMatrix, projectionMatrix, viewport, &(x), &(y), &(dummy));
+  //    projected_points[i].x = x;
+  //    projected_points[i].y = y;
+  //    /** the coordinate systems origin is in the top-left corner! **/
+  //    projected_points[i].y = viewport[3] - projected_points[i].y;
+  //  }
+  //
+  //  glPopMatrix();
 }
 
 // std::vector<Point3f*> Viewport::getSelectedCylinderPoints(const QPoint& pos) {

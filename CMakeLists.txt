@@ -61,6 +61,8 @@ add_executable(labeler
   ${VIZ_SHADER_SRC}
   
   src/data/label_utils.cpp
+  src/data/kitti_utils.cpp
+  src/rv/string_utils.cpp
   src/data/Math.cpp
   src/data/misc.cpp
   src/data/ViewFrustum.cpp
@@ -71,6 +73,7 @@ add_executable(labeler
   src/widget/LabelButton.cpp
   src/widget/Mainframe.cpp
   src/widget/Viewport.cpp
+  src/widget/KittiReader.cpp
 )
 
 target_link_libraries(labeler ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)

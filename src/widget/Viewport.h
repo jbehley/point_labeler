@@ -26,6 +26,7 @@
 #include <glow/GlVertexArray.h>
 #include <glow/util/RoSeCamera.h>
 
+#include "common.h"
 #include "data/ViewFrustum.h"
 #include "data/geometry.h"
 
@@ -41,15 +42,14 @@ class Viewport : public QGLWidget {
   Viewport(QWidget* parent = 0, Qt::WindowFlags f = 0);
   ~Viewport();
 
+  void setPoints(const std::vector<PointcloudPtr>& points, std::vector<LabelsPtr>& labels);
+
  signals:
-  void newCylinderFinished();
-  void cylinderChanged();
   void labelingChanged();
 
  public slots:
   /** \brief set axis fixed **/
   void setFixedAxis(AXIS axis);
-  void setPoints(const std::vector<Point3f>& points, std::vector<uint32_t>& labels);
 
   void setRadius(float value);
   /** \brief label used when in PAINT **/
@@ -111,8 +111,8 @@ class Viewport : public QGLWidget {
   bool contextInitialized_;
   std::map<uint32_t, glow::GlColor> mLabelColors;
 
-  const std::vector<Point3f>* points;
-  std::vector<uint32_t>* labels;
+  std::vector<PointcloudPtr> points_;
+  std::vector<LabelsPtr> labels_;
   std::vector<Point3f> projected_points;
 
   glow::RoSeCamera mCamera;
@@ -132,9 +132,10 @@ class Viewport : public QGLWidget {
   QTimer timer_;
 
   // shaders, etc.
-  glow::GlBuffer<glow::vec3> bufLabelColors{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
-  glow::GlBuffer<Point3f> bufPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
-  glow::GlBuffer<uint32_t> bufLabels_{glow::BufferTarget::ELEMENT_ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<Eigen::Vector4f> bufPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<float> bufRemissions_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<glow::GlColor> bufLabelColors_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<uint32_t> bufVisible_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
   glow::GlVertexArray vao_no_points_;
   glow::GlVertexArray vao_points_;
