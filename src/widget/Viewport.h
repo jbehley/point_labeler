@@ -98,7 +98,7 @@ class Viewport : public QGLWidget {
 
   glow::GlCamera::MouseButton resolveMouseButton(Qt::MouseButtons button);
 
-  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
+  //  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
   void labelPoints(int32_t x, int32_t y, float radius, uint32_t label);
   void updateProjections();
 
@@ -132,7 +132,10 @@ class Viewport : public QGLWidget {
   QTimer timer_;
 
   // shaders, etc.
-  glow::GlBuffer<Eigen::Vector4f> bufPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  uint32_t maxScans_ = 500;
+  uint32_t maxPointsPerScan_ = 150000;
+  std::vector<Eigen::Matrix4f> bufPoses_;
+  glow::GlBuffer<Point3f> bufPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<float> bufRemissions_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<glow::GlColor> bufLabelColors_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<uint32_t> bufVisible_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
@@ -153,6 +156,13 @@ class Viewport : public QGLWidget {
   Eigen::Matrix4f view_{Eigen::Matrix4f::Identity()};
   Eigen::Matrix4f projection_{Eigen::Matrix4f::Identity()};
   Eigen::Matrix4f conversion_{glow::RoSe2GL::matrix};
+
+  struct BufferInfo {
+    uint32_t index;
+    uint32_t size;
+  };
+
+  std::map<Laserscan*, BufferInfo> bufferContent_;
 };
 
 #endif /* POINTVIEW_H_ */

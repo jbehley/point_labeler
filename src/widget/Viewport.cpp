@@ -4,8 +4,12 @@
 
 #include <glow/ScopedBinder.h>
 #include <glow/glutil.h>
+#include <algorithm>
+#include <chrono>
+#include "rv/Stopwatch.h"
 
 using namespace glow;
+using namespace rv;
 
 Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
     : QGLWidget(parent, 0, f),
@@ -27,8 +31,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   conversion_ = RoSe2GL::matrix;
 
-  uint32_t max_size = 20 * 150000;  // 20 scans with 150.000 points.
+  uint32_t max_size = maxScans_ * maxPointsPerScan_;  // 20 scans with 150.000 points.
 
+  bufPoses_.resize(maxScans_);
   bufPoints_.reserve(max_size);
   bufRemissions_.reserve(max_size);
   bufVisible_.reserve(max_size);
@@ -52,11 +57,10 @@ void Viewport::initPrograms() {
 }
 
 void Viewport::initVertexBuffers() {
-  vao_points_.setVertexAttribute(0, bufPoints_, 4, glow::AttributeType::FLOAT, false, sizeof(Eigen::Vector4f), nullptr);
-  vao_points_.setVertexAttribute(1, bufRemissions_, 1, glow::AttributeType::FLOAT, false, sizeof(float), nullptr);
-  vao_points_.setVertexAttribute(2, bufLabelColors_, 4, glow::AttributeType::FLOAT, false, sizeof(GlColor), nullptr);
-  vao_points_.setVertexAttribute(3, bufVisible_, 1, glow::AttributeType::UNSIGNED_INT, false, sizeof(uint32_t),
-                                 nullptr);
+  vao_points_.setVertexAttribute(0, bufPoints_, 3, AttributeType::FLOAT, false, sizeof(Point3f), nullptr);
+  vao_points_.setVertexAttribute(1, bufRemissions_, 1, AttributeType::FLOAT, false, sizeof(float), nullptr);
+  vao_points_.setVertexAttribute(2, bufLabelColors_, 4, AttributeType::FLOAT, false, sizeof(GlColor), nullptr);
+  vao_points_.setVertexAttribute(3, bufVisible_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
@@ -65,53 +69,98 @@ void Viewport::setFixedAxis(AXIS axis) {
 }
 
 void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<LabelsPtr>& l) {
-  // this must be happend gradually.
-
   std::cout << "Setting points..." << std::flush;
   points_ = p;
   labels_ = l;
 
-  std::vector<Eigen::Vector4f> accumulPoints;
-  std::vector<float> accumlRemissions;
-  std::vector<GlColor> label_colors;
+  {
+    // first remove entries using a set_difference
+    std::vector<Laserscan*> before;
+    std::vector<Laserscan*> after;
+    for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) before.push_back(it->first);
+    for (auto it = p.begin(); it != p.end(); ++it) after.push_back(it->get());
 
-  for (uint32_t t = 0; t < points_.size(); ++t) {
-    accumulPoints.reserve(accumulPoints.size() + points_[t]->size());
-    for (uint32_t i = 0; i < points_[t]->size(); ++i) {
-      Eigen::Vector4f p(points_[t]->points[i].x, points_[t]->points[i].y, points_[t]->points[i].z, 1.0f);
-      accumulPoints.push_back(points_[t]->pose * p);
-    }
+    std::sort(before.begin(), before.end());
+    std::sort(after.begin(), after.end());
+
+    std::vector<Laserscan*> needsDelete;
+    std::vector<Laserscan*>::iterator end =
+        std::set_difference(before.begin(), before.end(), after.begin(), after.end(), needsDelete.begin());
+
+    for (auto it = needsDelete.begin(); it != end; ++it) bufferContent_.erase(*it);
   }
 
-  accumlRemissions.resize(accumulPoints.size(), 1.0f);
-  uint32_t offset = 0;
-  for (uint32_t t = 0; t < points_.size(); ++t) {
-    if (points_[t]->hasRemissions()) {
-      for (uint32_t i = 0; i < points_[t]->size(); ++i) {
-        accumlRemissions[offset + i] = points_[t]->remissions[i];
+  std::vector<int32_t> usedIndexes;
+  for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
+    usedIndexes.push_back(it->second.index);
+  }
+
+  std::sort(usedIndexes.begin(), usedIndexes.end());
+  usedIndexes.push_back(maxScans_);
+
+  std::vector<int32_t> freeIndexes;
+  for (int32_t j = 0; j < usedIndexes[0]; ++j) freeIndexes.push_back(j);
+  for (uint32_t i = 0; i < usedIndexes.size() - 1; ++i) {
+    for (int32_t j = usedIndexes[i] + 1; j < usedIndexes[i + 1]; ++j) freeIndexes.push_back(j);
+  }
+
+  std::cout << freeIndexes.size() << " free spots." << std::endl;
+
+  uint32_t nextFree = 0;
+  uint32_t loadedScans = 0;
+  float memcpy_time = 0.0f;
+
+  Stopwatch::tic();
+  for (uint32_t i = 0; i < points_.size(); ++i) {
+    if (bufferContent_.find(points_[i].get()) == bufferContent_.end()) {
+      if (nextFree == freeIndexes.size()) {
+        std::cerr << "Warning: insufficient memory for scan." << std::endl;
+        break;
       }
+
+      int32_t index = freeIndexes[nextFree++];
+      std::cout << index << std::endl;
+
+      // not already loaded to buffer, need to transfer data to next free spot.
+      uint32_t num_points = std::min(maxPointsPerScan_, points_[i]->size());
+      if (points_[i]->size() >= maxPointsPerScan_) std::cerr << "warning: losing some points" << std::endl;
+
+      std::vector<GlColor> label_colors(num_points, GlColor::BLACK);
+      if (labels_[i]->size() < num_points) {
+        std::cout << "thats weird: " << labels_[i]->size() << " < " << num_points << std::endl;
+      } else {
+        for (uint32_t j = 0; j < num_points; ++j) {
+          label_colors[j] = mLabelColors[(*labels_[i])[j]];
+        }
+      }
+
+      std::vector<uint32_t> visible(num_points, 1);  // TODO: use visibilities by toggled labels.
+
+      Stopwatch::tic();
+
+      BufferInfo info;
+      info.index = index;
+      info.size = num_points;
+
+      bufferContent_[points_[i].get()] = info;
+      bufPoses_[index] = points_[i]->pose;
+      bufPoints_.replace(index * maxPointsPerScan_, &points_[i]->points[0], num_points);
+      if (points_[i]->hasRemissions())
+        bufRemissions_.replace(index * maxPointsPerScan_, &points_[i]->remissions[0], num_points);
+      bufLabelColors_.replace(index * maxPointsPerScan_, label_colors);
+      bufVisible_.replace(index * maxPointsPerScan_, visible);
+
+      memcpy_time += Stopwatch::toc();
+
+      loadedScans += 1;
     }
-    offset += points_[t]->size();
   }
+  float total_time = Stopwatch::toc();
 
-  label_colors.resize(accumulPoints.size());
-  offset = 0;
-  for (uint32_t t = 0; t < labels_.size(); ++t) {
-    for (uint32_t i = 0; i < labels_[t]->size(); ++i) {
-      label_colors[offset + i] = mLabelColors[(*labels_[t])[i]];
-    }
-    offset += labels_[t]->size();
-  }
-
-  std::vector<uint32_t> visible(accumulPoints.size(), 1);
-
-  bufPoints_.assign(accumulPoints);
-  bufRemissions_.assign(accumlRemissions);
-  bufLabelColors_.assign(label_colors);
-  bufVisible_.assign(visible);
+  std::cout << "Loaded " << loadedScans << " of total " << points_.size() << " scans." << std::endl;
+  std::cout << "memcpy: " << memcpy_time << " s / " << total_time << " s." << std::endl;
 
   updateGL();
-  std::cout << "ended." << std::flush;
 }
 
 void Viewport::setRadius(float value) {
@@ -201,9 +250,12 @@ void Viewport::paintGL() {
     ScopedBinder<GlProgram> program_binder(prgDrawPoints_);
     ScopedBinder<GlVertexArray> vao_binder(vao_points_);
 
-    prgDrawPoints_.setUniform(mvp_);
+    for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
+      mvp_ = projection_ * view_ * conversion_ * it->first->pose;
+      prgDrawPoints_.setUniform(mvp_);
 
-    glDrawArrays(GL_POINTS, 0, bufPoints_.size());
+      glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
+    }
   }
   //
   //    glMatrixMode(GL_MODELVIEW);
@@ -376,36 +428,36 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
 
 void Viewport::keyPressEvent(QKeyEvent*) {}
 
-void Viewport::drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels) {
-  glPushMatrix();
-  glMultMatrixf(RoSe2GL::matrix.data());
-
-  glPointSize(pointSize_);
-  glColor3fv(GlColor::BLACK);
-
-  glBegin(GL_POINTS);
-  for (uint32_t i = 0; i < points.size(); ++i) {
-    bool found = false;
-
-    for (uint32_t j = 0; j < mFilteredLabels.size(); ++j) {
-      if (mFilteredLabels[j] == labels[i]) {
-        found = true;
-        break;
-      }
-    }
-
-    if (!found && mFilteredLabels.size() > 0) continue;
-
-    if (mLabelColors.find(labels[i]) == mLabelColors.end())
-      glColor3fv(GlColor::BLACK);
-    else
-      glColor3fv(mLabelColors[labels[i]]);
-    glVertex3fv(&points[i].x);
-  }
-  glEnd();
-
-  glPopMatrix();
-}
+// void Viewport::drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels) {
+//  glPushMatrix();
+//  glMultMatrixf(RoSe2GL::matrix.data());
+//
+//  glPointSize(pointSize_);
+//  glColor3fv(GlColor::BLACK);
+//
+//  glBegin(GL_POINTS);
+//  for (uint32_t i = 0; i < points.size(); ++i) {
+//    bool found = false;
+//
+//    for (uint32_t j = 0; j < mFilteredLabels.size(); ++j) {
+//      if (mFilteredLabels[j] == labels[i]) {
+//        found = true;
+//        break;
+//      }
+//    }
+//
+//    if (!found && mFilteredLabels.size() > 0) continue;
+//
+//    if (mLabelColors.find(labels[i]) == mLabelColors.end())
+//      glColor3fv(GlColor::BLACK);
+//    else
+//      glColor3fv(mLabelColors[labels[i]]);
+//    glVertex3fv(&points[i].x);
+//  }
+//  glEnd();
+//
+//  glPopMatrix();
+//}
 
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label) {
   if (points_.size() == 0 || labels_.size() == 0) return;

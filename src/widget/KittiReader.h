@@ -37,6 +37,11 @@ class KittiReader {
   KITTICalibration calib_;
   std::vector<Eigen::Matrix4f> poses_;
   std::vector<std::string> velodyne_filenames_;
+  std::vector<std::string> label_filenames_;
+
+  // cache reads from before.
+  std::map<uint32_t, PointcloudPtr> pointsCache_;
+  std::map<uint32_t, LabelsPtr> labelCache_;
 };
 
 #endif /* SRC_WIDGET_KITTIREADER_H_ */
