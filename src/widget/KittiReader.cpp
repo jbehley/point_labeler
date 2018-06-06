@@ -61,6 +61,8 @@ void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::
 
   float maxDistance = 15.0f;
 
+  uint32_t scansRead = 0;
+
   // find nearby scans.
   Eigen::Vector4f midpoint = poses_[index].col(3);
   for (uint32_t t = 0; t < velodyne_filenames_.size(); ++t) {
@@ -69,6 +71,8 @@ void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::
       indexesAfter.push_back(t);
 
       if (pointsCache_.find(t) == pointsCache_.end()) {
+        scansRead += 1;
+
         points.push_back(std::shared_ptr<Laserscan>(new Laserscan));
         readPoints(velodyne_filenames_[t], *points.back());
         pointsCache_[t] = points.back();
@@ -93,16 +97,21 @@ void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::
     }
   }
 
-  std::cout << (indexesAfter.size() - indexesBefore.size()) << " point clouds read." << std::endl;
+  std::cout << scansRead << " point clouds read." << std::endl;
 
   // FIXME: keep more scans in cache. not only remove unloaded scans.
 
   std::sort(indexesBefore.begin(), indexesBefore.end());
   std::sort(indexesAfter.begin(), indexesAfter.end());
 
+  std::cout << "before: " << rv::stringify(indexesBefore) << std::endl;
+  std::cout << "after: " << rv::stringify(indexesAfter) << std::endl;
+
   std::vector<int32_t> needsDelete(indexesBefore.size());
   std::vector<int32_t>::iterator end = std::set_difference(
       indexesBefore.begin(), indexesBefore.end(), indexesAfter.begin(), indexesAfter.end(), needsDelete.begin());
+
+  std::cout << "must be deleted: " << rv::stringify(needsDelete) << std::endl;
 
   for (auto it = needsDelete.begin(); it != end; ++it) {
     pointsCache_.erase(*it);

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>866</width>
-    <height>612</height>
+    <height>615</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -44,7 +44,7 @@
          <x>0</x>
          <y>0</y>
          <width>200</width>
-         <height>477</height>
+         <height>476</height>
         </rect>
        </property>
        <attribute name="label">
@@ -351,17 +351,71 @@
        </widget>
       </item>
       <item>
-       <widget class="QSlider" name="sldTimeline">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+       <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <property name="leftMargin">
+         <number>5</number>
         </property>
-        <property name="tickPosition">
-         <enum>QSlider::TicksBelow</enum>
+        <property name="topMargin">
+         <number>5</number>
         </property>
-        <property name="tickInterval">
-         <number>100</number>
+        <property name="rightMargin">
+         <number>5</number>
         </property>
-       </widget>
+        <property name="bottomMargin">
+         <number>5</number>
+        </property>
+        <item>
+         <widget class="QToolButton" name="btnBackward">
+          <property name="minimumSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>&lt;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSlider" name="sldTimeline">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="tickPosition">
+           <enum>QSlider::TicksBelow</enum>
+          </property>
+          <property name="tickInterval">
+           <number>100</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QToolButton" name="btnForward">
+          <property name="minimumSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>&gt;</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </item>
@@ -373,7 +427,7 @@
      <x>0</x>
      <y>0</y>
      <width>866</width>
-     <height>26</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">

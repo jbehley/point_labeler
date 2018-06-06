@@ -73,9 +73,7 @@ void Viewport::initVertexBuffers() {
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
-void Viewport::setFixedAxis(AXIS axis) {
-  mAxis = axis;
-}
+void Viewport::setFixedAxis(AXIS axis) { mAxis = axis; }
 
 void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<LabelsPtr>& l) {
   std::cout << "Setting points..." << std::flush;
@@ -170,17 +168,11 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   updateGL();
 }
 
-void Viewport::setRadius(float value) {
-  mRadius = value;
-}
+void Viewport::setRadius(float value) { mRadius = value; }
 
-void Viewport::setLabel(uint32_t label) {
-  mCurrentLabel = label;
-}
+void Viewport::setLabel(uint32_t label) { mCurrentLabel = label; }
 
-void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
-  mLabelColors = colors;
-}
+void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) { mLabelColors = colors; }
 
 void Viewport::setPointSize(int value) {
   pointSize_ = value;
@@ -192,9 +184,7 @@ void Viewport::setMode(MODE mode) {
   updateGL();
 }
 
-void Viewport::setFlags(int32_t flags) {
-  mFlags = flags;
-}
+void Viewport::setFlags(int32_t flags) { mFlags = flags; }
 
 void Viewport::setOverwrite(bool value) {
   if (value)
@@ -478,40 +468,42 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 
   // TODO: use quadtree to accelerate search.
 
-  for (uint32_t t = 0; t < points_.size(); ++t)
-    for (uint32_t i = 0; i < points_[t]->size(); ++i) {
-      //    Point3f& p = scan[i].pos;
-      //    Point3f global_pos = scan.pose()(scan[i].pos);
-      //    float distance = p.x * p.x + p.y * p.y + p.z * p.z;
-      //
-      //    Label label = labels[i];
-      //    if (do_mapping && mapping.find(label) != mapping.end()) label = mapping[label];
-      //    if (do_filtering && filter.find(label) == filter.end()) continue;
-      //
-      //    if (mFilterPointsDistance && (distance > max_distance2 || distance < min_distance2)) continue;
-      //    if (!mShowLabeledPoints && label != 0) continue;
+  for (uint32_t i = 0; i < projectedPoints_.size(); ++i) {
+    //    Point3f& p = scan[i].pos;
+    //    Point3f global_pos = scan.pose()(scan[i].pos);
+    //    float distance = p.x * p.x + p.y * p.y + p.z * p.z;
+    //
+    //    Label label = labels[i];
+    //    if (do_mapping && mapping.find(label) != mapping.end()) label = mapping[label];
+    //    if (do_filtering && filter.find(label) == filter.end()) continue;
+    //
+    //    if (mFilterPointsDistance && (distance > max_distance2 || distance < min_distance2)) continue;
+    //    if (!mShowLabeledPoints && label != 0) continue;
 
-      //      if (!vf.isInside((*points_[t])[i].x, (*points_[t])[i].y, (*points_[t])[i].z)) continue; // TODO::
-      //      Culling!
+    //      if (!vf.isInside((*points_[t])[i].x, (*points_[t])[i].y, (*points_[t])[i].z)) continue; // TODO::
+    //      Culling!
 
-      bool found = false;
+    bool found = false;
 
-      for (uint32_t j = 0; j < mFilteredLabels.size(); ++j)
-        if (mFilteredLabels[j] == (*labels_[t])[i]) {
-          found = true;
-          break;
-        }
+    uint32_t& label = (*labels_[projectedPoints_[i].timestamp])[projectedPoints_[i].index];
 
-      if (!found && mFilteredLabels.size() > 0) continue;
-
-      double dx = projected_points[i].x - x;
-      double dy = projected_points[i].y - y;
-      if (dx * dx + dy * dy < radius2) {
-        if (((*labels_[t])[i] == 0) || (mFlags & FLAG_OVERWRITE)) {
-          (*labels_[t])[i] = new_label;
-        }
+    for (uint32_t j = 0; j < mFilteredLabels.size(); ++j) {
+      if (mFilteredLabels[j] == label) {
+        found = true;
+        break;
       }
     }
+
+    if (!found && mFilteredLabels.size() > 0) continue;
+
+    double dx = projectedPoints_[i].pos.x - x;
+    double dy = projectedPoints_[i].pos.y - y;
+    if (dx * dx + dy * dy < radius2) {
+      if ((label == 0) || (mFlags & FLAG_OVERWRITE)) {
+        label = new_label;
+      }
+    }
+  }
 
   emit labelingChanged();
 }
@@ -544,7 +536,8 @@ void Viewport::updateProjections() {
       ProjectedPoint p;
       p.pos.x = 0.5 * (projectedPointsScan[i].x + 1.0f) * width();
       p.pos.y = height() - 0.5 * (projectedPointsScan[i].y + 1.0f);
-      p.index = uint32_t(projectedPointsScan[i].z);
+      p.timestamp = it->second.index;
+      p.index = i;
       projectedPoints_.push_back(p);
     }
 

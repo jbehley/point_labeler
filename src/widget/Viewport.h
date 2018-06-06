@@ -117,7 +117,6 @@ class Viewport : public QGLWidget {
 
   std::vector<PointcloudPtr> points_;
   std::vector<LabelsPtr> labels_;
-  std::vector<Point3f> projected_points;
 
   glow::RoSeCamera mCamera;
 

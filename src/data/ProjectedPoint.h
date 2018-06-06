@@ -6,6 +6,7 @@
 
 struct ProjectedPoint {
   glow::vec2 pos;
+  uint32_t timestamp;
   uint32_t index;
 };
 
