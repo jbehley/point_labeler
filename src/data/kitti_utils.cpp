@@ -1,12 +1,12 @@
 #include "kitti_utils.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <boost/lexical_cast.hpp>
 #include <fstream>
+#include <iostream>
 #include <vector>
 #include "rv/string_utils.h"
-#include <boost/lexical_cast.hpp>
-#include <iostream>
-#include <stdlib.h>
-#include <stdio.h>
 
 using namespace rv;
 
@@ -16,8 +16,7 @@ using namespace rv;
     exit(1);                                     \
   }
 
-KITTICalibration::KITTICalibration() {
-}
+KITTICalibration::KITTICalibration() {}
 
 KITTICalibration::KITTICalibration(const std::string& filename) {
   initialize(filename);
@@ -80,7 +79,8 @@ std::vector<Eigen::Matrix4f> loadPoses(const std::string& file_name) {
   std::ifstream fp(file_name.c_str());
   std::string line;
 
-  if (!fp.is_open()) return poses;
+  if (!fp.is_open()) throw std::runtime_error("Unable to open pose file :" + file_name);
+
   fp.peek();
 
   while (fp.good()) {

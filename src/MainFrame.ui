@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>902</width>
-    <height>701</height>
+    <width>866</width>
+    <height>612</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,6 +22,12 @@
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>200</width>
+        <height>0</height>
+       </size>
       </property>
       <property name="maximumSize">
        <size>
@@ -38,7 +44,7 @@
          <x>0</x>
          <y>0</y>
          <width>200</width>
-         <height>566</height>
+         <height>477</height>
         </rect>
        </property>
        <attribute name="label">
@@ -335,7 +341,14 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
-       <widget class="Viewport" name="mViewportXYZ" native="true"/>
+       <widget class="Viewport" name="mViewportXYZ" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>640</width>
+          <height>480</height>
+         </size>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QSlider" name="sldTimeline">
@@ -359,7 +372,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>902</width>
+     <width>866</width>
      <height>26</height>
     </rect>
    </property>

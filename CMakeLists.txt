@@ -53,7 +53,7 @@ COMPILE_SHADERS(${VIZ_SHADER_SRC}
   src/shaders/draw_pose.geom
   
   src/shaders/draw_points.vert
-  src/shaders/draw_points.frag
+  src/shaders/project_points.vert
 )
 
 add_executable(labeler 

@@ -21,14 +21,18 @@
 
 #include <glow/GlBuffer.h>
 #include <glow/GlColor.h>
+#include <glow/GlFramebuffer.h>
 #include <glow/GlProgram.h>
+#include <glow/GlRenderbuffer.h>
 #include <glow/GlShaderCache.h>
+#include <glow/GlTexture.h>
 #include <glow/GlVertexArray.h>
 #include <glow/util/RoSeCamera.h>
 
 #include "common.h"
 #include "data/ViewFrustum.h"
 #include "data/geometry.h"
+#include "data/ProjectedPoint.h"
 
 class Viewport : public QGLWidget {
   Q_OBJECT
@@ -132,19 +136,25 @@ class Viewport : public QGLWidget {
   QTimer timer_;
 
   // shaders, etc.
-  uint32_t maxScans_ = 500;
-  uint32_t maxPointsPerScan_ = 150000;
+  uint32_t maxScans_{25};
+  uint32_t maxPointsPerScan_{150000};
   std::vector<Eigen::Matrix4f> bufPoses_;
   glow::GlBuffer<Point3f> bufPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<float> bufRemissions_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<glow::GlColor> bufLabelColors_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<uint32_t> bufVisible_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
+  glow::GlBuffer<glow::vec3> bufProjectedPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlTransformFeedback tfProjectedPoints_;
+
+  std::vector<ProjectedPoint> projectedPoints_;
+
   glow::GlVertexArray vao_no_points_;
   glow::GlVertexArray vao_points_;
 
   glow::GlProgram prgDrawPose_;
   glow::GlProgram prgDrawPoints_;
+  glow::GlProgram prgProjectPoints_;
 
   int32_t pointSize_{1};
   std::map<std::string, bool> drawing_options_;

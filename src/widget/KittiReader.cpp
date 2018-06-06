@@ -46,7 +46,7 @@ void KittiReader::initialize(const QString& directory) {
       out.close();
     }
 
-    label_filenames_.push_back(filename.toStdString());
+    label_filenames_.push_back(labels_dir.filePath(filename).toStdString());
   }
 }
 
@@ -59,7 +59,7 @@ void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::
   for (auto it = pointsCache_.begin(); it != pointsCache_.end(); ++it) indexesBefore.push_back(it->first);
   std::vector<int32_t> indexesAfter;
 
-  float maxDistance = 25.0f;
+  float maxDistance = 15.0f;
 
   // find nearby scans.
   Eigen::Vector4f midpoint = poses_[index].col(3);
@@ -77,6 +77,15 @@ void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::
         labels.push_back(std::shared_ptr<std::vector<uint32_t>>(new std::vector<uint32_t>()));
         readLabels(label_filenames_[t], *labels.back());
         labelCache_[t] = labels.back();
+
+        if (points.back()->size() != labels.back()->size()) {
+          std::cout << "Filename: " << velodyne_filenames_[t] << std::endl;
+          std::cout << "Filename: " << label_filenames_[t] << std::endl;
+          std::cout << "num. points = " << points.back()->size() << " vs. num. labels = " << labels.back()->size()
+                    << std::endl;
+          throw std::runtime_error("Inconsistent number of labels.");
+        }
+
       } else {
         points.push_back(pointsCache_[t]);
         labels.push_back(labelCache_[t]);
@@ -153,7 +162,7 @@ void KittiReader::readPoints(const std::string& filename, Laserscan& scan) {
 void KittiReader::readLabels(const std::string& filename, std::vector<uint32_t>& labels) {
   std::ifstream in(filename.c_str(), std::ios::binary);
   if (!in.is_open()) {
-    std::cerr << "Unabled to open label file. " << std::endl;
+    std::cerr << "Unable to open label file. " << std::endl;
     return;
   }
 

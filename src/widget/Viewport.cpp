@@ -21,9 +21,6 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       mRadius(5),
       buttonPressed(false) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
-  // mCamera.setPosition(-50, -50, -50);
-  // mCamera.setYaw(Math::deg2rad(-125.0));
-  // mCamera.setPitch(Math::deg2rad(-45.0));
 
   //  setMouseTracking(true);
 
@@ -31,29 +28,41 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   conversion_ = RoSe2GL::matrix;
 
-  uint32_t max_size = maxScans_ * maxPointsPerScan_;  // 20 scans with 150.000 points.
+  uint32_t max_size = maxScans_ * maxPointsPerScan_;
 
   bufPoses_.resize(maxScans_);
-  bufPoints_.reserve(max_size);
-  bufRemissions_.reserve(max_size);
-  bufVisible_.reserve(max_size);
-  bufLabelColors_.reserve(max_size);
+  bufPoints_.resize(max_size);
+  bufRemissions_.resize(max_size);
+  bufVisible_.resize(max_size);
+  bufLabelColors_.resize(max_size);
+
+  std::vector<std::string> feedback_varyings{"projected_point"};
+
+  bufProjectedPoints_.resize(maxPointsPerScan_);
+  tfProjectedPoints_.attach(feedback_varyings, bufProjectedPoints_);
 
   initPrograms();
   initVertexBuffers();
+
+  glow::_CheckGlError(__FILE__, __LINE__);
 }
 
 Viewport::~Viewport() {}
 
 void Viewport::initPrograms() {
   prgDrawPoints_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/draw_points.vert"));
-  prgDrawPoints_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/draw_points.frag"));
+  prgDrawPoints_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgDrawPoints_.link();
 
   prgDrawPose_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/empty.vert"));
   prgDrawPose_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/draw_pose.geom"));
   prgDrawPose_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgDrawPose_.link();
+
+  prgProjectPoints_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/project_points.vert"));
+  prgProjectPoints_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
+  prgProjectPoints_.attach(tfProjectedPoints_);
+  prgProjectPoints_.link();
 }
 
 void Viewport::initVertexBuffers() {
@@ -72,6 +81,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   std::cout << "Setting points..." << std::flush;
   points_ = p;
   labels_ = l;
+  glow::_CheckGlError(__FILE__, __LINE__);
 
   {
     // first remove entries using a set_difference
@@ -104,8 +114,6 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     for (int32_t j = usedIndexes[i] + 1; j < usedIndexes[i + 1]; ++j) freeIndexes.push_back(j);
   }
 
-  std::cout << freeIndexes.size() << " free spots." << std::endl;
-
   uint32_t nextFree = 0;
   uint32_t loadedScans = 0;
   float memcpy_time = 0.0f;
@@ -119,19 +127,16 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
       }
 
       int32_t index = freeIndexes[nextFree++];
-      std::cout << index << std::endl;
+      //      std::cout << index << std::endl;
 
       // not already loaded to buffer, need to transfer data to next free spot.
       uint32_t num_points = std::min(maxPointsPerScan_, points_[i]->size());
       if (points_[i]->size() >= maxPointsPerScan_) std::cerr << "warning: losing some points" << std::endl;
 
       std::vector<GlColor> label_colors(num_points, GlColor::BLACK);
-      if (labels_[i]->size() < num_points) {
-        std::cout << "thats weird: " << labels_[i]->size() << " < " << num_points << std::endl;
-      } else {
-        for (uint32_t j = 0; j < num_points; ++j) {
-          label_colors[j] = mLabelColors[(*labels_[i])[j]];
-        }
+
+      for (uint32_t j = 0; j < num_points; ++j) {
+        label_colors[j] = mLabelColors[(*labels_[i])[j]];
       }
 
       std::vector<uint32_t> visible(num_points, 1);  // TODO: use visibilities by toggled labels.
@@ -147,8 +152,8 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
       bufPoints_.replace(index * maxPointsPerScan_, &points_[i]->points[0], num_points);
       if (points_[i]->hasRemissions())
         bufRemissions_.replace(index * maxPointsPerScan_, &points_[i]->remissions[0], num_points);
-      bufLabelColors_.replace(index * maxPointsPerScan_, label_colors);
-      bufVisible_.replace(index * maxPointsPerScan_, visible);
+      bufLabelColors_.replace(index * maxPointsPerScan_, &label_colors[0], num_points);
+      bufVisible_.replace(index * maxPointsPerScan_, &visible[0], num_points);
 
       memcpy_time += Stopwatch::toc();
 
@@ -156,6 +161,8 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     }
   }
   float total_time = Stopwatch::toc();
+
+  glow::_CheckGlError(__FILE__, __LINE__);
 
   std::cout << "Loaded " << loadedScans << " of total " << points_.size() << " scans." << std::endl;
   std::cout << "memcpy: " << memcpy_time << " s / " << total_time << " s." << std::endl;
@@ -218,16 +225,14 @@ void Viewport::resizeGL(int w, int h) {
   float aspect = float(w) / float(h);
 
   projection_ = glPerspective(fov, aspect, 0.1f, 2000.0f);
+
+  updateProjections();
 }
 
 void Viewport::paintGL() {
   glEnable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPointSize(pointSize_);
-
-  vf.update();
-  /** update the projected coordinates. TODO: only if pose changes. **/
-  updateProjections();
 
   model_ = Eigen::Matrix4f::Identity();
   view_ = mCamera.matrix();
@@ -246,7 +251,7 @@ void Viewport::paintGL() {
     glDrawArrays(GL_POINTS, 0, 1);
   }
 
-  if (points_.size()) {
+  if (points_.size() > 0) {
     ScopedBinder<GlProgram> program_binder(prgDrawPoints_);
     ScopedBinder<GlVertexArray> vao_binder(vao_points_);
 
@@ -320,6 +325,10 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
                             resolveKeyboardModifier(event->modifiers()))) {
     timer_.stop();
     updateGL();  // get the last action.
+
+    //    vf.update();
+    /** update the projected coordinates. TODO: only if pose changes. **/
+    updateProjections();
 
     return;
   }
@@ -402,9 +411,9 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
 void Viewport::mouseMoveEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
   if (mCamera.mouseMoved(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
-                         resolveKeyboardModifier(event->modifiers())))
+                         resolveKeyboardModifier(event->modifiers()))) {
     return;
-
+  }
   if (mMode == PAINT) {
     if (buttonPressed) {
       if (event->buttons() & Qt::LeftButton)
@@ -508,6 +517,43 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 }
 
 void Viewport::updateProjections() {
+  Stopwatch::tic();
+  ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
+  ScopedBinder<GlTransformFeedback> feedbackBinder(tfProjectedPoints_);
+  ScopedBinder<GlProgram> programBinder(prgProjectPoints_);
+
+  projectedPoints_.clear();
+
+  uint32_t numPointsAll = 0;
+  glEnable(GL_RASTERIZER_DISCARD);
+  std::vector<vec3> projectedPointsScan(maxPointsPerScan_);
+  for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
+    mvp_ = projection_ * mCamera.matrix() * conversion_ * it->first->pose;
+    prgDrawPoints_.setUniform(mvp_);
+
+    tfProjectedPoints_.begin(TransformFeedbackMode::POINTS);
+    glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
+    bufProjectedPoints_.resize(tfProjectedPoints_.end());
+
+    bufProjectedPoints_.get(projectedPointsScan);
+    for (uint32_t i = 0; i < projectedPointsScan.size(); ++i) {
+      if (projectedPointsScan[i].x < -1.0f || projectedPointsScan[i].x > 1.0f || projectedPointsScan[i].y < -1.0f ||
+          projectedPointsScan[i].y > 1.0f)
+        continue;
+
+      ProjectedPoint p;
+      p.pos.x = 0.5 * (projectedPointsScan[i].x + 1.0f) * width();
+      p.pos.y = height() - 0.5 * (projectedPointsScan[i].y + 1.0f);
+      p.index = uint32_t(projectedPointsScan[i].z);
+      projectedPoints_.push_back(p);
+    }
+
+    numPointsAll += projectedPointsScan.size();
+  }
+
+  glDisable(GL_RASTERIZER_DISCARD);
+
+  std::cout << "Projected " << numPointsAll << " in " << Stopwatch::toc() << " s" << std::endl;
   //  if (points == 0 || labels == 0) return;
   //
   //  glPushMatrix();
