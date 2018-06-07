@@ -83,9 +83,7 @@ void Viewport::initVertexBuffers() {
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
-void Viewport::setFixedAxis(AXIS axis) {
-  mAxis = axis;
-}
+void Viewport::setFixedAxis(AXIS axis) { mAxis = axis; }
 
 void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<LabelsPtr>& l) {
   std::cout << "Setting points..." << std::flush;
@@ -176,13 +174,9 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   updateGL();
 }
 
-void Viewport::setRadius(float value) {
-  mRadius = value;
-}
+void Viewport::setRadius(float value) { mRadius = value; }
 
-void Viewport::setLabel(uint32_t label) {
-  mCurrentLabel = label;
-}
+void Viewport::setLabel(uint32_t label) { mCurrentLabel = label; }
 
 void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
   mLabelColors = colors;
@@ -206,9 +200,7 @@ void Viewport::setMode(MODE mode) {
   updateGL();
 }
 
-void Viewport::setFlags(int32_t flags) {
-  mFlags = flags;
-}
+void Viewport::setFlags(int32_t flags) { mFlags = flags; }
 
 void Viewport::setOverwrite(bool value) {
   if (value)
@@ -323,6 +315,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
     }
   } else if (mMode == PAINT) {
     buttonPressed = true;
+    mChangeCamera = false;
     if (event->buttons() & Qt::LeftButton)
       labelPoints(event->x(), event->y(), mRadius, mCurrentLabel);
     else if (event->buttons() & Qt::RightButton)
@@ -358,6 +351,13 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
     }
   } else if (mMode == PAINT) {
     buttonPressed = false;
+
+    if (event->buttons() & Qt::LeftButton)
+      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel);
+    else if (event->buttons() & Qt::RightButton)
+      labelPoints(event->x(), event->y(), mRadius, 0);
+
+    updateGL();
   }
   //  if (mSelectionMode && !((mCurrentPaintMode & PAINT_BRUSH)
   //      || (mCurrentPaintMode & PAINT_FILLPOLYGON)) && (e->button()
@@ -526,7 +526,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
     glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
     tfUpdateLabels_.end();
 
-    bufUpdatedLabels_.copyTo(0, maxPointsPerScan_, bufLabels_, it->second.index * maxPointsPerScan_);
+    bufUpdatedLabels_.copyTo(bufLabels_, it->second.index * maxPointsPerScan_);
   }
 
   glDisable(GL_RASTERIZER_DISCARD);
