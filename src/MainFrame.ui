@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>866</width>
-    <height>615</height>
+    <height>624</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -44,7 +44,7 @@
          <x>0</x>
          <y>0</y>
          <width>200</width>
-         <height>476</height>
+         <height>489</height>
         </rect>
        </property>
        <attribute name="label">
@@ -179,12 +179,18 @@
             <property name="text">
              <string>Brush</string>
             </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
            </widget>
           </item>
           <item>
            <widget class="QToolButton" name="btnPolygonMode">
             <property name="text">
              <string>Polygon</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -427,7 +433,7 @@
      <x>0</x>
      <y>0</y>
      <width>866</width>
-     <height>27</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">

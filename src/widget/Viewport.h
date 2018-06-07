@@ -30,9 +30,9 @@
 #include <glow/util/RoSeCamera.h>
 
 #include "common.h"
+#include "data/ProjectedPoint.h"
 #include "data/ViewFrustum.h"
 #include "data/geometry.h"
-#include "data/ProjectedPoint.h"
 
 class Viewport : public QGLWidget {
   Q_OBJECT
@@ -119,6 +119,7 @@ class Viewport : public QGLWidget {
   std::vector<LabelsPtr> labels_;
 
   glow::RoSeCamera mCamera;
+  bool mChangeCamera{false};
 
   AXIS mAxis;
   MODE mMode;
@@ -140,11 +141,16 @@ class Viewport : public QGLWidget {
   std::vector<Eigen::Matrix4f> bufPoses_;
   glow::GlBuffer<Point3f> bufPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<float> bufRemissions_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
-  glow::GlBuffer<glow::GlColor> bufLabelColors_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<uint32_t> bufLabels_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<uint32_t> bufVisible_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
   glow::GlBuffer<glow::vec3> bufProjectedPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlTransformFeedback tfProjectedPoints_;
+
+  glow::GlTransformFeedback tfUpdateLabels_;
+  glow::GlBuffer<uint32_t> bufUpdatedLabels_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+
+  glow::GlTextureRectangle texLabelColors_;
 
   std::vector<ProjectedPoint> projectedPoints_;
 
@@ -154,6 +160,7 @@ class Viewport : public QGLWidget {
   glow::GlProgram prgDrawPose_;
   glow::GlProgram prgDrawPoints_;
   glow::GlProgram prgProjectPoints_;
+  glow::GlProgram prgUpdateLabels_;
 
   int32_t pointSize_{1};
   std::map<std::string, bool> drawing_options_;

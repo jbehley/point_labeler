@@ -23,7 +23,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.actionSave, SIGNAL(triggered()), this, SLOT(save()));
 
   /** initialize the paint button mapping **/
-  connect(ui.actionPaintMode, &QAction::triggered, [this]() { changeMode(Viewport::PAINT); });
+  connect(ui.btnBrushMode, &QToolButton::released, [this]() { changeMode(Viewport::PAINT); });
 
   connect(ui.mViewportXYZ, SIGNAL(labelingChanged()), this, SLOT(unsavedChanges()));
 
@@ -153,8 +153,9 @@ void Mainframe::changeRadius(int value) {
 void Mainframe::changeMode(int mode) {
   ui.mViewportXYZ->setMode(Viewport::NONE);
 
-  if (mode == Viewport::PAINT && ui.actionPaintMode->isChecked()) /** PAINTMODE **/
+  if (mode == Viewport::PAINT && ui.btnBrushMode->isChecked()) /** PAINTMODE **/
   {
+    std::cout << "triggered paint mode." << std::endl;
     ui.mViewportXYZ->setMode(Viewport::PAINT);
 
     ui.actionCylinderMode->setChecked(false);

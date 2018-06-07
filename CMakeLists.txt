@@ -54,6 +54,7 @@ COMPILE_SHADERS(${VIZ_SHADER_SRC}
   
   src/shaders/draw_points.vert
   src/shaders/project_points.vert
+  src/shaders/update_labels.vert
 )
 
 add_executable(labeler 

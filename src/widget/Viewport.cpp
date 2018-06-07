@@ -19,7 +19,8 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       mFlags(FLAG_OVERWRITE),
       mCurrentLabel(0),
       mRadius(5),
-      buttonPressed(false) {
+      buttonPressed(false),
+      texLabelColors_(256, 1, TextureFormat::RGB) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
   //  setMouseTracking(true);
@@ -34,12 +35,16 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   bufPoints_.resize(max_size);
   bufRemissions_.resize(max_size);
   bufVisible_.resize(max_size);
-  bufLabelColors_.resize(max_size);
+  bufLabels_.resize(max_size);
 
   std::vector<std::string> feedback_varyings{"projected_point"};
 
   bufProjectedPoints_.resize(maxPointsPerScan_);
   tfProjectedPoints_.attach(feedback_varyings, bufProjectedPoints_);
+
+  bufUpdatedLabels_.resize(maxPointsPerScan_);
+  std::vector<std::string> update_varyings{"out_label"};
+  tfUpdateLabels_.attach(update_varyings, bufUpdatedLabels_);
 
   initPrograms();
   initVertexBuffers();
@@ -63,23 +68,32 @@ void Viewport::initPrograms() {
   prgProjectPoints_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgProjectPoints_.attach(tfProjectedPoints_);
   prgProjectPoints_.link();
+
+  prgUpdateLabels_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/update_labels.vert"));
+  prgUpdateLabels_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
+  prgUpdateLabels_.attach(tfUpdateLabels_);
+  prgUpdateLabels_.link();
 }
 
 void Viewport::initVertexBuffers() {
   vao_points_.setVertexAttribute(0, bufPoints_, 3, AttributeType::FLOAT, false, sizeof(Point3f), nullptr);
   vao_points_.setVertexAttribute(1, bufRemissions_, 1, AttributeType::FLOAT, false, sizeof(float), nullptr);
-  vao_points_.setVertexAttribute(2, bufLabelColors_, 4, AttributeType::FLOAT, false, sizeof(GlColor), nullptr);
+  vao_points_.setVertexAttribute(2, bufLabels_, 1, AttributeType::FLOAT, false, sizeof(uint32_t), nullptr);
   vao_points_.setVertexAttribute(3, bufVisible_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
-void Viewport::setFixedAxis(AXIS axis) { mAxis = axis; }
+void Viewport::setFixedAxis(AXIS axis) {
+  mAxis = axis;
+}
 
 void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<LabelsPtr>& l) {
   std::cout << "Setting points..." << std::flush;
   points_ = p;
   labels_ = l;
   glow::_CheckGlError(__FILE__, __LINE__);
+
+  // TODO: on unload => fetch labels and update labels in file.
 
   {
     // first remove entries using a set_difference
@@ -131,12 +145,6 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
       uint32_t num_points = std::min(maxPointsPerScan_, points_[i]->size());
       if (points_[i]->size() >= maxPointsPerScan_) std::cerr << "warning: losing some points" << std::endl;
 
-      std::vector<GlColor> label_colors(num_points, GlColor::BLACK);
-
-      for (uint32_t j = 0; j < num_points; ++j) {
-        label_colors[j] = mLabelColors[(*labels_[i])[j]];
-      }
-
       std::vector<uint32_t> visible(num_points, 1);  // TODO: use visibilities by toggled labels.
 
       Stopwatch::tic();
@@ -150,7 +158,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
       bufPoints_.replace(index * maxPointsPerScan_, &points_[i]->points[0], num_points);
       if (points_[i]->hasRemissions())
         bufRemissions_.replace(index * maxPointsPerScan_, &points_[i]->remissions[0], num_points);
-      bufLabelColors_.replace(index * maxPointsPerScan_, &label_colors[0], num_points);
+      bufLabels_.replace(index * maxPointsPerScan_, &(*labels_[i])[0], num_points);
       bufVisible_.replace(index * maxPointsPerScan_, &visible[0], num_points);
 
       memcpy_time += Stopwatch::toc();
@@ -168,11 +176,24 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   updateGL();
 }
 
-void Viewport::setRadius(float value) { mRadius = value; }
+void Viewport::setRadius(float value) {
+  mRadius = value;
+}
 
-void Viewport::setLabel(uint32_t label) { mCurrentLabel = label; }
+void Viewport::setLabel(uint32_t label) {
+  mCurrentLabel = label;
+}
 
-void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) { mLabelColors = colors; }
+void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
+  mLabelColors = colors;
+
+  std::vector<vec3> label_colors(256);
+  for (auto it = mLabelColors.begin(); it != mLabelColors.end(); ++it)
+    label_colors[it->first] = vec3(it->second.R, it->second.G, it->second.B);
+
+  label_colors[0] = vec3(0, 155, 0);
+  texLabelColors_.assign(PixelFormat::RGB, PixelType::UNSIGNED_INT, &label_colors[0]);
+}
 
 void Viewport::setPointSize(int value) {
   pointSize_ = value;
@@ -181,10 +202,13 @@ void Viewport::setPointSize(int value) {
 
 void Viewport::setMode(MODE mode) {
   mMode = mode;
+  std::cout << "mode is now paint. " << std::endl;
   updateGL();
 }
 
-void Viewport::setFlags(int32_t flags) { mFlags = flags; }
+void Viewport::setFlags(int32_t flags) {
+  mFlags = flags;
+}
 
 void Viewport::setOverwrite(bool value) {
   if (value)
@@ -195,6 +219,8 @@ void Viewport::setOverwrite(bool value) {
 
 void Viewport::setFilteredLabels(const std::vector<uint32_t>& labels) {
   mFilteredLabels = labels;
+
+  // TODO update visibility via SHADER (like the label update.)!
   updateGL();
 }
 
@@ -244,6 +270,8 @@ void Viewport::paintGL() {
   if (points_.size() > 0) {
     ScopedBinder<GlProgram> program_binder(prgDrawPoints_);
     ScopedBinder<GlVertexArray> vao_binder(vao_points_);
+    glActiveTexture(GL_TEXTURE0);
+    texLabelColors_.bind();
 
     for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
       mvp_ = projection_ * view_ * conversion_ * it->first->pose;
@@ -251,6 +279,8 @@ void Viewport::paintGL() {
 
       glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
     }
+
+    texLabelColors_.release();
   }
   //
   //    glMatrixMode(GL_MODELVIEW);
@@ -284,13 +314,14 @@ void Viewport::paintGL() {
 
 void Viewport::mousePressEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
-  if (mCamera.mousePressed(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
-                           resolveKeyboardModifier(event->modifiers()))) {
-    timer_.start(1. / 30.);
-    return;
-  }
-
-  if (mMode == PAINT) {
+  if (event->modifiers() == Qt::ControlModifier || (mMode != PAINT)) {
+    if (mCamera.mousePressed(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
+                             resolveKeyboardModifier(event->modifiers()))) {
+      timer_.start(1. / 30.);
+      mChangeCamera = true;
+      return;
+    }
+  } else if (mMode == PAINT) {
     buttonPressed = true;
     if (event->buttons() & Qt::LeftButton)
       labelPoints(event->x(), event->y(), mRadius, mCurrentLabel);
@@ -311,19 +342,21 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
 
 void Viewport::mouseReleaseEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
-  if (mCamera.mouseReleased(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
-                            resolveKeyboardModifier(event->modifiers()))) {
+  if (mChangeCamera) {
     timer_.stop();
-    updateGL();  // get the last action.
+    updateGL();
+    if (mCamera.mouseReleased(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
+                              resolveKeyboardModifier(event->modifiers()))) {
+      timer_.stop();
+      updateGL();  // get the last action.
 
-    //    vf.update();
-    /** update the projected coordinates. TODO: only if pose changes. **/
-    updateProjections();
+      //    vf.update();
+      /** update the projected coordinates. TODO: only if pose changes. **/
+      //      updateProjections();
 
-    return;
-  }
-
-  if (mMode == PAINT) {
+      return;
+    }
+  } else if (mMode == PAINT) {
     buttonPressed = false;
   }
   //  if (mSelectionMode && !((mCurrentPaintMode & PAINT_BRUSH)
@@ -400,11 +433,12 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
 
 void Viewport::mouseMoveEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
-  if (mCamera.mouseMoved(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
-                         resolveKeyboardModifier(event->modifiers()))) {
-    return;
-  }
-  if (mMode == PAINT) {
+  if (mChangeCamera) {
+    if (mCamera.mouseMoved(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
+                           resolveKeyboardModifier(event->modifiers()))) {
+      return;
+    }
+  } else if (mMode == PAINT) {
     if (buttonPressed) {
       if (event->buttons() & Qt::LeftButton)
         labelPoints(event->x(), event->y(), mRadius, mCurrentLabel);
@@ -458,52 +492,90 @@ void Viewport::keyPressEvent(QKeyEvent*) {}
 //  glPopMatrix();
 //}
 
+// uniform int width;
+// uniform int height;
+// uniform vec2 window_pos;
+// uniform float radius;
+// uniform uint new_label;
+
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label) {
   if (points_.size() == 0 || labels_.size() == 0) return;
 
-  float radius2 = radius * radius;
+  std::cout << "called labelPoints" << std::endl;
+  Stopwatch::tic();
 
-  //  float min_distance2 = min_distance * min_distance;
-  //  float max_distance2 = max_distance * max_distance;
+  ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
+  ScopedBinder<GlTransformFeedback> feedbackBinder(tfUpdateLabels_);
+  ScopedBinder<GlProgram> programBinder(prgUpdateLabels_);
 
-  // TODO: use quadtree to accelerate search.
+  prgUpdateLabels_.setUniform(GlUniform<vec2>("window_pos", glow::vec2(x, y)));
+  prgUpdateLabels_.setUniform(GlUniform<int32_t>("width", width()));
+  prgUpdateLabels_.setUniform(GlUniform<int32_t>("height", height()));
+  prgUpdateLabels_.setUniform(GlUniform<float>("radius", radius));
+  prgUpdateLabels_.setUniform(GlUniform<uint32_t>("new_label", new_label));
 
-  for (uint32_t i = 0; i < projectedPoints_.size(); ++i) {
-    //    Point3f& p = scan[i].pos;
-    //    Point3f global_pos = scan.pose()(scan[i].pos);
-    //    float distance = p.x * p.x + p.y * p.y + p.z * p.z;
-    //
-    //    Label label = labels[i];
-    //    if (do_mapping && mapping.find(label) != mapping.end()) label = mapping[label];
-    //    if (do_filtering && filter.find(label) == filter.end()) continue;
-    //
-    //    if (mFilterPointsDistance && (distance > max_distance2 || distance < min_distance2)) continue;
-    //    if (!mShowLabeledPoints && label != 0) continue;
+  glEnable(GL_RASTERIZER_DISCARD);
 
-    //      if (!vf.isInside((*points_[t])[i].x, (*points_[t])[i].y, (*points_[t])[i].z)) continue; // TODO::
-    //      Culling!
+  for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
+    mvp_ = projection_ * mCamera.matrix() * conversion_ * it->first->pose;
+    prgUpdateLabels_.setUniform(mvp_);
 
-    bool found = false;
+    //    tfUpdateLabels_.setBufferOffset(bufLabels_, it->second.index * maxPointsPerScan_);
 
-    uint32_t& label = (*labels_[projectedPoints_[i].timestamp])[projectedPoints_[i].index];
+    tfUpdateLabels_.begin(TransformFeedbackMode::POINTS);
+    glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
+    tfUpdateLabels_.end();
 
-    for (uint32_t j = 0; j < mFilteredLabels.size(); ++j) {
-      if (mFilteredLabels[j] == label) {
-        found = true;
-        break;
-      }
-    }
-
-    if (!found && mFilteredLabels.size() > 0) continue;
-
-    double dx = projectedPoints_[i].pos.x - x;
-    double dy = projectedPoints_[i].pos.y - y;
-    if (dx * dx + dy * dy < radius2) {
-      if ((label == 0) || (mFlags & FLAG_OVERWRITE)) {
-        label = new_label;
-      }
-    }
+    bufUpdatedLabels_.copyTo(0, maxPointsPerScan_, bufLabels_, it->second.index * maxPointsPerScan_);
   }
+
+  glDisable(GL_RASTERIZER_DISCARD);
+
+  std::cout << Stopwatch::toc() << " s." << std::endl;
+
+  //  float radius2 = radius * radius;
+  //
+  //  //  float min_distance2 = min_distance * min_distance;
+  //  //  float max_distance2 = max_distance * max_distance;
+  //
+  //  // TODO: use quadtree to accelerate search.
+  //
+  //  for (uint32_t i = 0; i < projectedPoints_.size(); ++i) {
+  //    //    Point3f& p = scan[i].pos;
+  //    //    Point3f global_pos = scan.pose()(scan[i].pos);
+  //    //    float distance = p.x * p.x + p.y * p.y + p.z * p.z;
+  //    //
+  //    //    Label label = labels[i];
+  //    //    if (do_mapping && mapping.find(label) != mapping.end()) label = mapping[label];
+  //    //    if (do_filtering && filter.find(label) == filter.end()) continue;
+  //    //
+  //    //    if (mFilterPointsDistance && (distance > max_distance2 || distance < min_distance2)) continue;
+  //    //    if (!mShowLabeledPoints && label != 0) continue;
+  //
+  //    //      if (!vf.isInside((*points_[t])[i].x, (*points_[t])[i].y, (*points_[t])[i].z)) continue; // TODO::
+  //    //      Culling!
+  //
+  //    bool found = false;
+  //
+  //    uint32_t& label = (*labels_[projectedPoints_[i].timestamp])[projectedPoints_[i].index];
+  //
+  //    for (uint32_t j = 0; j < mFilteredLabels.size(); ++j) {
+  //      if (mFilteredLabels[j] == label) {
+  //        found = true;
+  //        break;
+  //      }
+  //    }
+  //
+  //    if (!found && mFilteredLabels.size() > 0) continue;
+  //
+  //    double dx = projectedPoints_[i].pos.x - x;
+  //    double dy = projectedPoints_[i].pos.y - y;
+  //    if (dx * dx + dy * dy < radius2) {
+  //      if ((label == 0) || (mFlags & FLAG_OVERWRITE)) {
+  //        label = new_label;
+  //      }
+  //    }
+  //  }
 
   emit labelingChanged();
 }
