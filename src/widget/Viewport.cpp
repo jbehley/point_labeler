@@ -65,12 +65,12 @@ void Viewport::initPrograms() {
   prgDrawPose_.link();
 
   prgProjectPoints_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/project_points.vert"));
-  prgProjectPoints_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
+  prgProjectPoints_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/empty.frag"));
   prgProjectPoints_.attach(tfProjectedPoints_);
   prgProjectPoints_.link();
 
   prgUpdateLabels_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/update_labels.vert"));
-  prgUpdateLabels_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
+  prgUpdateLabels_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/empty.frag"));
   prgUpdateLabels_.attach(tfUpdateLabels_);
   prgUpdateLabels_.link();
 }
@@ -78,7 +78,7 @@ void Viewport::initPrograms() {
 void Viewport::initVertexBuffers() {
   vao_points_.setVertexAttribute(0, bufPoints_, 3, AttributeType::FLOAT, false, sizeof(Point3f), nullptr);
   vao_points_.setVertexAttribute(1, bufRemissions_, 1, AttributeType::FLOAT, false, sizeof(float), nullptr);
-  vao_points_.setVertexAttribute(2, bufLabels_, 1, AttributeType::FLOAT, false, sizeof(uint32_t), nullptr);
+  vao_points_.setVertexAttribute(2, bufLabels_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
   vao_points_.setVertexAttribute(3, bufVisible_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
 }
 
@@ -234,7 +234,7 @@ void Viewport::resizeGL(int w, int h) {
 
   projection_ = glPerspective(fov, aspect, 0.1f, 2000.0f);
 
-  updateProjections();
+//  updateProjections();
 }
 
 void Viewport::paintGL() {
@@ -274,34 +274,6 @@ void Viewport::paintGL() {
 
     texLabelColors_.release();
   }
-  //
-  //    glMatrixMode(GL_MODELVIEW);
-  //    glLoadIdentity();
-  //    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  //
-  //    Eigen::Matrix4f view = mCamera.matrix();
-  //    glMultMatrixf(view.data());
-  //
-  //
-  //  glPushMatrix();
-  //
-  //  glMultMatrixf(glow::RoSe2GL::matrix.data());
-  //
-  //  glBegin(GL_LINES);
-  //  glColor3f(1.0f, 0.0f, 0.0f);
-  //  glVertex3f(0.0f, 0.0f, 0.0f);
-  //  glVertex3f(5.0f, 0.0f, 0.0f);
-  //  glColor3f(0.0f, 1.0f, 0.0f);
-  //  glVertex3f(0.0f, 0.0f, 0.0f);
-  //  glVertex3f(0.0f, 5.0f, 0.0f);
-  //  glColor3f(0.0f, 0.0f, 1.0f);
-  //  glVertex3f(0.0f, 0.0f, 0.0f);
-  //  glVertex3f(0.0f, 0.0f, 5.0f);
-  //  glEnd();
-  //
-  //  glPopMatrix();
-  //
-  //  if (points != 0 && labels != 0) drawPoints(*points, *labels);
 }
 
 void Viewport::mousePressEvent(QMouseEvent* event) {
@@ -342,10 +314,6 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
                               resolveKeyboardModifier(event->modifiers()))) {
       timer_.stop();
       updateGL();  // get the last action.
-
-      //    vf.update();
-      /** update the projected coordinates. TODO: only if pose changes. **/
-      //      updateProjections();
 
       return;
     }
@@ -461,52 +429,15 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
 
 void Viewport::keyPressEvent(QKeyEvent*) {}
 
-// void Viewport::drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels) {
-//  glPushMatrix();
-//  glMultMatrixf(RoSe2GL::matrix.data());
-//
-//  glPointSize(pointSize_);
-//  glColor3fv(GlColor::BLACK);
-//
-//  glBegin(GL_POINTS);
-//  for (uint32_t i = 0; i < points.size(); ++i) {
-//    bool found = false;
-//
-//    for (uint32_t j = 0; j < mFilteredLabels.size(); ++j) {
-//      if (mFilteredLabels[j] == labels[i]) {
-//        found = true;
-//        break;
-//      }
-//    }
-//
-//    if (!found && mFilteredLabels.size() > 0) continue;
-//
-//    if (mLabelColors.find(labels[i]) == mLabelColors.end())
-//      glColor3fv(GlColor::BLACK);
-//    else
-//      glColor3fv(mLabelColors[labels[i]]);
-//    glVertex3fv(&points[i].x);
-//  }
-//  glEnd();
-//
-//  glPopMatrix();
-//}
-
-// uniform int width;
-// uniform int height;
-// uniform vec2 window_pos;
-// uniform float radius;
-// uniform uint new_label;
-
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label) {
   if (points_.size() == 0 || labels_.size() == 0) return;
 
-  std::cout << "called labelPoints" << std::endl;
+  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::endl;
   Stopwatch::tic();
 
   ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
-  ScopedBinder<GlTransformFeedback> feedbackBinder(tfUpdateLabels_);
   ScopedBinder<GlProgram> programBinder(prgUpdateLabels_);
+  ScopedBinder<GlTransformFeedback> feedbackBinder(tfUpdateLabels_);
 
   prgUpdateLabels_.setUniform(GlUniform<vec2>("window_pos", glow::vec2(x, y)));
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("width", width()));
@@ -518,463 +449,25 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 
   for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
     mvp_ = projection_ * mCamera.matrix() * conversion_ * it->first->pose;
-    prgUpdateLabels_.setUniform(mvp_);
 
-    //    tfUpdateLabels_.setBufferOffset(bufLabels_, it->second.index * maxPointsPerScan_);
+    prgUpdateLabels_.setUniform(mvp_);
 
     tfUpdateLabels_.begin(TransformFeedbackMode::POINTS);
     glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
     tfUpdateLabels_.end();
 
     bufUpdatedLabels_.copyTo(bufLabels_, it->second.index * maxPointsPerScan_);
+
   }
 
   glDisable(GL_RASTERIZER_DISCARD);
 
   std::cout << Stopwatch::toc() << " s." << std::endl;
 
-  //  float radius2 = radius * radius;
-  //
-  //  //  float min_distance2 = min_distance * min_distance;
-  //  //  float max_distance2 = max_distance * max_distance;
-  //
-  //  // TODO: use quadtree to accelerate search.
-  //
-  //  for (uint32_t i = 0; i < projectedPoints_.size(); ++i) {
-  //    //    Point3f& p = scan[i].pos;
-  //    //    Point3f global_pos = scan.pose()(scan[i].pos);
-  //    //    float distance = p.x * p.x + p.y * p.y + p.z * p.z;
-  //    //
-  //    //    Label label = labels[i];
-  //    //    if (do_mapping && mapping.find(label) != mapping.end()) label = mapping[label];
-  //    //    if (do_filtering && filter.find(label) == filter.end()) continue;
-  //    //
-  //    //    if (mFilterPointsDistance && (distance > max_distance2 || distance < min_distance2)) continue;
-  //    //    if (!mShowLabeledPoints && label != 0) continue;
-  //
-  //    //      if (!vf.isInside((*points_[t])[i].x, (*points_[t])[i].y, (*points_[t])[i].z)) continue; // TODO::
-  //    //      Culling!
-  //
-  //    bool found = false;
-  //
-  //    uint32_t& label = (*labels_[projectedPoints_[i].timestamp])[projectedPoints_[i].index];
-  //
-  //    for (uint32_t j = 0; j < mFilteredLabels.size(); ++j) {
-  //      if (mFilteredLabels[j] == label) {
-  //        found = true;
-  //        break;
-  //      }
-  //    }
-  //
-  //    if (!found && mFilteredLabels.size() > 0) continue;
-  //
-  //    double dx = projectedPoints_[i].pos.x - x;
-  //    double dy = projectedPoints_[i].pos.y - y;
-  //    if (dx * dx + dy * dy < radius2) {
-  //      if ((label == 0) || (mFlags & FLAG_OVERWRITE)) {
-  //        label = new_label;
-  //      }
-  //    }
-  //  }
 
   emit labelingChanged();
 }
 
-void Viewport::updateProjections() {
-  Stopwatch::tic();
-  ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
-  ScopedBinder<GlTransformFeedback> feedbackBinder(tfProjectedPoints_);
-  ScopedBinder<GlProgram> programBinder(prgProjectPoints_);
-
-  projectedPoints_.clear();
-
-  uint32_t numPointsAll = 0;
-  glEnable(GL_RASTERIZER_DISCARD);
-  std::vector<vec3> projectedPointsScan(maxPointsPerScan_);
-  for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
-    mvp_ = projection_ * mCamera.matrix() * conversion_ * it->first->pose;
-    prgDrawPoints_.setUniform(mvp_);
-
-    tfProjectedPoints_.begin(TransformFeedbackMode::POINTS);
-    glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
-    bufProjectedPoints_.resize(tfProjectedPoints_.end());
-
-    bufProjectedPoints_.get(projectedPointsScan);
-    for (uint32_t i = 0; i < projectedPointsScan.size(); ++i) {
-      if (projectedPointsScan[i].x < -1.0f || projectedPointsScan[i].x > 1.0f || projectedPointsScan[i].y < -1.0f ||
-          projectedPointsScan[i].y > 1.0f)
-        continue;
-
-      ProjectedPoint p;
-      p.pos.x = 0.5 * (projectedPointsScan[i].x + 1.0f) * width();
-      p.pos.y = height() - 0.5 * (projectedPointsScan[i].y + 1.0f);
-      p.timestamp = it->second.index;
-      p.index = i;
-      projectedPoints_.push_back(p);
-    }
-
-    numPointsAll += projectedPointsScan.size();
-  }
-
-  glDisable(GL_RASTERIZER_DISCARD);
-
-  std::cout << "Projected " << numPointsAll << " in " << Stopwatch::toc() << " s" << std::endl;
-  //  if (points == 0 || labels == 0) return;
-  //
-  //  glPushMatrix();
-  //  glMultMatrixf(glow::RoSe2GL::matrix.data());
-  //
-  //  GLint viewport[4];
-  //  GLdouble modelMatrix[16];
-  //  GLdouble projectionMatrix[16];
-  //
-  //  glGetIntegerv(GL_VIEWPORT, viewport);
-  //  glGetDoublev(GL_MODELVIEW_MATRIX, modelMatrix);
-  //  glGetDoublev(GL_PROJECTION_MATRIX, projectionMatrix);
-  //
-  //  projected_points.resize(points->size());
-  //  for (uint32_t i = 0; i < points->size(); ++i) {
-  //    double dummy = 0.0;
-  //
-  //    const Point3f& p = (*points)[i];
-  //
-  //    double x, y;
-  //
-  //    gluProject(p.x, p.y, p.z, modelMatrix, projectionMatrix, viewport, &(x), &(y), &(dummy));
-  //    projected_points[i].x = x;
-  //    projected_points[i].y = y;
-  //    /** the coordinate systems origin is in the top-left corner! **/
-  //    projected_points[i].y = viewport[3] - projected_points[i].y;
-  //  }
-  //
-  //  glPopMatrix();
-}
-
-// std::vector<Point3f*> Viewport::getSelectedCylinderPoints(const QPoint& pos) {
-//  if (cylinders == 0) return std::vector<Point3f*>();
-//  if (mAxis == XYZ) return std::vector<Point3f*>();
-//  if (pos.x() >= width() || pos.y() >= height() || pos.x() <= 0 || pos.y() <= 0) return std::vector<Point3f*>();
-//
-//  const uint32_t HIT_TOLERANCE = 25;
-//
-//  std::vector<Point3f*> hittedPoints;
-//  std::map<uint32_t, Point3f*> nameMap;
-//
-//  const double FOV = 45.0;
-//
-//  double ASPECT_RATIO = (double)width() / (double)height();
-//  double MIN_Z = 0.1, MAX_Z = 327.68;
-//  int viewport[4];
-//  memset(viewport, 0, sizeof(viewport));
-//  unsigned int buffer[256];
-//  memset(buffer, 0, sizeof(buffer));
-//
-//  float lDepth[1];
-//  lDepth[0] = 0;
-//
-//  glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-//
-//  glGetIntegerv(GL_VIEWPORT, viewport);
-//
-//  //      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//  glSelectBuffer(256, buffer);  // Den Puffer zuordnen
-//
-//  glMatrixMode(GL_PROJECTION);  // In den Projektionsmodus
-//  glRenderMode(GL_SELECT);      // In den Selectionsmodus schalten
-//  glPushMatrix();               // Um unsere Matrix zu sichern
-//  glLoadIdentity();             // Und dieselbige wieder zurueckzusetzen
-//
-//  gluPickMatrix(pos.x(), viewport[3] - pos.y(), 1.0, 1.0, viewport);
-//  gluPerspective(FOV, ASPECT_RATIO, MIN_Z, MAX_Z);
-//
-//  glInitNames();
-//  glPushName(0);
-//
-//  glMatrixMode(GL_MODELVIEW);
-//  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-//  glDisable(GL_CULL_FACE);
-//
-//  glPushMatrix();
-//  /** important: the conversion from RoSe to OpenGL coordinates. **/
-//  glMultMatrixf(rv::RoSe2GL);
-//
-//  /** draw bounding boxes of segments. **/
-//  int32_t name = 1;
-//  for (uint32_t i = 0; i < cylinders->size(); ++i) {
-//    if (&(*cylinders)[i] == newCylinder) continue;
-//
-//    bool found = false;
-//
-//    for (uint32_t j = 0; j < mFilteredLabels.size(); ++j) {
-//      if (mFilteredLabels[j] == (*cylinders)[i].label) {
-//        found = true;
-//        break;
-//      }
-//    }
-//
-//    if (!found && mFilteredLabels.size() > 0) continue;
-//
-//    bool sfound = false;
-//    bool efound = false;
-//
-//    Point3f& s = (*cylinders)[i].s;
-//    Point3f& e = (*cylinders)[i].e;
-//
-//    for (uint32_t j = 0; j < selectedCylinderPoints.size(); ++j) {
-//      if (selectedCylinderPoints[j] == &s) sfound = true;
-//      if (selectedCylinderPoints[j] == &e) efound = true;
-//    }
-//
-//    nameMap[name] = &s;
-//    nameMap[name + 1] = &e;
-//    if (!sfound) {
-//      glLoadName(name);
-//      glPushMatrix();
-//      glTranslatef(s.x, s.y, s.z);
-//      drawSphere(mCylinderPointSize);
-//      glPopMatrix();
-//    }
-//
-//    if (!efound) {
-//      glLoadName(name + 1);
-//      glPushMatrix();
-//      glTranslatef(e.x, e.y, e.z);
-//      drawSphere(mCylinderPointSize);
-//      glPopMatrix();
-//    }
-//    name += 2;
-//  }
-//
-//  glPopMatrix();
-//
-//  glMatrixMode(GL_PROJECTION);  // Wieder in den Projektionsmodus
-//  glPopMatrix();                // und unsere alte Matrix wiederherzustellen
-//
-//  glMatrixMode(GL_MODELVIEW);
-//  int hits = glRenderMode(GL_RENDER);  // Anzahl der Treffer auslesen
-//
-//  glPushMatrix();
-//  /** important: the conversion from RoSe to OpenGL coordinates. **/
-//  glMultMatrixf(rv::RoSe2GL);
-//
-//  name = 1;
-//  for (uint32_t i = 0; i < cylinders->size(); ++i) {
-//    if (&(*cylinders)[i] == newCylinder) continue;
-//
-//    bool found = false;
-//
-//    for (uint32_t j = 0; j < mFilteredLabels.size(); ++j) {
-//      if (mFilteredLabels[j] == (*cylinders)[i].label) {
-//        found = true;
-//        break;
-//      }
-//    }
-//
-//    if (!found && mFilteredLabels.size() > 0) continue;
-//
-//    Point3f& s = (*cylinders)[i].s;
-//    Point3f& e = (*cylinders)[i].e;
-//
-//    bool sfound = false, efound = false;
-//    for (uint32_t j = 0; j < selectedCylinderPoints.size(); ++j) {
-//      if (selectedCylinderPoints[j] == &s) sfound = true;
-//      if (selectedCylinderPoints[j] == &e) efound = true;
-//    }
-//
-//    if (!sfound) {
-//      glLoadName(name);
-//      glPushMatrix();
-//      glTranslatef(s.x, s.y, s.z);
-//      drawSphere(mCylinderPointSize);
-//      glPopMatrix();
-//    }
-//
-//    if (!efound) {
-//      glLoadName(name + 1);
-//      glPushMatrix();
-//      glTranslatef(e.x, e.y, e.z);
-//      drawSphere(mCylinderPointSize);
-//      glPopMatrix();
-//    }
-//    name += 2;
-//  }
-//  glPopMatrix();
-//
-//  glReadPixels(pos.x(), (viewport[3] - pos.y()), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, lDepth);
-//
-//  if (hits > 0) {
-//    uint32_t minz = buffer[1];
-//    uint32_t obj_name = buffer[3];
-//    for (int32_t i = 0; i < hits; i++) {
-//      if (buffer[(i * 4) + 1] < minz) {
-//        obj_name = buffer[(i * 4) + 3];
-//        minz = buffer[(i * 4) + 1];
-//      }
-//    }
-//
-//    if (obj_name > 0) {
-//      for (int32_t i = 0; i < hits; i++) {
-//        if (buffer[(i * 4) + 1] - minz < HIT_TOLERANCE) {
-//          hittedPoints.push_back(nameMap[buffer[(i * 4) + 3]]);
-//        }
-//      }
-//    }
-//  }
-//
-//  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//  updateGL();
-//
-//  return hittedPoints;
-//}
-
-// bool Viewport::getClickedPoint(const QPoint& pos, Point3f& selectedPoint) {
-//  /** todo: implement plane for xyz **/
-//  if (mAxis == XYZ) return false;
-//  if (pos.x() >= width() || pos.y() >= height() || pos.x() <= 0 || pos.y() <= 0) return false;
-//
-//  bool pointSelected = false;
-//  Point3f origin;
-//
-//  if (newCylinder != 0) {
-//    origin = newCylinder->s;
-//  } else if (selectedCylinderPoints.size() > 0) {
-//    origin = *selectedCylinderPoints[0];
-//  }
-//
-//  float planeExtent = 100000.0f;
-//  Point3f p1, p2, p3, p4;
-//  if (mAxis == X) {
-//    p1 = Point3f(0.0f, -planeExtent, planeExtent);
-//    p2 = Point3f(0.0f, -planeExtent, -planeExtent);
-//    p3 = Point3f(0.0f, planeExtent, -planeExtent);
-//    p4 = Point3f(0.0f, planeExtent, planeExtent);
-//  } else if (mAxis == Y) {
-//    p1 = Point3f(planeExtent, 0.0f, planeExtent);
-//    p2 = Point3f(planeExtent, 0.0f, -planeExtent);
-//    p3 = Point3f(-planeExtent, 0.0f, -planeExtent);
-//    p4 = Point3f(-planeExtent, 0.0f, planeExtent);
-//  } else if (mAxis == Z) {
-//    p1 = Point3f(planeExtent, planeExtent, 0.0f);
-//    p2 = Point3f(-planeExtent, planeExtent, 0.0f);
-//    p3 = Point3f(-planeExtent, -planeExtent, 0.0f);
-//    p4 = Point3f(planeExtent, -planeExtent, 0.0f);
-//  }
-//
-//  for (uint32_t i = 0; i < 3; ++i) {
-//    p1[i] += origin[i];
-//    p2[i] += origin[i];
-//    p3[i] += origin[i];
-//    p4[i] += origin[i];
-//  }
-//
-//  std::vector<Point3f*> hittedPoints;
-//  std::map<uint32_t, Point3f*> nameMap;
-//
-//  static const double FOV = 45.0;
-//
-//  const double ASPECT_RATIO = (double)width() / (double)height();
-//  const double MIN_Z = 0.1, MAX_Z = 327.68;
-//  int viewport[4];
-//  memset(viewport, 0, sizeof(viewport));
-//  unsigned int buffer[256];
-//  memset(buffer, 0, sizeof(buffer));
-//
-//  float lDepth[1];
-//  lDepth[0] = 0;
-//
-//  glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-//
-//  glGetIntegerv(GL_VIEWPORT, viewport);
-//
-//  //      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//  glSelectBuffer(256, buffer);  // Den Puffer zuordnen
-//
-//  glMatrixMode(GL_PROJECTION);  // In den Projektionsmodus
-//  glRenderMode(GL_SELECT);      // In den Selectionsmodus schalten
-//  glPushMatrix();               // Um unsere Matrix zu sichern
-//  glLoadIdentity();             // Und dieselbige wieder zurueckzusetzen
-//
-//  gluPickMatrix(pos.x(), viewport[3] - pos.y(), 1.0, 1.0, viewport);
-//  gluPerspective(FOV, ASPECT_RATIO, MIN_Z, MAX_Z);
-//
-//  glInitNames();
-//  glPushName(0);
-//
-//  glMatrixMode(GL_MODELVIEW);
-//  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-//  glDisable(GL_CULL_FACE);
-//
-//  glPushMatrix();
-//  /** important: the conversion from RoSe to OpenGL coordinates. **/
-//  glMultMatrixf(glow::RoSe2GL::matrix.data());
-//
-//  int32_t name = 1;
-//  glLoadName(name);
-//  glBegin(GL_QUADS);
-//  glVertex3fv(&p1.x);
-//  glVertex3fv(&p2.x);
-//  glVertex3fv(&p3.x);
-//  glVertex3fv(&p4.x);
-//  glEnd();
-//
-//  glPopMatrix();
-//
-//  glMatrixMode(GL_PROJECTION);  // Wieder in den Projektionsmodus
-//  glPopMatrix();                // und unsere alte Matrix wiederherzustellen
-//
-//  glMatrixMode(GL_MODELVIEW);
-//  int hits = glRenderMode(GL_RENDER);  // Anzahl der Treffer auslesen
-//
-//  glPushMatrix();
-//  /** important: the conversion from RoSe to OpenGL coordinates. **/
-//  glMultMatrixf(glow::RoSe2GL::matrix.data());
-//
-//  name = 1;
-//  glLoadName(name);
-//  glBegin(GL_QUADS);
-//  glVertex3fv(&p1.x);
-//  glVertex3fv(&p2.x);
-//  glVertex3fv(&p3.x);
-//  glVertex3fv(&p4.x);
-//  glEnd();
-//  glPopMatrix();
-//
-//  glReadPixels(pos.x(), (viewport[3] - pos.y()), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, lDepth);
-//
-//  if (hits > 0) {
-//    uint32_t minz = buffer[1];
-//    uint32_t obj_name = buffer[3];
-//    for (int32_t i = 0; i < hits; i++) {
-//      if (buffer[(i * 4) + 1] < minz) {
-//        obj_name = buffer[(i * 4) + 3];
-//        minz = buffer[(i * 4) + 1];
-//      }
-//    }
-//
-//    if (obj_name == 1) {
-//      // calculate the unprojected point only if the ground has been hit
-//      double modMatrix[16];
-//      double projMatrix[16];
-//
-//      glGetDoublev(GL_MODELVIEW_MATRIX, modMatrix);
-//      glGetDoublev(GL_PROJECTION_MATRIX, projMatrix);
-//      double p[3];
-//      gluUnProject(pos.x(), (viewport[3] - pos.y()), lDepth[0], modMatrix, projMatrix, viewport, &p[0], &p[1],
-//      &p[2]);
-//
-//      /** change selected point to RoSe convention **/
-//      selectedPoint[0] = -p[2];
-//      selectedPoint[2] = p[1];
-//      selectedPoint[1] = -p[0];
-//      pointSelected = true;
-//    }
-//  }
-//
-//  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//  updateGL();
-//
-//  return pointSelected;
-//}
 
 glow::GlCamera::KeyboardModifier Viewport::resolveKeyboardModifier(Qt::KeyboardModifiers modifiers) {
   // currently only single button presses are supported.

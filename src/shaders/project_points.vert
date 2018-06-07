@@ -9,7 +9,7 @@ layout (location = 3) in uint  in_visible;
 // materials.
 uniform mat4 mvp;
 
-out vec4 color;
+
 out vec3 projected_point;
 
 void main()
@@ -19,5 +19,6 @@ void main()
   
   vec4 p = mvp * vec4(in_vertex, 1.0);
   projected_point = vec3(-10.f, -10.f, gl_VertexID);
+  // projected_point = p.xyz;
   if(p.z > -1.0f || p.z < 1.0f) projected_point.xy = p.xy;
 }

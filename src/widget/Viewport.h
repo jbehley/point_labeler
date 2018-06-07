@@ -104,13 +104,7 @@ class Viewport : public QGLWidget {
 
   //  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
   void labelPoints(int32_t x, int32_t y, float radius, uint32_t label);
-  void updateProjections();
 
-  /** \brief get 3d coordinates of a click.
-   *
-   *  \return true, if valid point has been clicked, false otherwise.
-   */
-  //  bool getClickedPoint(const QPoint& mousePosition, Point3f& clickedPoint);
 
   bool contextInitialized_;
   std::map<uint32_t, glow::GlColor> mLabelColors;
@@ -136,7 +130,7 @@ class Viewport : public QGLWidget {
   QTimer timer_;
 
   // shaders, etc.
-  uint32_t maxScans_{25};
+  uint32_t maxScans_{500};
   uint32_t maxPointsPerScan_{150000};
   std::vector<Eigen::Matrix4f> bufPoses_;
   glow::GlBuffer<Point3f> bufPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
