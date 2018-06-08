@@ -37,7 +37,7 @@ class Mainframe : public QMainWindow {
   void generateLabelButtons();
   void closeEvent(QCloseEvent* event);
 
-
+  void readConfig();
 
   std::vector<uint32_t> indexes_;
   std::vector<PointcloudPtr> points_;

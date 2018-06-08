@@ -30,7 +30,7 @@ void main()
   {
 
     float distance =  length(pos.xy - window_pos);
-    if( (distance < radius ) ) //(in_visible > uint(0)) &&
+    if( (in_visible > uint(0)) && (distance < radius) )
     {
       out_label = new_label;
     } 

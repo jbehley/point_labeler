@@ -1,6 +1,7 @@
 #include "Viewport.h"
 #include "data/Math.h"
 #include "data/draw_utils.h"
+#include "data/misc.h"
 
 #include <glow/ScopedBinder.h>
 #include <glow/glutil.h>
@@ -83,10 +84,37 @@ void Viewport::initVertexBuffers() {
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
-void Viewport::setFixedAxis(AXIS axis) { mAxis = axis; }
+void Viewport::setFixedAxis(AXIS axis) {
+  mAxis = axis;
+}
+
+void Viewport::setMaximumScans(uint32_t numScans) {
+  maxScans_ = numScans;
+
+  uint32_t max_size = maxScans_ * maxPointsPerScan_;
+
+  bufPoses_.resize(maxScans_);
+  bufPoints_.resize(max_size);
+  bufRemissions_.resize(max_size);
+  bufVisible_.resize(max_size);
+  bufLabels_.resize(max_size);
+}
 
 void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<LabelsPtr>& l) {
   std::cout << "Setting points..." << std::flush;
+
+  // determine which labels need to be updated.
+  std::vector<uint32_t> indexes;
+  index_difference(labels_, l, indexes);
+
+  for (auto index : indexes) {
+    if (bufferContent_.find(p[index].get()) == bufferContent_.end()) continue;
+    const BufferInfo& info = bufferContent_[p[index].get()];
+
+    // replace label information with labels from GPU.
+    bufLabels_.get(*l[index], info.index * maxPointsPerScan_, info.size);
+  }
+
   points_ = p;
   labels_ = l;
   glow::_CheckGlError(__FILE__, __LINE__);
@@ -103,11 +131,13 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     std::sort(before.begin(), before.end());
     std::sort(after.begin(), after.end());
 
-    std::vector<Laserscan*> needsDelete;
+    std::vector<Laserscan*> needsDelete(before.size());
     std::vector<Laserscan*>::iterator end =
         std::set_difference(before.begin(), before.end(), after.begin(), after.end(), needsDelete.begin());
 
-    for (auto it = needsDelete.begin(); it != end; ++it) bufferContent_.erase(*it);
+    for (auto it = needsDelete.begin(); it != end; ++it) {
+      bufferContent_.erase(*it);
+    }
   }
 
   std::vector<int32_t> usedIndexes;
@@ -143,7 +173,13 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
       uint32_t num_points = std::min(maxPointsPerScan_, points_[i]->size());
       if (points_[i]->size() >= maxPointsPerScan_) std::cerr << "warning: losing some points" << std::endl;
 
-      std::vector<uint32_t> visible(num_points, 1);  // TODO: use visibilities by toggled labels.
+      std::vector<uint32_t> visible(num_points, 1);
+
+      for (uint32_t j = 0; j < num_points; ++j) {
+        if (std::find(mFilteredLabels.begin(), mFilteredLabels.end(), (*labels_[i])[j]) != mFilteredLabels.end()) {
+          visible[j] = 0;
+        }
+      }
 
       Stopwatch::tic();
 
@@ -174,9 +210,21 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   updateGL();
 }
 
-void Viewport::setRadius(float value) { mRadius = value; }
+void Viewport::updateLabels() {
+  for (uint32_t i = 0; i < points_.size(); ++i) {
+    const BufferInfo& info = bufferContent_[points_[i].get()];
+    // replace label information with labels from GPU.
+    bufLabels_.get(*labels_[i], info.index * maxPointsPerScan_, info.size);
+  }
+}
 
-void Viewport::setLabel(uint32_t label) { mCurrentLabel = label; }
+void Viewport::setRadius(float value) {
+  mRadius = value;
+}
+
+void Viewport::setLabel(uint32_t label) {
+  mCurrentLabel = label;
+}
 
 void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
   mLabelColors = colors;
@@ -185,7 +233,6 @@ void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
   for (auto it = mLabelColors.begin(); it != mLabelColors.end(); ++it)
     label_colors[it->first] = vec3(it->second.R, it->second.G, it->second.B);
 
-  label_colors[0] = vec3(0, 155, 0);
   texLabelColors_.assign(PixelFormat::RGB, PixelType::UNSIGNED_INT, &label_colors[0]);
 }
 
@@ -200,7 +247,9 @@ void Viewport::setMode(MODE mode) {
   updateGL();
 }
 
-void Viewport::setFlags(int32_t flags) { mFlags = flags; }
+void Viewport::setFlags(int32_t flags) {
+  mFlags = flags;
+}
 
 void Viewport::setOverwrite(bool value) {
   if (value)
@@ -234,7 +283,7 @@ void Viewport::resizeGL(int w, int h) {
 
   projection_ = glPerspective(fov, aspect, 0.1f, 2000.0f);
 
-//  updateProjections();
+  //  updateProjections();
 }
 
 void Viewport::paintGL() {
@@ -432,8 +481,8 @@ void Viewport::keyPressEvent(QKeyEvent*) {}
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label) {
   if (points_.size() == 0 || labels_.size() == 0) return;
 
-  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::endl;
-  Stopwatch::tic();
+  //  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::endl;
+  //  Stopwatch::tic();
 
   ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
   ScopedBinder<GlProgram> programBinder(prgUpdateLabels_);
@@ -457,17 +506,14 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
     tfUpdateLabels_.end();
 
     bufUpdatedLabels_.copyTo(bufLabels_, it->second.index * maxPointsPerScan_);
-
   }
 
   glDisable(GL_RASTERIZER_DISCARD);
 
-  std::cout << Stopwatch::toc() << " s." << std::endl;
-
+  //  std::cout << Stopwatch::toc() << " s." << std::endl;
 
   emit labelingChanged();
 }
-
 
 glow::GlCamera::KeyboardModifier Viewport::resolveKeyboardModifier(Qt::KeyboardModifiers modifiers) {
   // currently only single button presses are supported.

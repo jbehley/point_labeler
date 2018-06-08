@@ -46,7 +46,12 @@ class Viewport : public QGLWidget {
   Viewport(QWidget* parent = 0, Qt::WindowFlags f = 0);
   ~Viewport();
 
+  void setMaximumScans(uint32_t numScans);
+
   void setPoints(const std::vector<PointcloudPtr>& points, std::vector<LabelsPtr>& labels);
+
+  /** \brief update all labels with GPU labels. **/
+  void updateLabels();
 
  signals:
   void labelingChanged();
@@ -126,11 +131,10 @@ class Viewport : public QGLWidget {
   /** selected endpoint **/
 
   bool buttonPressed;
-  ViewFrustum vf;
   QTimer timer_;
 
   // shaders, etc.
-  uint32_t maxScans_{500};
+  uint32_t maxScans_{50};
   uint32_t maxPointsPerScan_{150000};
   std::vector<Eigen::Matrix4f> bufPoses_;
   glow::GlBuffer<Point3f> bufPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};

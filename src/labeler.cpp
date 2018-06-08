@@ -7,6 +7,5 @@ int main(int argc, char** argv) {
   Mainframe frame;
   frame.show();
 
-
   return app.exec();
 }

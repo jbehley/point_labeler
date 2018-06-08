@@ -20,7 +20,7 @@ void main()
   
   gl_Position = mvp * vec4(in_vertex, 1.0);
   
-  float r = max(in_remission,0.3);
+  float r = in_remission * 0.7 + 0.3; // ensure r in [0.3, 1.0]
   vec3 hsv = rgb2hsv(in_color.rgb);
   hsv.b = max(hsv.b, 0.8);
   color = vec4(hsv2rgb(vec3(1, 1, r) * hsv), 1.0);

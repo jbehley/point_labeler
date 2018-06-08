@@ -133,7 +133,7 @@
             </property>
             <property name="maximumSize">
              <size>
-              <width>30</width>
+              <width>80</width>
               <height>16777215</height>
              </size>
             </property>
@@ -372,6 +372,9 @@
         </property>
         <item>
          <widget class="QToolButton" name="btnBackward">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="minimumSize">
            <size>
             <width>25</width>
@@ -404,6 +407,9 @@
         </item>
         <item>
          <widget class="QToolButton" name="btnForward">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="minimumSize">
            <size>
             <width>25</width>

@@ -14,6 +14,8 @@
 
 #include <QtWidgets/QMessageBox>
 
+#include <boost/lexical_cast.hpp>
+
 using namespace glow;
 
 Mainframe::Mainframe() : mChangesSinceLastSave(false) {
@@ -37,6 +39,21 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.mRadiusSlider, SIGNAL(valueChanged(int)), this, SLOT(changeRadius(int)));
   connect(ui.sldTimeline, &QSlider::valueChanged, [this](int value) { setCurrentScanIdx(value); });
+  connect(ui.btnForward, &QToolButton::released, [this]() {
+    int32_t value = ui.sldTimeline->value() + 1;
+    if (value < int32_t(reader_.count())) ui.sldTimeline->setValue(value);
+    ui.btnBackward->setEnabled(true);
+    if (value == int32_t(reader_.count()) - 1) ui.btnForward->setEnabled(false);
+  });
+
+  connect(ui.btnBackward, &QToolButton::released, [this]() {
+    int32_t value = ui.sldTimeline->value() + 1;
+    if (value >= 0) ui.sldTimeline->setValue(value);
+    ui.btnForward->setEnabled(true);
+    if (value == 0) ui.btnBackward->setEnabled(false);
+  });
+
+  connect(ui.chkFilterLabels, &QCheckBox::toggled, [this](bool value) { updateFiltering(value); });
 
   /** load labels and colors **/
   std::map<uint32_t, std::string> label_names;
@@ -48,6 +65,8 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   ui.mViewportXYZ->setLabelColors(label_colors);
 
   generateLabelButtons();
+
+  readConfig();
 }
 
 Mainframe::~Mainframe() {}
@@ -95,6 +114,9 @@ void Mainframe::open() {
     reader_.initialize(retValue);
 
     ui.sldTimeline->setMaximum(reader_.count());
+    ui.btnBackward->setEnabled(false);
+    ui.btnForward->setEnabled(false);
+    if (reader_.count() > 0) ui.btnForward->setEnabled(true);
 
     if (ui.sldTimeline->value() == 0) setCurrentScanIdx(0);
     ui.sldTimeline->setValue(0);
@@ -112,18 +134,8 @@ void Mainframe::open() {
 }
 
 void Mainframe::save() {
-  // TODO: write binary format and accombining header.
-  //  QFileInfo info(QString::fromStdString(filename));
-  //  QString labelName = info.absolutePath() + "/" + info.baseName();
-  //
-  //  std::string labels_file = labelName.toStdString();
-  //  labels_file += ".label.xyz";
-  //
-  //  /* (3) overwrite the complete label file with new label information. */
-  //  std::ofstream out(labels_file.c_str());
-  //  for (uint32_t i = 0; i < points.size() - 1; ++i) out << labels[i] << std::endl;
-  //  out << labels[labels.size() - 1];
-  //  out.close();
+  ui.mViewportXYZ->updateLabels();
+  reader_.update(indexes_, labels_);
 
   mChangesSinceLastSave = false;
 }
@@ -166,78 +178,6 @@ void Mainframe::changeMode(int mode) {
     ui.actionCylinderMode->setChecked(false);
   }
 }
-
-// void Mainframe::readXYZ(const std::string& filename) {
-//  std::ifstream in(filename.c_str());
-//  if (!in.is_open()) throw "unable to open XYZ file.";
-//
-//  QFileInfo info(QString::fromStdString(filename));
-//  QString labelName = info.absolutePath() + "/" + info.baseName();
-//  std::string labels_file = labelName.toStdString();
-//
-//  labels_file += ".label.xyz";
-//
-//  //  std::string cylinder_file = RoSe::FileUtil::stripExtension(filename, 1);
-//  //  cylinder_file += ".cylinder.xyz";
-//
-//  std::cout << "labels-filename: " << labels_file << std::endl;
-//  //  std::cout << "cylinder_filename: " << cylinder_file << std::endl;
-//
-//  std::ifstream in_labels(labels_file.c_str());
-//  std::ofstream out_labels;
-//
-//  bool generate_labels = false;
-//  if (!in_labels.is_open()) {
-//    std::cout << "labels file not found. generating labels file." << std::endl;
-//    generate_labels = true;
-//    out_labels.open(labels_file.c_str());
-//    if (!out_labels.is_open()) throw "unable to generate label filename.";
-//  }
-//
-//  //  std::ifstream in_cylinders(cylinder_file.c_str());
-//
-//  std::string line;
-//  //  Point3f midpoint;
-//
-//  in.peek();
-//  int idx = 0;
-//  while (!in.eof() && in.good()) {
-//    std::getline(in, line);
-//    std::vector<std::string> tokens = split(line, ";");
-//
-//    if (tokens.size() < 3) continue;
-//
-//    float x = QString::fromStdString(tokens[0]).toFloat();
-//    float y = QString::fromStdString(tokens[1]).toFloat();
-//    float z = QString::fromStdString(tokens[2]).toFloat();
-//
-//    if (!generate_labels) {
-//      std::getline(in_labels, line);
-//      labels.push_back(QString::fromStdString(line).toInt());
-//    } else {
-//      out_labels << "0" << std::endl;
-//      labels.push_back(0);
-//    }
-//
-//    points.push_back(Point3f(x, y, z));
-//    midpoint += points.back();
-//
-//    in.peek();
-//    ++idx;
-//  }
-//
-//  midpoint /= points.size();
-//
-//  /** substract the midpoint **/
-//  for (uint32_t i = 0; i < points.size(); ++i) {
-//    points[i] = Point3f(points[i] - midpoint);
-//  }
-//
-//  in.close();
-//  in_labels.close();
-//  //  in_cylinders.close();
-//  out_labels.close();
-//}
 
 void Mainframe::generateLabelButtons() {
   const int BtnsPerRow = 5;
@@ -338,9 +278,51 @@ void Mainframe::unsavedChanges() {
 void Mainframe::setCurrentScanIdx(int32_t idx) {
   std::cout << "setting scan." << std::endl;
 
-  reader_.update(indexes_, labels_);
+  std::vector<uint32_t> oldIndexes = indexes_;
+  std::vector<LabelsPtr> oldLabels = labels_;
 
   reader_.retrieve(idx, indexes_, points_, labels_);
 
+  // find difference.
+  std::vector<uint32_t> diff_indexes;
+  index_difference(oldLabels, labels_, diff_indexes);
+
+  std::vector<uint32_t> removedIndexes;
+  std::vector<LabelsPtr> removedLabels;
+
+  for (auto index : diff_indexes) {
+    removedIndexes.push_back(oldIndexes[index]);
+    removedLabels.push_back(oldLabels[index]);
+  }
+  // only update really needed label files.
+  reader_.update(removedIndexes, removedLabels);
+
   ui.mViewportXYZ->setPoints(points_, labels_);
+}
+
+void Mainframe::readConfig() {
+  std::ifstream in("settings.cfg");
+
+  if (!in.is_open()) return;
+
+  std::string line;
+  in.peek();
+  while (in.good() && !in.eof()) {
+    std::getline(in, line);
+
+    auto tokens = split(line, ":");
+    if (tokens[0] == "max scans") {
+      uint32_t numScans = boost::lexical_cast<uint32_t>(trim(tokens[1]));
+      ui.mViewportXYZ->setMaximumScans(numScans);
+      std::cout << "-- Setting 'max scans' to " << numScans << std::endl;
+    }
+
+    if (tokens[0] == "max distance") {
+      float distance = boost::lexical_cast<float>(trim(tokens[1]));
+      reader_.setMaximumDistance(distance);
+      std::cout << "-- Setting 'max distance' to " << distance << std::endl;
+    }
+  }
+
+  in.close();
 }

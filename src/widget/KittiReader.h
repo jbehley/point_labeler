@@ -22,6 +22,8 @@ class KittiReader {
 
   uint32_t count() const { return velodyne_filenames_.size(); }
 
+  void setMaximumDistance(float distance) { maxDistance_ = distance; }
+
   /** \brief get points and labels for given index. **/
   void retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
                 std::vector<LabelsPtr>& labels);
@@ -29,7 +31,6 @@ class KittiReader {
   void update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels);
 
  protected:
-
   void readPoints(const std::string& filename, Laserscan& scan);
   void readLabels(const std::string& filename, std::vector<uint32_t>& labels);
   void readPoses(const std::string& filename, std::vector<Eigen::Matrix4f>& poses);
@@ -42,6 +43,8 @@ class KittiReader {
   // cache reads from before.
   std::map<uint32_t, PointcloudPtr> pointsCache_;
   std::map<uint32_t, LabelsPtr> labelCache_;
+
+  float maxDistance_{15.0f};
 };
 
 #endif /* SRC_WIDGET_KITTIREADER_H_ */

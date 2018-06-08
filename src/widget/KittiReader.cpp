@@ -59,15 +59,13 @@ void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::
   for (auto it = pointsCache_.begin(); it != pointsCache_.end(); ++it) indexesBefore.push_back(it->first);
   std::vector<int32_t> indexesAfter;
 
-  float maxDistance = 15.0f;
-
   uint32_t scansRead = 0;
 
   // find nearby scans.
   Eigen::Vector4f midpoint = poses_[index].col(3);
   for (uint32_t t = 0; t < velodyne_filenames_.size(); ++t) {
     Eigen::Vector4f other_midpoint = poses_[t].col(3);
-    if ((midpoint - other_midpoint).norm() < maxDistance) {
+    if ((midpoint - other_midpoint).norm() < maxDistance_) {
       indexesAfter.push_back(t);
 
       if (pointsCache_.find(t) == pointsCache_.end()) {
@@ -104,14 +102,9 @@ void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::
   std::sort(indexesBefore.begin(), indexesBefore.end());
   std::sort(indexesAfter.begin(), indexesAfter.end());
 
-  std::cout << "before: " << rv::stringify(indexesBefore) << std::endl;
-  std::cout << "after: " << rv::stringify(indexesAfter) << std::endl;
-
   std::vector<int32_t> needsDelete(indexesBefore.size());
   std::vector<int32_t>::iterator end = std::set_difference(
       indexesBefore.begin(), indexesBefore.end(), indexesAfter.begin(), indexesAfter.end(), needsDelete.begin());
-
-  std::cout << "must be deleted: " << rv::stringify(needsDelete) << std::endl;
 
   for (auto it = needsDelete.begin(); it != end; ++it) {
     pointsCache_.erase(*it);
@@ -137,7 +130,11 @@ void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::
 }
 
 void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels) {
-  // TODO: rewrite labels!
+  for (uint32_t i = 0; i < indexes.size(); ++i) {
+    std::ofstream out(label_filenames_[indexes[i]].c_str());
+    out.write((const char*)&(*labels[i])[0], labels[i]->size() * sizeof(uint32_t));
+    out.close();
+  }
 }
 
 void KittiReader::readPoints(const std::string& filename, Laserscan& scan) {
