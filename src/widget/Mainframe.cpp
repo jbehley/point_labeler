@@ -47,7 +47,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   });
 
   connect(ui.btnBackward, &QToolButton::released, [this]() {
-    int32_t value = ui.sldTimeline->value() + 1;
+    int32_t value = ui.sldTimeline->value() - 1;
     if (value >= 0) ui.sldTimeline->setValue(value);
     ui.btnForward->setEnabled(true);
     if (value == 0) ui.btnBackward->setEnabled(false);
