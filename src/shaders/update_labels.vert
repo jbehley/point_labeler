@@ -11,6 +11,7 @@ uniform int height;
 uniform vec2 window_pos;
 uniform float radius;
 uniform uint new_label;
+uniform bool overwrite;
 
 out uint out_label;
 
@@ -30,7 +31,7 @@ void main()
   {
 
     float distance =  length(pos.xy - window_pos);
-    if( (in_visible > uint(0)) && (distance < radius) )
+    if((in_visible > uint(0)) && (distance < radius) && (overwrite || in_label == uint(0)))
     {
       out_label = new_label;
     } 

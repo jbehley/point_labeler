@@ -37,7 +37,7 @@
 		<id>10</id>
 		<name>car</name>
 		<description>This includes cars, jeeps, SUVs, vans with a continuous body shape (i.e. the driver cabin and cargo compartment are one)</description>
-		<color>0 0 255</color>
+		<color>100 150 245</color>
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>car</category>
@@ -46,7 +46,7 @@
 		<id>11</id>
 		<name>bicycle</name>
 		<description>Includes bicycles without the cyclist or possibly other passengers. The cyclist and passengers recieve the label cyclist.</description>
-		<color>0 0 255</color>
+		<color>100 230 245</color>
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>bicycle</category>
@@ -55,7 +55,7 @@
 		<id>12</id>
 		<name>boat</name>
 		<description>Vehicle suitable for riding/sailing on water.</description>
-		<color>0 0 255</color>
+		<color>100 120 200</color>
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>boat</category>
@@ -64,7 +64,7 @@
 		<id>13</id>
 		<name>bus</name>
 		<description>Includes buses that are intended for 9+ persons for public or long-distance transport.</description>
-		<color>0 0 255</color>
+		<color>100 80 250</color>
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>bus</category>
@@ -82,7 +82,7 @@
 		<id>15</id>
 		<name>motorcycle</name>
 		<description>This includes motorcycles, mopeds without the driver or other passengers. Both driver and passengers recieve the label motorcyclist.</description>
-		<color>0 0 255</color>
+		<color>30 60 150</color>
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>motorcycle</category>
@@ -109,12 +109,12 @@
 		<id>18</id>
 		<name>truck</name>
 		<description>This includes trucks, vans with a body that is separate from the driver cabin, pickup trucks, as well as their attached trailers.</description>
-		<color>0 0 255</color>
+		<color>80 30 180</color>
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>truck</category>
 	</label>
-	<label>
+	<!--  label>
 		<id>19</id>
 		<name>wheeled-slow</name>
 		<description>Covers all slow moving wheeled  objects  like wheelchairs, mobility-scooters, scooters, prams or rickshaw. All of  which  can  potentially have riders (other rider) sitting on them, similar to cycles are driven by cyclists.</description>
@@ -122,7 +122,7 @@
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>wheeled-slow</category>
-	</label>
+	</label-->
 	<label>
 		<id>20</id>
 		<name>other-vehicle</name>
@@ -136,8 +136,8 @@
 	<label>
 		<id>30</id>
 		<name>Person</name>
-		<description></description>
-		<color>255 0 0</color>
+		<description>Persons moving by their own legs, sitting, or any unusual pose, but not meant to drive a vehicle.</description>
+		<color>255 30 30</color>
 		<root>human</root>
 		<macro></macro>
 		<category>Person</category>
@@ -145,8 +145,8 @@
 	<label>
 		<id>31</id>
 		<name>bicyclist</name>
-		<description></description>
-		<color>255 0 0</color>
+		<description>Humans driving a bicycle.</description>
+		<color>255 40 200</color>
 		<root>human</root>
 		<macro>rider</macro>
 		<category>bicyclist</category>
@@ -154,13 +154,13 @@
 	<label>
 		<id>32</id>
 		<name>motorcyclist</name>
-		<description></description>
-		<color>255 0 0</color>
+		<description>Persons riding a motorcycle.</description>
+		<color>150 30 90</color>
 		<root>human</root>
 		<macro>rider</macro>
 		<category>motorcyclist</category>
 	</label>
-	<label>
+	<!--  label>
 		<id>33</id>
 		<name>other rider</name>
 		<description></description>
@@ -168,13 +168,13 @@
 		<root>human</root>
 		<macro>rider</macro>
 		<category>other rider</category>
-	</label>
+	</label-->
 
 	<label>
 		<id>40</id>
 		<name>road</name>
 		<description></description>
-		<color>150 150 150</color>
+		<color>255 0 255</color>
 		<root>construction</root>
 		<macro>flat</macro>
 		<category>road</category>
@@ -183,12 +183,12 @@
 		<id>41</id>
 		<name>bike lane</name>
 		<description></description>
-		<color>150 150 150</color>
+		<color>200 0 200</color>
 		<root>construction</root>
 		<macro>flat</macro>
 		<category>bike lane</category>
 	</label>
-	<label>
+	<!--  label>
 		<id>42</id>
 		<name>crosswalk plain</name>
 		<description></description>
@@ -196,8 +196,8 @@
 		<root>construction</root>
 		<macro>flat</macro>
 		<category>crosswalk plain</category>
-	</label>
-	<label>
+	</label-->
+	<!-- label>
 		<id>43</id>
 		<name>curb cut</name>
 		<description></description>
@@ -205,17 +205,17 @@
 		<root>construction</root>
 		<macro>flat</macro>
 		<category>curb cut</category>
-	</label>
+	</label -->
  	<label>
 		<id>44</id>
 		<name>parking</name>
 		<description></description>
-		<color>150 150 150</color>
+		<color>255 150 255</color>
 		<root>construction</root>
 		<macro>flat</macro>
 		<category>parking</category>
 	</label>
- 	<label>
+ 	<!--  label>
 		<id>45</id>
 		<name>pedestrian area</name>
 		<description></description>
@@ -223,17 +223,17 @@
 		<root>construction</root>
 		<macro>flat</macro>
 		<category>pedestrian area</category>
-	</label>
+	</label-->
  	<label>
 		<id>46</id>
 		<name>rail track</name>
 		<description></description>
-		<color>150 150 150</color>
+		<color>100 0 100</color>
 		<root>construction</root>
 		<macro>flat</macro>
 		<category>rail track</category>
 	</label>
- 	<label>
+ 	<!--  label>
 		<id>47</id>
 		<name>service lane</name>
 		<description></description>
@@ -241,44 +241,111 @@
 		<root>construction</root>
 		<macro>flat</macro>
 		<category>serice lane</category>
-	</label>
+	</label-->
  	<label>
 		<id>48</id>
 		<name>sidewalk</name>
 		<description></description>
-		<color>150 150 150</color>
+		<color>75 0 75</color>
 		<root>construction</root>
 		<macro>flat</macro>
 		<category>sidewalk</category>
 	</label>
+	
  	<label>
 		<id>50</id>
 		<name>building</name>
 		<description></description>
-		<color>150 150 150</color>
+		<color>255 150 0</color>
 		<root>construction</root>
 		<macro>structure</macro>
 		<category>building</category>
 	</label>
- 	<label>
+ 	<!--label>
 		<id>51</id>
 		<name>bridge</name>
 		<description></description>
-		<color>150 150 150</color>
+		<color>255 150 0</color>
 		<root>construction</root>
 		<macro>structure</macro>
 		<category>bridge</category>
-	</label>
- 	<label>
+	</label-->
+ 	<!-- label>
 		<id>52</id>
 		<name>tunnel</name>
 		<description></description>
-		<color>150 150 150</color>
+		<color>255 150 0</color>
 		<root>construction</root>
 		<macro>structure</macro>
 		<category>tunnel</category>
-	</label>
+	</label-->
 
-<!-- missing: nature, object, marking, barrier, animal -->
+  <label>
+    <id>60</id>
+    <name>crosswalk zebra</name>
+    <description>Crosswalk indicated by a zebra pattern</description>
+    <color>0 100 80</color>
+    <root>marking</root>
+    <macro></macro>
+    <category>crosswalk zebra</category>
+  </label>
+  <label>
+    <id>60</id>
+    <name>lane marking</name>
+    <description>Other lane markings, including dashed and 
+    solid lane seperation makrings, stop lines, text, arrows, 
+    or restricted areas.</description>
+    <color>150 255 170</color>
+    <root>marking</root>
+    <macro></macro>
+    <category>lane marking</category>
+  </label>
+  <label>
+    <id>70</id>
+    <name>vegetation</name>
+    <description>Trees, and other forms of  vertical growing vegetation.</description>
+    <color>0 175 0</color>
+    <root>nature</root>
+    <macro></macro>
+    <category>vegetation</category>
+  </label>
+  <label>
+    <id>71</id>
+    <name>trunk</name>
+    <description>tree trunks.</description>
+    <color>135 60 0</color>
+    <root>nature</root>
+    <macro></macro>
+    <category>trunk</category>
+  </label>
+  <label>
+    <id>72</id>
+    <name>terrain</name>
+    <description>grass and all other types  of horizontal spreading vegetation, including soil.</description>
+    <color>150 240 80</color>
+    <root>nature</root>
+    <macro></macro>
+    <category>terrain</category>
+  </label>
+  
+  <label>
+    <id>80</id>
+    <name>pole</name>
+    <description>thin and elongated, typically vertically oriented poles, eg. sing or traffic signs.</description>
+    <color>255 240 150</color>
+    <root>object</root>
+    <macro>support</macro>
+    <category>pole</category>
+  </label>
+  <label>
+    <id>81</id>
+    <name>traffic sign</name>
+    <description>traffic signs.</description>
+    <color>255 0 0</color>
+    <root>object</root>
+    <macro>traffic-sign</macro>
+    <category>traffic sign</category>
+  </label>
+<!-- missing: nature, object, barrier, animal -->
 
 </config>

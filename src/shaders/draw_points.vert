@@ -19,6 +19,8 @@ void main()
   vec4 in_color = texture(label_colors, vec2(in_label, 0));
   
   gl_Position = mvp * vec4(in_vertex, 1.0);
+  if(in_visible == uint(0)) gl_Position = vec4(-10, -10, -10, 1);
+  
   
   float r = in_remission * 0.7 + 0.3; // ensure r in [0.3, 1.0]
   vec3 hsv = rgb2hsv(in_color.rgb);

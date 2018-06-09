@@ -38,14 +38,13 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   bufVisible_.resize(max_size);
   bufLabels_.resize(max_size);
 
-  std::vector<std::string> feedback_varyings{"projected_point"};
-
-  bufProjectedPoints_.resize(maxPointsPerScan_);
-  tfProjectedPoints_.attach(feedback_varyings, bufProjectedPoints_);
-
   bufUpdatedLabels_.resize(maxPointsPerScan_);
   std::vector<std::string> update_varyings{"out_label"};
   tfUpdateLabels_.attach(update_varyings, bufUpdatedLabels_);
+
+  bufUpdatedVisiblity_.resize(maxPointsPerScan_);
+  std::vector<std::string> visibility_varyings{"out_visible"};
+  tfUpdateVisibility_.attach(visibility_varyings, bufUpdatedVisiblity_);
 
   initPrograms();
   initVertexBuffers();
@@ -65,15 +64,15 @@ void Viewport::initPrograms() {
   prgDrawPose_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgDrawPose_.link();
 
-  prgProjectPoints_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/project_points.vert"));
-  prgProjectPoints_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/empty.frag"));
-  prgProjectPoints_.attach(tfProjectedPoints_);
-  prgProjectPoints_.link();
-
   prgUpdateLabels_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/update_labels.vert"));
   prgUpdateLabels_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/empty.frag"));
   prgUpdateLabels_.attach(tfUpdateLabels_);
   prgUpdateLabels_.link();
+
+  prgUpdateVisibility_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/update_visibility.vert"));
+  prgUpdateVisibility_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/empty.frag"));
+  prgUpdateVisibility_.attach(tfUpdateVisibility_);
+  prgUpdateVisibility_.link();
 }
 
 void Viewport::initVertexBuffers() {
@@ -230,10 +229,10 @@ void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
   mLabelColors = colors;
 
   std::vector<vec3> label_colors(256);
-  for (auto it = mLabelColors.begin(); it != mLabelColors.end(); ++it)
+  for (auto it = mLabelColors.begin(); it != mLabelColors.end(); ++it) {
     label_colors[it->first] = vec3(it->second.R, it->second.G, it->second.B);
-
-  texLabelColors_.assign(PixelFormat::RGB, PixelType::UNSIGNED_INT, &label_colors[0]);
+  }
+  texLabelColors_.assign(PixelFormat::RGB, PixelType::FLOAT, &label_colors[0]);
 }
 
 void Viewport::setPointSize(int value) {
@@ -243,7 +242,7 @@ void Viewport::setPointSize(int value) {
 
 void Viewport::setMode(MODE mode) {
   mMode = mode;
-  std::cout << "mode is now paint. " << std::endl;
+
   updateGL();
 }
 
@@ -259,10 +258,46 @@ void Viewport::setOverwrite(bool value) {
 }
 
 void Viewport::setFilteredLabels(const std::vector<uint32_t>& labels) {
-  mFilteredLabels = labels;
+  std::cout << "setting filtered labels." << std::endl;
 
-  // TODO update visibility via SHADER (like the label update.)!
+  std::vector<uint32_t> labels_before = mFilteredLabels;
+  mFilteredLabels = labels;
+  std::sort(mFilteredLabels.begin(), mFilteredLabels.end());
+
+  std::vector<uint32_t> difference(std::max(labels_before.size(), labels.size()));
+  auto end = std::set_difference(labels_before.begin(), labels_before.end(), mFilteredLabels.begin(),
+                                 mFilteredLabels.end(), difference.begin());
+
+  for (auto it = difference.begin(); it != end; ++it) setLabelVisibility(*it, 1);  // now visible again.
+
+  end = std::set_difference(mFilteredLabels.begin(), mFilteredLabels.end(), labels_before.begin(), labels_before.end(),
+                            difference.begin());
+
+  for (auto it = difference.begin(); it != end; ++it) setLabelVisibility(*it, 0);  // now invisible.
+
   updateGL();
+}
+
+void Viewport::setLabelVisibility(uint32_t label, bool visible) {
+  std::cout << "setLabelVisibility(" << label << ", " << visible << std::endl;
+  ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
+  ScopedBinder<GlProgram> programBinder(prgUpdateVisibility_);
+  ScopedBinder<GlTransformFeedback> feedbackBinder(tfUpdateVisibility_);
+
+  prgUpdateLabels_.setUniform(GlUniform<uint32_t>("label", label));
+  prgUpdateLabels_.setUniform(GlUniform<uint32_t>("visibility", visible ? 1 : 0));
+
+  glEnable(GL_RASTERIZER_DISCARD);
+
+  for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
+    tfUpdateVisibility_.begin(TransformFeedbackMode::POINTS);
+    glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
+    tfUpdateVisibility_.end();
+
+    bufUpdatedVisiblity_.copyTo(bufVisible_, it->second.index * maxPointsPerScan_);
+  }
+
+  glDisable(GL_RASTERIZER_DISCARD);
 }
 
 void Viewport::initializeGL() {
@@ -282,8 +317,6 @@ void Viewport::resizeGL(int w, int h) {
   float aspect = float(w) / float(h);
 
   projection_ = glPerspective(fov, aspect, 0.1f, 2000.0f);
-
-  //  updateProjections();
 }
 
 void Viewport::paintGL() {
@@ -493,6 +526,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("height", height()));
   prgUpdateLabels_.setUniform(GlUniform<float>("radius", radius));
   prgUpdateLabels_.setUniform(GlUniform<uint32_t>("new_label", new_label));
+  prgUpdateLabels_.setUniform(GlUniform<bool>("overwrite", mFlags & FLAG_OVERWRITE));
 
   glEnable(GL_RASTERIZER_DISCARD);
 

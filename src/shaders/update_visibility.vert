@@ -7,12 +7,12 @@ layout (location = 3) in uint  in_visible;
 
 
 uniform uint label;
-uniform int visibilty;
+uniform uint visibility;
 
 out uint out_visible;
 
 void main()
 {
   out_visible = in_visible;
-  if(in_label == label) out_visible = visibilty;
+  if(in_label == label) out_visible = visibility;
 }

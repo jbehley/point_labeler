@@ -53,6 +53,8 @@ class Viewport : public QGLWidget {
   /** \brief update all labels with GPU labels. **/
   void updateLabels();
 
+  void setLabelVisibility(uint32_t label, bool visible);
+
  signals:
   void labelingChanged();
 
@@ -110,7 +112,6 @@ class Viewport : public QGLWidget {
   //  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
   void labelPoints(int32_t x, int32_t y, float radius, uint32_t label);
 
-
   bool contextInitialized_;
   std::map<uint32_t, glow::GlColor> mLabelColors;
 
@@ -142,23 +143,21 @@ class Viewport : public QGLWidget {
   glow::GlBuffer<uint32_t> bufLabels_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<uint32_t> bufVisible_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
-  glow::GlBuffer<glow::vec3> bufProjectedPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
-  glow::GlTransformFeedback tfProjectedPoints_;
-
   glow::GlTransformFeedback tfUpdateLabels_;
   glow::GlBuffer<uint32_t> bufUpdatedLabels_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
-  glow::GlTextureRectangle texLabelColors_;
+  glow::GlTransformFeedback tfUpdateVisibility_;
+  glow::GlBuffer<uint32_t> bufUpdatedVisiblity_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
-  std::vector<ProjectedPoint> projectedPoints_;
+  glow::GlTextureRectangle texLabelColors_;
 
   glow::GlVertexArray vao_no_points_;
   glow::GlVertexArray vao_points_;
 
   glow::GlProgram prgDrawPose_;
   glow::GlProgram prgDrawPoints_;
-  glow::GlProgram prgProjectPoints_;
   glow::GlProgram prgUpdateLabels_;
+  glow::GlProgram prgUpdateVisibility_;
 
   int32_t pointSize_{1};
   std::map<std::string, bool> drawing_options_;

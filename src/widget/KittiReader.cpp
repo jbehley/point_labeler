@@ -52,6 +52,7 @@ void KittiReader::initialize(const QString& directory) {
 
 void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
                            std::vector<LabelsPtr>& labels) {
+  indexes.clear();
   points.clear();
   labels.clear();
 
@@ -67,6 +68,8 @@ void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::
     Eigen::Vector4f other_midpoint = poses_[t].col(3);
     if ((midpoint - other_midpoint).norm() < maxDistance_) {
       indexesAfter.push_back(t);
+
+      indexes.push_back(t);
 
       if (pointsCache_.find(t) == pointsCache_.end()) {
         scansRead += 1;
