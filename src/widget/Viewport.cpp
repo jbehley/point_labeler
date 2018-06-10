@@ -49,6 +49,12 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   initPrograms();
   initVertexBuffers();
 
+  drawingOption_["remission"] = true;
+  drawingOption_["color"] = false;
+
+  texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
+  texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
+
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
@@ -228,11 +234,13 @@ void Viewport::setLabel(uint32_t label) {
 void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
   mLabelColors = colors;
 
-  std::vector<vec3> label_colors(256);
+  std::vector<uint8_t> label_colors(3 * 256);
   for (auto it = mLabelColors.begin(); it != mLabelColors.end(); ++it) {
-    label_colors[it->first] = vec3(it->second.R, it->second.G, it->second.B);
+    label_colors[3 * it->first] = it->second.R * 255;
+    label_colors[3 * it->first + 1] = it->second.G * 255;
+    label_colors[3 * it->first + 2] = it->second.B * 255;
   }
-  texLabelColors_.assign(PixelFormat::RGB, PixelType::FLOAT, &label_colors[0]);
+  texLabelColors_.assign(PixelFormat::RGB, PixelType::UNSIGNED_BYTE, &label_colors[0]);
 }
 
 void Viewport::setPointSize(int value) {
@@ -257,9 +265,20 @@ void Viewport::setOverwrite(bool value) {
     mFlags = mFlags & ~FLAG_OVERWRITE;
 }
 
-void Viewport::setFilteredLabels(const std::vector<uint32_t>& labels) {
-  std::cout << "setting filtered labels." << std::endl;
+void Viewport::setDrawingOption(const std::string& name, bool value) {
+  drawingOption_[name] = value;
+  updateGL();
+}
 
+void Viewport::setMinRange(float range) {
+  minRange_ = range;
+}
+
+void Viewport::setMaxRange(float range) {
+  maxRange_ = range;
+}
+
+void Viewport::setFilteredLabels(const std::vector<uint32_t>& labels) {
   std::vector<uint32_t> labels_before = mFilteredLabels;
   mFilteredLabels = labels;
   std::sort(mFilteredLabels.begin(), mFilteredLabels.end());
@@ -279,13 +298,12 @@ void Viewport::setFilteredLabels(const std::vector<uint32_t>& labels) {
 }
 
 void Viewport::setLabelVisibility(uint32_t label, bool visible) {
-  std::cout << "setLabelVisibility(" << label << ", " << visible << std::endl;
   ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
   ScopedBinder<GlProgram> programBinder(prgUpdateVisibility_);
   ScopedBinder<GlTransformFeedback> feedbackBinder(tfUpdateVisibility_);
 
-  prgUpdateLabels_.setUniform(GlUniform<uint32_t>("label", label));
-  prgUpdateLabels_.setUniform(GlUniform<uint32_t>("visibility", visible ? 1 : 0));
+  prgUpdateVisibility_.setUniform(GlUniform<uint32_t>("label", label));
+  prgUpdateVisibility_.setUniform(GlUniform<uint32_t>("visibility", visible ? 1 : 0));
 
   glEnable(GL_RASTERIZER_DISCARD);
 
@@ -344,6 +362,12 @@ void Viewport::paintGL() {
   if (points_.size() > 0) {
     ScopedBinder<GlProgram> program_binder(prgDrawPoints_);
     ScopedBinder<GlVertexArray> vao_binder(vao_points_);
+
+    prgDrawPoints_.setUniform(GlUniform<bool>("useRemission", drawingOption_["remission"]));
+    prgDrawPoints_.setUniform(GlUniform<bool>("useColor", drawingOption_["color"]));
+    prgDrawPoints_.setUniform(GlUniform<float>("maxRange", maxRange_));
+    prgDrawPoints_.setUniform(GlUniform<float>("minRange", minRange_));
+
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.bind();
 
@@ -527,6 +551,8 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<float>("radius", radius));
   prgUpdateLabels_.setUniform(GlUniform<uint32_t>("new_label", new_label));
   prgUpdateLabels_.setUniform(GlUniform<bool>("overwrite", mFlags & FLAG_OVERWRITE));
+  prgUpdateLabels_.setUniform(GlUniform<float>("maxRange", maxRange_));
+  prgUpdateLabels_.setUniform(GlUniform<float>("minRange", minRange_));
 
   glEnable(GL_RASTERIZER_DISCARD);
 

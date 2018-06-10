@@ -51,4 +51,14 @@ void index_difference(const std::vector<T, A>& a, const std::vector<T, A>& b, st
   for (auto it = proxy_result.begin(); it != end; ++it) result.push_back(it->index);
 }
 
+#include <glow/glutil.h>
+
+struct Triangle {
+  glow::vec2 i, j, k;
+};
+
+bool insideTriangle(const glow::vec2& p, const glow::vec2& v1, const glow::vec2& v2, const glow::vec2& v3);
+
+bool triangulate(const std::vector<glow::vec2>& points, std::vector<Triangle>& triangles);
+
 #endif /* MISC_H_ */

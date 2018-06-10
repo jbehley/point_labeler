@@ -55,6 +55,12 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.chkFilterLabels, &QCheckBox::toggled, [this](bool value) { updateFiltering(value); });
 
+  connect(ui.chkShowRemission, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("remission", value); });
+
+  connect(ui.chkShowColor, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("color", value); });
+
   /** load labels and colors **/
   std::map<uint32_t, std::string> label_names;
   std::map<uint32_t, glow::GlColor> label_colors;
@@ -84,6 +90,8 @@ void Mainframe::closeEvent(QCloseEvent* event) {
   //      return;
   //    }
   //  }
+  ui.mViewportXYZ->updateLabels();
+  reader_.update(indexes_, labels_);
 
   event->accept();
 }
@@ -321,6 +329,18 @@ void Mainframe::readConfig() {
       float distance = boost::lexical_cast<float>(trim(tokens[1]));
       reader_.setMaximumDistance(distance);
       std::cout << "-- Setting 'max distance' to " << distance << std::endl;
+    }
+
+    if (tokens[0] == "max range") {
+      float range = boost::lexical_cast<float>(trim(tokens[1]));
+      ui.mViewportXYZ->setMaxRange(range);
+      std::cout << "-- Setting 'max range' to " << range << std::endl;
+    }
+
+    if (tokens[0] == "min range") {
+      float range = boost::lexical_cast<float>(trim(tokens[1]));
+      ui.mViewportXYZ->setMinRange(range);
+      std::cout << "-- Setting 'min range' to " << range << std::endl;
     }
   }
 

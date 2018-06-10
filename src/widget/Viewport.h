@@ -55,6 +55,11 @@ class Viewport : public QGLWidget {
 
   void setLabelVisibility(uint32_t label, bool visible);
 
+  void setDrawingOption(const std::string& name, bool value);
+
+  void setMinRange(float range);
+  void setMaxRange(float range);
+
  signals:
   void labelingChanged();
 
@@ -176,6 +181,10 @@ class Viewport : public QGLWidget {
   };
 
   std::map<Laserscan*, BufferInfo> bufferContent_;
+
+  std::map<std::string, bool> drawingOption_;
+
+  float minRange_{0.0f}, maxRange_{100.0f};
 };
 
 #endif /* POINTVIEW_H_ */

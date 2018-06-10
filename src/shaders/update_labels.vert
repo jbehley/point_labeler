@@ -12,12 +12,14 @@ uniform vec2 window_pos;
 uniform float radius;
 uniform uint new_label;
 uniform bool overwrite;
+uniform float minRange;
+uniform float maxRange;
 
 out uint out_label;
 
-
 void main()
 {
+  float range = length(in_vertex);
   vec4 point = mvp * vec4(in_vertex, 1.0);
   point = vec4(point.x/point.w, point.y/point.w, point.z/point.w, 1.0);
   gl_Position = mvp * vec4(in_vertex, 1.0);
@@ -27,14 +29,17 @@ void main()
   vec3 pos =  vec3(0.5f * (point.x + 1.0) * width, 0.5f * (point.y + 1.0) * height, 0.5f * (point.z + 1.0)); 
   pos.y = height - pos.y;
   
-  if(pos.x >= 0 && pos.x < width  && pos.y >= 0 && pos.y < height && pos.z >= 0.0f && pos.z <= 1.0f)
+  if((in_visible > uint(0)) && !(range < minRange || range > maxRange))
   {
-
-    float distance =  length(pos.xy - window_pos);
-    if((in_visible > uint(0)) && (distance < radius) && (overwrite || in_label == uint(0)))
+    if(pos.x >= 0 && pos.x < width  && pos.y >= 0 && pos.y < height && pos.z >= 0.0f && pos.z <= 1.0f)
     {
-      out_label = new_label;
-    } 
+  
+      float distance =  length(pos.xy - window_pos);
+      if( (distance < radius) && (overwrite || in_label == uint(0)))
+      {
+        out_label = new_label;
+      } 
+    }
   }
  
 
