@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include <glow/glutil.h>
+
 /** \brief remove whitespaces at the beginning and end of a string. **/
 std::string trim(const std::string& str, const std::string& whitespaces = " \0\t\n\r\x0B");
 
@@ -50,8 +52,6 @@ void index_difference(const std::vector<T, A>& a, const std::vector<T, A>& b, st
   result.clear();
   for (auto it = proxy_result.begin(); it != end; ++it) result.push_back(it->index);
 }
-
-#include <glow/glutil.h>
 
 struct Triangle {
   glow::vec2 i, j, k;

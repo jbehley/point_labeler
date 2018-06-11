@@ -26,6 +26,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   /** initialize the paint button mapping **/
   connect(ui.btnBrushMode, &QToolButton::released, [this]() { changeMode(Viewport::PAINT); });
+  connect(ui.btnPolygonMode, &QToolButton::toggled, [this]() { changeMode(Viewport::POLYGON); });
 
   connect(ui.mViewportXYZ, SIGNAL(labelingChanged()), this, SLOT(unsavedChanges()));
 
@@ -178,12 +179,20 @@ void Mainframe::changeMode(int mode) {
     std::cout << "triggered paint mode." << std::endl;
     ui.mViewportXYZ->setMode(Viewport::PAINT);
 
-    ui.actionCylinderMode->setChecked(false);
+    ui.btnPolygonMode->setChecked(false);
 
     ui.mTools->setCurrentIndex(1);
+  } else if (mode == Viewport::POLYGON && ui.btnPolygonMode->isChecked()) /** PAINTMODE **/
+  {
+    std::cout << "triggered polygon mode." << std::endl;
+    ui.mViewportXYZ->setMode(Viewport::POLYGON);
+
+    ui.btnBrushMode->setChecked(false);
+
+//    ui.mTools->setCurrentIndex(1);
   } else if (mode == Viewport::NONE) {
-    ui.actionPaintMode->setChecked(false);
-    ui.actionCylinderMode->setChecked(false);
+    ui.btnPolygonMode->setChecked(false);
+    ui.btnBrushMode->setChecked(false);
   }
 }
 

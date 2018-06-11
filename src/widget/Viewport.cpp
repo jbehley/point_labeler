@@ -55,6 +55,8 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
 
+  setAutoFillBackground(false);
+
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
@@ -382,13 +384,40 @@ void Viewport::paintGL() {
   }
 }
 
+void Viewport::paintEvent(QPaintEvent* event) {
+  updateGL();
+
+  if (mMode == POLYGON) {
+
+    QPainter painter(this);
+
+
+    auto color = mLabelColors[mCurrentLabel];
+    painter.setBrush(QBrush(QColor(color.R * 255, color.G * 255, color.B * 255)));
+    painter.setPen(QColor(color.R * 255, color.G * 255, color.B * 255));
+
+    painter.drawRect(10, 10, 50, 50);
+
+    for (uint32_t i = 0; i < polygonPoints_.size(); ++i) {
+      auto& p = polygonPoints_[i];
+      painter.drawEllipse(p.x - 2, p.y - 2, 5, 5);
+    }
+
+    painter.end();
+  }
+}
+
 void Viewport::mousePressEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
-  if (event->modifiers() == Qt::ControlModifier || (mMode != PAINT)) {
+
+  mChangeCamera = false;
+
+  if (event->modifiers() == Qt::ControlModifier || (mMode == NONE)) {
     if (mCamera.mousePressed(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
                              resolveKeyboardModifier(event->modifiers()))) {
       timer_.start(1. / 30.);
       mChangeCamera = true;
+      polygonPoints_.clear();  // start over again.
       return;
     }
   } else if (mMode == PAINT) {
@@ -400,6 +429,22 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
       labelPoints(event->x(), event->y(), mRadius, 0);
 
     updateGL();
+  } else if (mMode == POLYGON) {
+    if (event->buttons() & Qt::LeftButton) {
+
+      polygonPoints_.push_back(vec2(event->x(), event->y()));
+
+    } else if (event->buttons() & Qt::RightButton) {
+      // finish polygon and label points.
+
+      // 1. determine winding: https://blog.element84.com/polygon-winding-post.html
+
+      polygonPoints_.clear();
+    }
+
+//    std::cout << "polygon: " << polygonPoints_.size() << std::endl;
+
+    repaint();
   }
   //  else if ((mCurrentPaintMode & PAINT_FILLPOLYGON) && (e->buttons() & Qt::LeftButton))
   //  {
@@ -432,6 +477,13 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
       labelPoints(event->x(), event->y(), mRadius, 0);
 
     updateGL();
+  } else if (mMode == POLYGON) {
+    if (polygonPoints_.size() > 0) {
+      polygonPoints_.back().x = event->x();
+      polygonPoints_.back().y = event->y();
+    }
+
+    repaint();
   }
   //  if (mSelectionMode && !((mCurrentPaintMode & PAINT_BRUSH)
   //      || (mCurrentPaintMode & PAINT_FILLPOLYGON)) && (e->button()
@@ -520,6 +572,12 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
         labelPoints(event->x(), event->y(), mRadius, 0);
     }
     updateGL();
+  } else if (mMode == POLYGON) {
+    if (polygonPoints_.size() > 0) {
+      polygonPoints_.back().x = event->x();
+      polygonPoints_.back().y = event->y();
+      repaint();
+    }
   }
   //  else if ((mCurrentPaintMode & PAINT_FILLPOLYGON) && (e->buttons()
   //      & Qt::LeftButton))

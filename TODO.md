@@ -15,6 +15,8 @@
 [x] save on quit.
 [x] min/max range of points in laserscan.
 
+## Other ideas.
+[ ] do projections only once (avoid the matrixmultiply?)
 
 ## Future work
 1. integrate pcp (?)

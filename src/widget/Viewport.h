@@ -39,7 +39,7 @@ class Viewport : public QGLWidget {
  public:
   enum AXIS { XYZ, X, Y, Z };
 
-  enum MODE { NONE, PAINT, CYLINDER };
+  enum MODE { NONE, PAINT, POLYGON };
 
   enum FLAGS { FLAG_OVERWRITE = 1, FLAG_OTHER = 2 };
 
@@ -104,6 +104,8 @@ class Viewport : public QGLWidget {
   void initializeGL();
   void resizeGL(int width, int height);
   void paintGL();
+
+  void paintEvent(QPaintEvent* event);
 
   void mousePressEvent(QMouseEvent*);
   void mouseReleaseEvent(QMouseEvent*);
@@ -185,6 +187,8 @@ class Viewport : public QGLWidget {
   std::map<std::string, bool> drawingOption_;
 
   float minRange_{0.0f}, maxRange_{100.0f};
+
+  std::vector<glow::vec2>  polygonPoints_;
 };
 
 #endif /* POINTVIEW_H_ */
