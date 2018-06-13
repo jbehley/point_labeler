@@ -43,8 +43,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>200</width>
-         <height>489</height>
+         <width>187</width>
+         <height>501</height>
         </rect>
        </property>
        <attribute name="label">
@@ -157,6 +157,26 @@
          <widget class="QCheckBox" name="chkFilterLabels">
           <property name="text">
            <string>filter labels</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="chkRemoveGround">
+          <property name="text">
+           <string>remove ground</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="spinGroundThreshold">
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="minimum">
+           <double>-10.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>-1.600000000000000</double>
           </property>
          </widget>
         </item>

@@ -1,23 +1,19 @@
 #include "misc.h"
 
+#include <stdint.h>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
-#include <stdint.h>
 #include <iostream>
 
-std::string trim(const std::string& str, const std::string& whitespaces)
-{
+std::string trim(const std::string& str, const std::string& whitespaces) {
   int32_t beg = 0;
   int32_t end = 0;
 
   /** find the beginning **/
-  for (beg = 0; beg < (int32_t) str.size(); ++beg)
-  {
+  for (beg = 0; beg < (int32_t)str.size(); ++beg) {
     bool found = false;
-    for (uint32_t i = 0; i < whitespaces.size(); ++i)
-    {
-      if (str[beg] == whitespaces[i])
-      {
+    for (uint32_t i = 0; i < whitespaces.size(); ++i) {
+      if (str[beg] == whitespaces[i]) {
         found = true;
         break;
       }
@@ -26,13 +22,10 @@ std::string trim(const std::string& str, const std::string& whitespaces)
   }
 
   /** find the end **/
-  for (end = int32_t(str.size()) - 1; end > beg; --end)
-  {
+  for (end = int32_t(str.size()) - 1; end > beg; --end) {
     bool found = false;
-    for (uint32_t i = 0; i < whitespaces.size(); ++i)
-    {
-      if (str[end] == whitespaces[i])
-      {
+    for (uint32_t i = 0; i < whitespaces.size(); ++i) {
+      if (str[end] == whitespaces[i]) {
         found = true;
         break;
       }
@@ -43,9 +36,7 @@ std::string trim(const std::string& str, const std::string& whitespaces)
   return str.substr(beg, end - beg + 1);
 }
 
-std::vector<std::string> split(const std::string& line,
-    const std::string& delim)
-{
+std::vector<std::string> split(const std::string& line, const std::string& delim) {
   QString string = QString::fromStdString(line);
 
   QStringList list = string.split(QString::fromStdString(delim));
@@ -53,8 +44,7 @@ std::vector<std::string> split(const std::string& line,
 
   QStringListIterator it(list);
 
-  while (it.hasNext())
-    tokens.push_back(it.next().toStdString());
+  while (it.hasNext()) tokens.push_back(it.next().toStdString());
 
   return tokens;
 }
@@ -121,8 +111,8 @@ bool triangulate(const std::vector<glow::vec2>& points, std::vector<Triangle>& t
       }
     }
 
-    i = (i + 1) % points.size();
-  } while ((lastear > lst.size() * 2) || (lst.size() == 3));
+    i = (i + 1) % lst.size();
+  } while ((lastear < int32_t(lst.size()) * 2) && (int32_t(lst.size()) != 3));
 
   if (lst.size() == 3) {
     Triangle tri;

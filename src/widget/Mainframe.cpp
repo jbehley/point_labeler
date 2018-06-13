@@ -62,6 +62,10 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.chkShowColor, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("color", value); });
 
+  connect(ui.chkRemoveGround, &QCheckBox::toggled, [this](bool value) { ui.mViewportXYZ->setGroundRemoval(value); });
+  connect(ui.spinGroundThreshold, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+          [this](double value) { ui.mViewportXYZ->setGroundThreshold(value); });
+
   /** load labels and colors **/
   std::map<uint32_t, std::string> label_names;
   std::map<uint32_t, glow::GlColor> label_colors;
@@ -189,7 +193,7 @@ void Mainframe::changeMode(int mode) {
 
     ui.btnBrushMode->setChecked(false);
 
-//    ui.mTools->setCurrentIndex(1);
+    //    ui.mTools->setCurrentIndex(1);
   } else if (mode == Viewport::NONE) {
     ui.btnPolygonMode->setChecked(false);
     ui.btnBrushMode->setChecked(false);

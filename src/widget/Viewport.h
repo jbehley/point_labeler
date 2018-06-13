@@ -60,6 +60,9 @@ class Viewport : public QGLWidget {
   void setMinRange(float range);
   void setMaxRange(float range);
 
+  void setGroundRemoval(bool value);
+  void setGroundThreshold(float value);
+
  signals:
   void labelingChanged();
 
@@ -104,8 +107,6 @@ class Viewport : public QGLWidget {
   void initializeGL();
   void resizeGL(int width, int height);
   void paintGL();
-
-  void paintEvent(QPaintEvent* event);
 
   void mousePressEvent(QMouseEvent*);
   void mouseReleaseEvent(QMouseEvent*);
@@ -160,11 +161,14 @@ class Viewport : public QGLWidget {
 
   glow::GlVertexArray vao_no_points_;
   glow::GlVertexArray vao_points_;
+  glow::GlVertexArray vao_polygon_points_;
+  glow::GlVertexArray vao_triangles_;
 
   glow::GlProgram prgDrawPose_;
   glow::GlProgram prgDrawPoints_;
   glow::GlProgram prgUpdateLabels_;
   glow::GlProgram prgUpdateVisibility_;
+  glow::GlProgram prgPolygonPoints_;
 
   int32_t pointSize_{1};
   std::map<std::string, bool> drawing_options_;
@@ -188,7 +192,14 @@ class Viewport : public QGLWidget {
 
   float minRange_{0.0f}, maxRange_{100.0f};
 
-  std::vector<glow::vec2>  polygonPoints_;
+  bool removeGround_{false};
+  float groundThreshold_{-1.6f};
+
+  std::vector<glow::vec2> polygonPoints_;
+  glow::GlBuffer<glow::vec2> bufPolygonPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlTextureRectangle texTriangles_;
+  glow::GlBuffer<glow::vec2> bufTriangles_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  uint32_t numTriangles_{0};
 };
 
 #endif /* POINTVIEW_H_ */

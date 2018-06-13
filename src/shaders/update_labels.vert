@@ -15,6 +15,13 @@ uniform bool overwrite;
 uniform float minRange;
 uniform float maxRange;
 
+uniform int labelingMode;
+uniform sampler2DRect triangles;
+uniform int numTriangles;
+
+uniform bool removeGround;
+uniform float groundThreshold;
+
 out uint out_label;
 
 void main()
@@ -29,11 +36,12 @@ void main()
   vec3 pos =  vec3(0.5f * (point.x + 1.0) * width, 0.5f * (point.y + 1.0) * height, 0.5f * (point.z + 1.0)); 
   pos.y = height - pos.y;
   
-  if((in_visible > uint(0)) && !(range < minRange || range > maxRange))
+  bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > groundThreshold); 
+  
+  if(visible && !(range < minRange || range > maxRange))
   {
     if(pos.x >= 0 && pos.x < width  && pos.y >= 0 && pos.y < height && pos.z >= 0.0f && pos.z <= 1.0f)
     {
-  
       float distance =  length(pos.xy - window_pos);
       if( (distance < radius) && (overwrite || in_label == uint(0)))
       {

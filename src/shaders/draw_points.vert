@@ -17,6 +17,9 @@ uniform bool useColor;
 uniform float minRange;
 uniform float maxRange;
 
+uniform bool removeGround;
+uniform float groundThreshold;
+
 out vec4 color;
 
 void main()
@@ -25,7 +28,10 @@ void main()
   
   float range = length(in_vertex);
   gl_Position = mvp * vec4(in_vertex, 1.0);
-  if(in_visible == uint(0) || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);
+  
+  bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > groundThreshold); 
+  
+  if(!visible || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);
   
   if(useRemission)
   { 

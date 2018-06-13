@@ -53,6 +53,7 @@ COMPILE_SHADERS(${VIZ_SHADER_SRC}
   src/shaders/draw_pose.geom
   
   src/shaders/draw_points.vert
+  src/shaders/draw_polygon.vert
   src/shaders/update_visibility.vert
   src/shaders/update_labels.vert
 )

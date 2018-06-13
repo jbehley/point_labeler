@@ -21,7 +21,8 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       mCurrentLabel(0),
       mRadius(5),
       buttonPressed(false),
-      texLabelColors_(256, 1, TextureFormat::RGB) {
+      texLabelColors_(256, 1, TextureFormat::RGB),
+      texTriangles_(100, 3, TextureFormat::RGB) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
   //  setMouseTracking(true);
@@ -37,6 +38,8 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   bufRemissions_.resize(max_size);
   bufVisible_.resize(max_size);
   bufLabels_.resize(max_size);
+
+  bufPolygonPoints_.reserve(100);
 
   bufUpdatedLabels_.resize(maxPointsPerScan_);
   std::vector<std::string> update_varyings{"out_label"};
@@ -81,6 +84,10 @@ void Viewport::initPrograms() {
   prgUpdateVisibility_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/empty.frag"));
   prgUpdateVisibility_.attach(tfUpdateVisibility_);
   prgUpdateVisibility_.link();
+
+  prgPolygonPoints_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/draw_polygon.vert"));
+  prgPolygonPoints_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
+  prgPolygonPoints_.link();
 }
 
 void Viewport::initVertexBuffers() {
@@ -88,6 +95,10 @@ void Viewport::initVertexBuffers() {
   vao_points_.setVertexAttribute(1, bufRemissions_, 1, AttributeType::FLOAT, false, sizeof(float), nullptr);
   vao_points_.setVertexAttribute(2, bufLabels_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
   vao_points_.setVertexAttribute(3, bufVisible_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
+
+  vao_polygon_points_.setVertexAttribute(0, bufPolygonPoints_, 2, AttributeType::FLOAT, false, sizeof(vec2), nullptr);
+
+  vao_triangles_.setVertexAttribute(0, bufTriangles_, 2, AttributeType::FLOAT, false, sizeof(vec2), nullptr);
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
@@ -299,6 +310,15 @@ void Viewport::setFilteredLabels(const std::vector<uint32_t>& labels) {
   updateGL();
 }
 
+void Viewport::setGroundRemoval(bool value) {
+  removeGround_ = value;
+  updateGL();
+}
+void Viewport::setGroundThreshold(float value) {
+  groundThreshold_ = value;
+  updateGL();
+}
+
 void Viewport::setLabelVisibility(uint32_t label, bool visible) {
   ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
   ScopedBinder<GlProgram> programBinder(prgUpdateVisibility_);
@@ -362,6 +382,8 @@ void Viewport::paintGL() {
   }
 
   if (points_.size() > 0) {
+    glPointSize(pointSize_);
+
     ScopedBinder<GlProgram> program_binder(prgDrawPoints_);
     ScopedBinder<GlVertexArray> vao_binder(vao_points_);
 
@@ -369,6 +391,8 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<bool>("useColor", drawingOption_["color"]));
     prgDrawPoints_.setUniform(GlUniform<float>("maxRange", maxRange_));
     prgDrawPoints_.setUniform(GlUniform<float>("minRange", minRange_));
+    prgDrawPoints_.setUniform(GlUniform<bool>("removeGround", removeGround_));
+    prgDrawPoints_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
 
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.bind();
@@ -382,28 +406,37 @@ void Viewport::paintGL() {
 
     texLabelColors_.release();
   }
-}
 
-void Viewport::paintEvent(QPaintEvent* event) {
-  updateGL();
-
+  glDisable(GL_DEPTH_TEST);
+  // Important: QPainter is apparently not working with OpenGL Core Profile < Qt5.9!!!!
+  //  http://blog.qt.io/blog/2017/01/27/opengl-core-profile-context-support-qpainter/
+  //  QPainter painter(this); // << does not work with OpenGL Core Profile.
   if (mMode == POLYGON) {
+    ScopedBinder<GlProgram> program_binder(prgPolygonPoints_);
 
-    QPainter painter(this);
+    vao_polygon_points_.bind();
 
+    prgPolygonPoints_.setUniform(GlUniform<int32_t>("width", width()));
+    prgPolygonPoints_.setUniform(GlUniform<int32_t>("height", height()));
+    prgPolygonPoints_.setUniform(GlUniform<uint32_t>("label", mCurrentLabel));
 
-    auto color = mLabelColors[mCurrentLabel];
-    painter.setBrush(QBrush(QColor(color.R * 255, color.G * 255, color.B * 255)));
-    painter.setPen(QColor(color.R * 255, color.G * 255, color.B * 255));
+    glActiveTexture(GL_TEXTURE0);
+    texLabelColors_.bind();
 
-    painter.drawRect(10, 10, 50, 50);
+    glDrawArrays(GL_LINE_LOOP, 0, bufPolygonPoints_.size());
 
-    for (uint32_t i = 0; i < polygonPoints_.size(); ++i) {
-      auto& p = polygonPoints_[i];
-      painter.drawEllipse(p.x - 2, p.y - 2, 5, 5);
-    }
+    glPointSize(7.0f);
 
-    painter.end();
+    glDrawArrays(GL_POINTS, 0, bufPolygonPoints_.size());
+    vao_polygon_points_.release();
+
+    vao_triangles_.bind();
+
+    glDrawArrays(GL_LINES, 0, bufTriangles_.size());
+
+    vao_triangles_.release();
+
+    texLabelColors_.release();
   }
 }
 
@@ -417,7 +450,9 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
                              resolveKeyboardModifier(event->modifiers()))) {
       timer_.start(1. / 30.);
       mChangeCamera = true;
-      polygonPoints_.clear();  // start over again.
+      polygonPoints_.clear();  // start over again.#
+      bufPolygonPoints_.assign(polygonPoints_);
+      bufTriangles_.resize(0);
       return;
     }
   } else if (mMode == PAINT) {
@@ -431,18 +466,63 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
     updateGL();
   } else if (mMode == POLYGON) {
     if (event->buttons() & Qt::LeftButton) {
-
       polygonPoints_.push_back(vec2(event->x(), event->y()));
 
     } else if (event->buttons() & Qt::RightButton) {
-      // finish polygon and label points.
+      if (polygonPoints_.size() > 2) {
+        // finish polygon and label points.
 
-      // 1. determine winding: https://blog.element84.com/polygon-winding-post.html
+        // 1. determine winding: https://blog.element84.com/polygon-winding-post.html
+
+        std::vector<vec2> points = polygonPoints_;
+        for (uint32_t i = 0; i < points.size(); ++i) {
+          points[i].y = height() - points[i].y;  // flip y.
+        }
+
+        float winding = 0.0f;
+        for (uint32_t i = 0; i < points.size() - 1; ++i) {
+          const auto& p = points[i + 1];
+          const auto& q = points[i];
+
+          winding += (p.x - q.x) * (p.y + p.y);
+        }
+
+        if (winding > 0) {
+          std::cout << "winding: CW" << std::endl;
+          std::reverse(points.begin(), points.end());
+        } else
+          std::cout << "winding: CCW" << std::endl;
+
+        std::vector<Triangle> triangles;
+        std::vector<glow::vec2> tris_verts;
+
+        triangulate(points, triangles);
+
+        std::cout << "#triangles: " << triangles.size() << std::endl;
+
+        std::vector<vec3> texContent(3 * 100);
+        for (uint32_t i = 0; i < triangles.size(); ++i) {
+          auto t = triangles[i];
+          texContent[i + 0 * 100] = vec3(t.i.x, t.i.y, 0);
+          texContent[i + 1 * 100] = vec3(t.j.x, t.j.y, 0);
+          texContent[i + 2 * 100] = vec3(t.k.x, t.k.y, 0);
+
+          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+        }
+        numTriangles_ = triangles.size();
+        texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
+        bufTriangles_.assign(tris_verts);
+      }
 
       polygonPoints_.clear();
     }
 
-//    std::cout << "polygon: " << polygonPoints_.size() << std::endl;
+    bufPolygonPoints_.assign(polygonPoints_);
 
     repaint();
   }
@@ -481,6 +561,8 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
     if (polygonPoints_.size() > 0) {
       polygonPoints_.back().x = event->x();
       polygonPoints_.back().y = event->y();
+
+      bufPolygonPoints_.assign(polygonPoints_);
     }
 
     repaint();
@@ -576,6 +658,9 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
     if (polygonPoints_.size() > 0) {
       polygonPoints_.back().x = event->x();
       polygonPoints_.back().y = event->y();
+
+      bufPolygonPoints_.assign(polygonPoints_);
+
       repaint();
     }
   }
@@ -611,6 +696,16 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<bool>("overwrite", mFlags & FLAG_OVERWRITE));
   prgUpdateLabels_.setUniform(GlUniform<float>("maxRange", maxRange_));
   prgUpdateLabels_.setUniform(GlUniform<float>("minRange", minRange_));
+  prgUpdateLabels_.setUniform(GlUniform<bool>("removeGround", removeGround_));
+  prgUpdateLabels_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
+  if (mMode == Viewport::PAINT) prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 0));
+  if (mMode == Viewport::POLYGON) {
+    prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 1));
+    prgUpdateLabels_.setUniform(GlUniform<int32_t>("numTriangles", numTriangles_));
+  }
+
+  glActiveTexture(GL_TEXTURE0);
+  texTriangles_.bind();
 
   glEnable(GL_RASTERIZER_DISCARD);
 
@@ -628,6 +723,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 
   glDisable(GL_RASTERIZER_DISCARD);
 
+  texTriangles_.release();
   //  std::cout << Stopwatch::toc() << " s." << std::endl;
 
   emit labelingChanged();
