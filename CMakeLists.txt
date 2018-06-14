@@ -79,19 +79,28 @@ add_executable(labeler
   src/widget/KittiReader.cpp
 )
 
-add_executable(runtests
+if(NOT GTEST_FOUND)
+ 
+  IF(IS_DIRECTORY "/usr/src/gtest/")
+    MESSAGE(STATUS "Found google test sources in /usr/src/gtest/") 
+    
+    ADD_SUBDIRECTORY(/usr/src/gtest/ gtest)
+    
+    # mimick the behaviour of find_package(GTest)
+    SET(GTEST_FOUND TRUE)
+    SET(GTEST_BOTH_LIBRARIES gtest gtest_main)
+    SET(GTEST_LIBRARIES gtest)
+    SET(GTEST_MAIN_LIBRARIES gtest_main)
+  ELSE()
+    find_package(GTest)
+  ENDIF()
+endif()
 
-  src/data/label_utils.cpp
-  src/data/kitti_utils.cpp
-  src/rv/string_utils.cpp
-  src/rv/Stopwatch.cpp
-  src/data/Math.cpp
-  src/data/misc.cpp
-  
-  src/tests/triangulateTest.cpp
-)
 
+if(GTEST_FOUND)
+  enable_testing()
+  add_subdirectory(src/test)
+endif()
 
 target_link_libraries(labeler ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
-target_link_libraries(runtests ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
 

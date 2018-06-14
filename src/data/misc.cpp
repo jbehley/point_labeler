@@ -81,9 +81,13 @@ bool triangulate(const std::vector<glow::vec2>& points, std::vector<Triangle>& t
     p2 = lst[((i + 1) + lst.size()) % lst.size()];
 
     // is corner convex or concave?
-    float l = ((p1.x - p.x) * (p2.y - p.y) - (p1.y - p.y) * (p2.x - p.x));
+    //    float l = ((p1.x - p.x) * (p2.y - p.y) - (p1.y - p.y) * (p2.x - p.x));
 
-    if (l < 0) {
+    float g = (p.y - p1.y) * (p2.x - p1.x) + (p1.x - p.x) * (p2.y - p1.y);
+    // signed triangle area:
+    //    float c = (p2.x - p1.x) * (p2.y + p1.y) + (p.x - p2.x) * (p.y + p2.y) + (p1.x - p.x) * (p1.y + p.y);
+
+    if (g < 0) {
       // check for other point inside triangle.
       bool intriangle = false;
       for (int32_t j = 2; j < int32_t(lst.size()) - 2; ++j) {
