@@ -79,5 +79,19 @@ add_executable(labeler
   src/widget/KittiReader.cpp
 )
 
+add_executable(runtests
+
+  src/data/label_utils.cpp
+  src/data/kitti_utils.cpp
+  src/rv/string_utils.cpp
+  src/rv/Stopwatch.cpp
+  src/data/Math.cpp
+  src/data/misc.cpp
+  
+  src/tests/triangulateTest.cpp
+)
+
+
 target_link_libraries(labeler ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
+target_link_libraries(runtests ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
 

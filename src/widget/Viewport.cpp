@@ -22,7 +22,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       mRadius(5),
       buttonPressed(false),
       texLabelColors_(256, 1, TextureFormat::RGB),
-      texTriangles_(100, 3, TextureFormat::RGB) {
+      texTriangles_(3 * 100, 1, TextureFormat::RGB) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
   //  setMouseTracking(true);
@@ -57,6 +57,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
+
+  texTriangles_.setMinifyingOperation(TexRectMinOp::NEAREST);
+  texTriangles_.setMagnifyingOperation(TexRectMagOp::NEAREST);
 
   setAutoFillBackground(false);
 
@@ -440,6 +443,11 @@ void Viewport::paintGL() {
   }
 }
 
+std::ostream& operator<<(std::ostream& os, const vec2& v) {
+  os << "(" << v.x << ", " << v.y << ")";
+  return os;
+}
+
 void Viewport::mousePressEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
 
@@ -477,6 +485,8 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         std::vector<vec2> points = polygonPoints_;
         for (uint32_t i = 0; i < points.size(); ++i) {
           points[i].y = height() - points[i].y;  // flip y.
+
+          std::cout << points[i] << std::endl;
         }
 
         float winding = 0.0f;
@@ -493,6 +503,10 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         } else
           std::cout << "winding: CCW" << std::endl;
 
+        for (uint32_t i = 0; i < points.size(); ++i) {
+          std::cout << points[i] << std::endl;
+        }
+
         std::vector<Triangle> triangles;
         std::vector<glow::vec2> tris_verts;
 
@@ -503,9 +517,9 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         std::vector<vec3> texContent(3 * 100);
         for (uint32_t i = 0; i < triangles.size(); ++i) {
           auto t = triangles[i];
-          texContent[i + 0 * 100] = vec3(t.i.x, t.i.y, 0);
-          texContent[i + 1 * 100] = vec3(t.j.x, t.j.y, 0);
-          texContent[i + 2 * 100] = vec3(t.k.x, t.k.y, 0);
+          texContent[3 * i + 0] = vec3(t.i.x / width(), (height() - t.i.y) / height(), 0);
+          texContent[3 * i + 1] = vec3(t.j.x / width(), (height() - t.j.y) / height(), 0);
+          texContent[3 * i + 2] = vec3(t.k.x / width(), (height() - t.k.y) / height(), 0);
 
           tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
           tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
@@ -514,9 +528,19 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
           tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
           tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
         }
+        std::cout << texContent[0].x << ", " << texContent[0].y << ";" << texContent[1].x << ", " << texContent[1].y
+                  << std::endl;
+
         numTriangles_ = triangles.size();
         texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
         bufTriangles_.assign(tris_verts);
+
+        std::vector<vec4> content(3 * 100);
+        texTriangles_.download(content);
+
+        std::cout << content[0].x << ", " << content[0].y << ";" << content[1].x << ", " << content[1].y << std::endl;
+
+        labelPoints(event->x(), event->y(), 0, mCurrentLabel);
       }
 
       polygonPoints_.clear();
@@ -526,12 +550,6 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
 
     repaint();
   }
-  //  else if ((mCurrentPaintMode & PAINT_FILLPOLYGON) && (e->buttons() & Qt::LeftButton))
-  //  {
-  //    vertices.push_back(RoSe::Vector2(e->x(), e->y()));
-  //
-  //    updateGL();
-  //  }
 
   event->accept();
 }
@@ -567,75 +585,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
 
     repaint();
   }
-  //  if (mSelectionMode && !((mCurrentPaintMode & PAINT_BRUSH)
-  //      || (mCurrentPaintMode & PAINT_FILLPOLYGON)) && (e->button()
-  //      == Qt::LeftButton) && e->modifiers() != Qt::ControlModifier)
-  //  {
-  //    curr_selected_point = getClickedPoint(e->x(), e->y());
-  //    if (curr_selected_point != 0) emit pointSelected();
-  //
-  //    //    mUpdateDisplayList = true;
-  //    //    updateGL();
-  //  }
-  //  else if ((mCurrentPaintMode & PAINT_FILLPOLYGON) && (e->button()
-  //      == Qt::LeftButton))
-  //  {
-  //    std::cout << "Mouse released at (" << e->x() << ", " << e->y() << ")"
-  //        << std::endl;
-  //    /** append point to polygon list **/
-  //    updateGL();
-  //  }
-  //  else if ((mCurrentPaintMode & PAINT_FILLPOLYGON) && (e->button()
-  //      == Qt::RightButton))
-  //  {
-  //    /** (1) determine winding order, really bullet proof is this method not, but it should work in most
-  //    situations.
-  //    **/
-  //    if (vertices.size() >= 3)
-  //    {
-  //      RoSe::Vector2 midpoint;
-  //
-  //      for (unsigned int i = 0; i < vertices.size(); ++i)
-  //        midpoint += vertices[i];
-  //
-  //      midpoint /= vertices.size();
-  //
-  //      /** the coordinate systems origin is in the top-left corner, so that the y axis is flipped. **/
-  //      int order = Math::halfPlaneTest(vertices[0], vertices[1], midpoint);
-  //
-  //      if (order > 0) // clockwise order; we have to reorder the vertices.
-  //      {
-  //        std::cout << "reordering the vertices." << std::endl;
-  //
-  //        std::cout << "BEFORE REORDERING:" << std::endl;
-  //        for (unsigned int i = 0; i < vertices.size(); ++i)
-  //          std::cout << vertices[i] << std::endl;
-  //
-  //        std::vector<RoSe::Vector2> temp;
-  //        for (int i = vertices.size() - 1; i >= 0; --i)
-  //          temp.push_back(vertices[i]);
-  //
-  //        vertices = temp;
-  //
-  //        std::cout << "AFTER REORDERING: " << std::endl;
-  //        for (unsigned int i = 0; i < vertices.size(); ++i)
-  //          std::cout << vertices[i] << std::endl;
-  //
-  //        assert(temp.size() == vertices.size());
-  //
-  //      }
-  //      std::list<std::vector<RoSe::Vector2> >::iterator pit =
-  //          projected_points.begin();
-  //      /** (2) label points **/
-  //      for (std::list<LabeledLaserscan>::iterator it = mFirstLaserscan; it
-  //          != mLastLaserscan; ++it, ++pit)
-  //        labelPoints(*it, *pit, vertices, mCurrentLabel);
-  //    }
-  //    vertices.clear();
-  //
-  //    mUpdateDisplayList = true;
-  //    updateGL();
-  //  }
+
   event->accept();
 }
 
@@ -664,15 +614,7 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
       repaint();
     }
   }
-  //  else if ((mCurrentPaintMode & PAINT_FILLPOLYGON) && (e->buttons()
-  //      & Qt::LeftButton))
-  //  {
-  //    /** update last point **/
-  //    RoSe::Vector2& lastPoint = vertices.back();
-  //    lastPoint[0] = e->x();
-  //    lastPoint[1] = e->y();
-  //    updateGL();
-  //  }
+
   event->accept();
 }
 
@@ -700,6 +642,8 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
   if (mMode == Viewport::PAINT) prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 0));
   if (mMode == Viewport::POLYGON) {
+    std::cout << "labeling with POLYGON" << std::endl;
+    std::cout << "#numTriangles = " << numTriangles_ << std::endl;
     prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 1));
     prgUpdateLabels_.setUniform(GlUniform<int32_t>("numTriangles", numTriangles_));
   }

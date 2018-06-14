@@ -24,6 +24,22 @@ uniform float groundThreshold;
 
 out uint out_label;
 
+bool insideTriangle(vec2 p, vec2 v1, vec2 v2, vec2 v3) {
+  float b0 = ((v2.x - v1.x) * (v3.y - v1.y) - (v3.x - v1.x) * (v2.y - v1.y));
+
+  if (abs(b0) > 0) {
+    // compute barycentric coordinates.
+    float b1 = (((v2.x - p.x) * (v3.y - p.y) - (v3.x - p.x) * (v2.y - p.y)) / b0);
+    float b2 = (((v3.x - p.x) * (v1.y - p.y) - (v1.x - p.x) * (v3.y - p.y)) / b0);
+    float b3 = 1.0f - b1 - b2;
+
+    // only if all are greater equal 0, the point can be inside.
+    return (b1 > 0) && (b2 > 0) && (b3 > 0);
+  }
+
+  return false;
+}
+
 void main()
 {
   float range = length(in_vertex);
@@ -38,17 +54,35 @@ void main()
   
   bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > groundThreshold); 
   
+
   if(visible && !(range < minRange || range > maxRange))
   {
     if(pos.x >= 0 && pos.x < width  && pos.y >= 0 && pos.y < height && pos.z >= 0.0f && pos.z <= 1.0f)
     {
-      float distance =  length(pos.xy - window_pos);
-      if( (distance < radius) && (overwrite || in_label == uint(0)))
+      if(labelingMode == 0)
       {
-        out_label = new_label;
+        float distance =  length(pos.xy - window_pos);
+        if( (distance < radius) && (overwrite || in_label == uint(0)))
+        {
+          out_label = new_label;
+        } 
       } 
-    }
-  }
- 
+      else if(labelingMode == 1)
+      {
+        for(int i = 0; i < numTriangles; ++i)
+        {
+          vec2 v1 = texture(triangles, vec2(3 * i + 0.5, 0.5)).xy * vec2(width, height);
+          vec2 v2 = texture(triangles, vec2(3 * i + 1.5, 0.5)).xy * vec2(width, height);
+          vec2 v3 = texture(triangles, vec2(3 * i + 2.5, 0.5)).xy * vec2(width, height);
 
+          if(insideTriangle(pos.xy, v1, v2, v3))
+          {
+            out_label = new_label;
+            break;
+          }
+        }
+      }
+    }
+    
+  }
 }
