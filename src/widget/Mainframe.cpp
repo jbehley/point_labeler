@@ -304,6 +304,8 @@ void Mainframe::setCurrentScanIdx(int32_t idx) {
 
   reader_.retrieve(idx, indexes_, points_, labels_);
 
+  ui.mViewportXYZ->setPoints(points_, labels_);
+
   // find difference.
   std::vector<uint32_t> diff_indexes;
   index_difference(oldLabels, labels_, diff_indexes);
@@ -318,7 +320,7 @@ void Mainframe::setCurrentScanIdx(int32_t idx) {
   // only update really needed label files.
   reader_.update(removedIndexes, removedLabels);
 
-  ui.mViewportXYZ->setPoints(points_, labels_);
+
 }
 
 void Mainframe::readConfig() {

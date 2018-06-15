@@ -129,11 +129,11 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   index_difference(labels_, l, indexes);
 
   for (auto index : indexes) {
-    if (bufferContent_.find(p[index].get()) == bufferContent_.end()) continue;
-    const BufferInfo& info = bufferContent_[p[index].get()];
+    if (bufferContent_.find(points_[index].get()) == bufferContent_.end()) continue;
+    const BufferInfo& info = bufferContent_[points_[index].get()];
 
     // replace label information with labels from GPU.
-    bufLabels_.get(*l[index], info.index * maxPointsPerScan_, info.size);
+    bufLabels_.get(*labels_[index], info.index * maxPointsPerScan_, info.size);
   }
 
   points_ = p;
@@ -433,11 +433,11 @@ void Viewport::paintGL() {
     glDrawArrays(GL_POINTS, 0, bufPolygonPoints_.size());
     vao_polygon_points_.release();
 
-    vao_triangles_.bind();
-
-    glDrawArrays(GL_LINES, 0, bufTriangles_.size());
-
-    vao_triangles_.release();
+    //    vao_triangles_.bind();
+    //
+    //    glDrawArrays(GL_LINES, 0, bufTriangles_.size());
+    //
+    //    vao_triangles_.release();
 
     texLabelColors_.release();
   }
@@ -504,11 +504,11 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         //        else std::cout << "winding: CCW" << std::endl;
 
         std::vector<Triangle> triangles;
-//        std::vector<glow::vec2> tris_verts;
+        //        std::vector<glow::vec2> tris_verts;
 
         triangulate(points, triangles);
 
-//        std::cout << "#triangles: " << triangles.size() << std::endl;
+        //        std::cout << "#triangles: " << triangles.size() << std::endl;
 
         std::vector<vec3> texContent(3 * 100);
         for (uint32_t i = 0; i < triangles.size(); ++i) {
@@ -517,18 +517,18 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
           texContent[3 * i + 1] = vec3(t.j.x / width(), (height() - t.j.y) / height(), 0);
           texContent[3 * i + 2] = vec3(t.k.x / width(), (height() - t.k.y) / height(), 0);
 
-//          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
-//          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
-//          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
-//          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
-//          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
-//          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+          //          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+          //          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+          //          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+          //          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+          //          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+          //          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
         }
 
         numTriangles_ = triangles.size();
         // note: colors are in range [0,1] for FLOAT!
         texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
-//        bufTriangles_.assign(tris_verts);
+        //        bufTriangles_.assign(tris_verts);
 
         labelPoints(event->x(), event->y(), 0, mCurrentLabel);
       }
