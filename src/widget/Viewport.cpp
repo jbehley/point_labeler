@@ -485,34 +485,30 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         std::vector<vec2> points = polygonPoints_;
         for (uint32_t i = 0; i < points.size(); ++i) {
           points[i].y = height() - points[i].y;  // flip y.
-
-          std::cout << points[i] << std::endl;
         }
 
         float winding = 0.0f;
-        for (uint32_t i = 0; i < points.size() - 1; ++i) {
-          const auto& p = points[i + 1];
+
+        // important: take also last edge into account!
+        for (uint32_t i = 0; i < points.size(); ++i) {
+          const auto& p = points[(i + 1) % points.size()];
           const auto& q = points[i];
 
-          winding += (p.x - q.x) * (p.y + p.y);
+          winding += (p.x - q.x) * (q.y + p.y);
         }
 
-        if (winding > 0) {
-          std::cout << "winding: CW" << std::endl;
-          std::reverse(points.begin(), points.end());
-        } else
-          std::cout << "winding: CCW" << std::endl;
+        // invert  order if CW order.
+        if (winding > 0) std::reverse(points.begin(), points.end());
 
-        for (uint32_t i = 0; i < points.size(); ++i) {
-          std::cout << points[i] << std::endl;
-        }
+        //        if (winding > 0) std::cout << "winding: CW" << std::endl;
+        //        else std::cout << "winding: CCW" << std::endl;
 
         std::vector<Triangle> triangles;
-        std::vector<glow::vec2> tris_verts;
+//        std::vector<glow::vec2> tris_verts;
 
         triangulate(points, triangles);
 
-        std::cout << "#triangles: " << triangles.size() << std::endl;
+//        std::cout << "#triangles: " << triangles.size() << std::endl;
 
         std::vector<vec3> texContent(3 * 100);
         for (uint32_t i = 0; i < triangles.size(); ++i) {
@@ -521,24 +517,18 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
           texContent[3 * i + 1] = vec3(t.j.x / width(), (height() - t.j.y) / height(), 0);
           texContent[3 * i + 2] = vec3(t.k.x / width(), (height() - t.k.y) / height(), 0);
 
-          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
-          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
-          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
-          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
-          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
-          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+//          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+//          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+//          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+//          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+//          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+//          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
         }
-        std::cout << texContent[0].x << ", " << texContent[0].y << ";" << texContent[1].x << ", " << texContent[1].y
-                  << std::endl;
 
         numTriangles_ = triangles.size();
+        // note: colors are in range [0,1] for FLOAT!
         texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
-        bufTriangles_.assign(tris_verts);
-
-        std::vector<vec4> content(3 * 100);
-        texTriangles_.download(content);
-
-        std::cout << content[0].x << ", " << content[0].y << ";" << content[1].x << ", " << content[1].y << std::endl;
+//        bufTriangles_.assign(tris_verts);
 
         labelPoints(event->x(), event->y(), 0, mCurrentLabel);
       }
@@ -642,8 +632,6 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
   if (mMode == Viewport::PAINT) prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 0));
   if (mMode == Viewport::POLYGON) {
-    std::cout << "labeling with POLYGON" << std::endl;
-    std::cout << "#numTriangles = " << numTriangles_ << std::endl;
     prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 1));
     prgUpdateLabels_.setUniform(GlUniform<int32_t>("numTriangles", numTriangles_));
   }

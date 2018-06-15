@@ -67,7 +67,7 @@ bool insideTriangle(const glow::vec2& p, const glow::vec2& v1, const glow::vec2&
 }
 
 bool triangulate(const std::vector<glow::vec2>& points, std::vector<Triangle>& triangles) {
-  uint32_t i = 0;
+  int32_t i = 0;
   int32_t lastear = -1;
   std::vector<glow::vec2> lst = points;
 

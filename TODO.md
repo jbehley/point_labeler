@@ -4,7 +4,7 @@
   - use vertex shader with transform feedback to update visibility
 [x] Label only visible points.
 [x] Save labels of unloaded point clouds on forward/backward automatically.
-[ ] Polygon labeling: non-convex simple polygons.
+[x] Polygon labeling: non-convex simple polygons.
   - ear cutting and use updateLabels shader for polygon labeling. [x]
   - use texture for representation of triangulated polygon.
 [ ] Segment-based labeling: use grid-based segmentation to find segments, which can be selected for labeling.
@@ -14,6 +14,7 @@
 [ ] moving/static labeling (bit in labels?)
 [x] save on quit.
 [x] min/max range of points in laserscan.
+[ ] remove ground by grid-based  segmentation of single scan.
 
 ## Other ideas.
 [ ] do projections only once (avoid the matrixmultiply?)

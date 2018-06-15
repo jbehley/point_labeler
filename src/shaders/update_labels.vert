@@ -75,7 +75,7 @@ void main()
           vec2 v2 = texture(triangles, vec2(3 * i + 1.5, 0.5)).xy * vec2(width, height);
           vec2 v3 = texture(triangles, vec2(3 * i + 2.5, 0.5)).xy * vec2(width, height);
 
-          if(insideTriangle(pos.xy, v1, v2, v3))
+          if(insideTriangle(pos.xy, v1, v2, v3) && (overwrite || in_label == uint(0)))
           {
             out_label = new_label;
             break;
