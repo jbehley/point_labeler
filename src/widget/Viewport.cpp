@@ -27,7 +27,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   //  setMouseTracking(true);
 
-  drawing_options_["coordinate axis"] = true;
+  drawingOption_["coordinate axis"] = true;
 
   conversion_ = RoSe2GL::matrix;
 
@@ -54,6 +54,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   drawingOption_["remission"] = true;
   drawingOption_["color"] = false;
+  drawingOption_["single scan"] = false;
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
@@ -317,8 +318,14 @@ void Viewport::setGroundRemoval(bool value) {
   removeGround_ = value;
   updateGL();
 }
+
 void Viewport::setGroundThreshold(float value) {
   groundThreshold_ = value;
+  updateGL();
+}
+
+void Viewport::setScanIndex(uint32_t idx) {
+  singleScanIdx_ = idx;
   updateGL();
 }
 
@@ -372,7 +379,7 @@ void Viewport::paintGL() {
 
   mvp_ = projection_ * view_ * conversion_;
 
-  if (drawing_options_["coordinate axis"]) {
+  if (drawingOption_["coordinate axis"]) {
     // coordinateSytem_->pose = Eigen::Matrix4f::Identity();
     ScopedBinder<GlProgram> program_binder(prgDrawPose_);
     ScopedBinder<GlVertexArray> vao_binder(vao_no_points_);
@@ -396,11 +403,18 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<float>("minRange", minRange_));
     prgDrawPoints_.setUniform(GlUniform<bool>("removeGround", removeGround_));
     prgDrawPoints_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
+    prgDrawPoints_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+    prgDrawPoints_.setUniform(GlUniform<float>("tileSize", tileSize_));
+
+    bool showSingleScan = drawingOption_["single scan"];
 
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.bind();
 
     for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
+      if (showSingleScan && (it->first != points_[singleScanIdx_].get())) continue;
+      prgDrawPoints_.setUniform(GlUniform<Eigen::Matrix4f>("pose", it->first->pose));
+
       mvp_ = projection_ * view_ * conversion_ * it->first->pose;
       prgDrawPoints_.setUniform(mvp_);
 
@@ -610,11 +624,19 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
 
 void Viewport::keyPressEvent(QKeyEvent*) {}
 
+void Viewport::setTileInfo(float x, float y, float tileSize) {
+  std::cout << x << ", " << y << ", " << tileSize << std::endl;
+  tilePos_ = vec2(x, y);
+  tileSize_ = tileSize;
+}
+
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label) {
   if (points_.size() == 0 || labels_.size() == 0) return;
 
   //  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::endl;
   //  Stopwatch::tic();
+
+  bool showSingleScan = drawingOption_["single scan"];
 
   ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
   ScopedBinder<GlProgram> programBinder(prgUpdateLabels_);
@@ -642,6 +664,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   glEnable(GL_RASTERIZER_DISCARD);
 
   for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
+    if (showSingleScan && (it->first != points_[singleScanIdx_].get())) continue;
     mvp_ = projection_ * mCamera.matrix() * conversion_ * it->first->pose;
 
     prgUpdateLabels_.setUniform(mvp_);

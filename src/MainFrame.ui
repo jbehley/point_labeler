@@ -44,7 +44,7 @@
          <x>0</x>
          <y>0</y>
          <width>187</width>
-         <height>501</height>
+         <height>532</height>
         </rect>
        </property>
        <attribute name="label">
@@ -177,6 +177,13 @@
           </property>
           <property name="value">
            <double>-1.600000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="chkShowSingleScan">
+          <property name="text">
+           <string>show single scan</string>
           </property>
          </widget>
         </item>

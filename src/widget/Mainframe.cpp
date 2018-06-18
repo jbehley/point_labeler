@@ -66,6 +66,9 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.spinGroundThreshold, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
           [this](double value) { ui.mViewportXYZ->setGroundThreshold(value); });
 
+  connect(ui.chkShowSingleScan, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("single scan", value); });
+
   /** load labels and colors **/
   std::map<uint32_t, std::string> label_names;
   std::map<uint32_t, glow::GlColor> label_colors;
@@ -126,13 +129,19 @@ void Mainframe::open() {
 
     reader_.initialize(retValue);
 
-    ui.sldTimeline->setMaximum(reader_.count());
+    //    ui.sldTimeline->setMaximum(reader_.count());
     ui.btnBackward->setEnabled(false);
     ui.btnForward->setEnabled(false);
     if (reader_.count() > 0) ui.btnForward->setEnabled(true);
 
-    if (ui.sldTimeline->value() == 0) setCurrentScanIdx(0);
+    //    if (ui.sldTimeline->value() == 0) setCurrentScanIdx(0);
+    //    ui.sldTimeline->setValue(0);
+    reader_.retrieve(Eigen::Vector3f::Zero(), indexes_, points_, labels_);
+    ui.mViewportXYZ->setPoints(points_, labels_);
+    ui.sldTimeline->setMaximum(indexes_.size());
     ui.sldTimeline->setValue(0);
+    const auto& tile = reader_.getTile(Eigen::Vector3f::Zero());
+    ui.mViewportXYZ->setTileInfo(tile.x, tile.y, tile.size);
 
     lastDirectory = base_dir.absolutePath();
 
@@ -296,13 +305,11 @@ void Mainframe::unsavedChanges() {
   mChangesSinceLastSave = true;
 }
 
-void Mainframe::setCurrentScanIdx(int32_t idx) {
-  std::cout << "setting scan." << std::endl;
-
+void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   std::vector<uint32_t> oldIndexes = indexes_;
   std::vector<LabelsPtr> oldLabels = labels_;
 
-  reader_.retrieve(idx, indexes_, points_, labels_);
+  reader_.retrieve(i, j, indexes_, points_, labels_);
 
   ui.mViewportXYZ->setPoints(points_, labels_);
 
@@ -319,8 +326,11 @@ void Mainframe::setCurrentScanIdx(int32_t idx) {
   }
   // only update really needed label files.
   reader_.update(removedIndexes, removedLabels);
+}
 
-
+void Mainframe::setCurrentScanIdx(int32_t idx) {
+  std::cout << "setting scan." << std::endl;
+  ui.mViewportXYZ->setScanIndex(idx);
 }
 
 void Mainframe::readConfig() {
@@ -340,15 +350,16 @@ void Mainframe::readConfig() {
       std::cout << "-- Setting 'max scans' to " << numScans << std::endl;
     }
 
-    if (tokens[0] == "max distance") {
-      float distance = boost::lexical_cast<float>(trim(tokens[1]));
-      reader_.setMaximumDistance(distance);
-      std::cout << "-- Setting 'max distance' to " << distance << std::endl;
+    if (tokens[0] == "tile size") {
+      float tileSize = boost::lexical_cast<float>(trim(tokens[1]));
+      reader_.setTileSize(tileSize);
+      std::cout << "-- Setting 'tile size' to " << tileSize << std::endl;
     }
 
     if (tokens[0] == "max range") {
       float range = boost::lexical_cast<float>(trim(tokens[1]));
       ui.mViewportXYZ->setMaxRange(range);
+      reader_.setMaximumDistance(range);
       std::cout << "-- Setting 'max range' to " << range << std::endl;
     }
 

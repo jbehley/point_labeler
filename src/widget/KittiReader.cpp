@@ -27,7 +27,8 @@ void KittiReader::initialize(const QString& directory) {
 
   // create label dir, etc.
   QDir labels_dir(base_dir.filePath("labels"));
-  //  find corresponding label files.
+
+  // find corresponding label files.
   if (!labels_dir.exists()) base_dir.mkdir("labels");
 
   for (uint32_t i = 0; i < velodyne_filenames_.size(); ++i) {
@@ -48,9 +49,83 @@ void KittiReader::initialize(const QString& directory) {
 
     label_filenames_.push_back(labels_dir.filePath(filename).toStdString());
   }
+
+  // assumes that (0,0,0) is always the start.
+  Eigen::Vector2f min = Eigen::Vector2f::Zero();
+  Eigen::Vector2f max = Eigen::Vector2f::Zero();
+
+  for (uint32_t i = 0; i < poses_.size(); ++i) {
+    Eigen::Vector4f t = poses_[i].col(3);
+
+    min.x() = std::min(t.x() - maxDistance_, min.x());
+    min.y() = std::min(t.y() - maxDistance_, min.y());
+    max.x() = std::max(t.x() + maxDistance_, max.x());
+    max.y() = std::max(t.y() + maxDistance_, max.y());
+  }
+
+  std::cout << "tileSize = " << tileSize_ << std::endl;
+  std::cout << "min = " << min << ", max = " << max << std::endl;
+
+  offset_.x() = std::ceil((std::abs(min.x()) - 0.5 * tileSize_) / tileSize_) * tileSize_ + 0.5 * tileSize_;
+  offset_.y() = std::ceil((std::abs(min.y()) - 0.5 * tileSize_) / tileSize_) * tileSize_ + 0.5 * tileSize_;
+
+  std::cout << "offset = " << offset_ << std::endl;
+
+  numTiles_.x() = std::ceil((std::abs(min.x()) - 0.5 * tileSize_) / tileSize_) +
+                  std::ceil((max.x() - 0.5 * tileSize_) / tileSize_) + 1;
+  numTiles_.y() = std::ceil((std::abs(min.y()) - 0.5 * tileSize_) / tileSize_) +
+                  std::ceil((max.y() - 0.5 * tileSize_) / tileSize_) + 1;
+
+  std::cout << "numTiles = " << numTiles_ << std::endl;
+
+  tiles_.resize(numTiles_.x() * numTiles_.y());
+
+  Eigen::Vector2f idxRadius(maxDistance_ / tileSize_, maxDistance_ / tileSize_);
+
+  for (uint32_t i = 0; i < poses_.size(); ++i) {
+    Eigen::Vector2f t = poses_[i].col(3).head(2);
+    Eigen::Vector2f idx((t.x() + offset_.x()) / tileSize_, (t.y() + offset_.y()) / tileSize_);
+
+    //    tiles_[tileIdxToOffset(uint32_t(idx.x()), uint32_t(idx.y()))].indexes.push_back(i);
+    uint32_t u_min = std::max(int32_t(idx.x() - idxRadius.x()), 0);
+    uint32_t u_max = std::min(int32_t(std::ceil(idx.x() + idxRadius.x())), numTiles_.x());
+    uint32_t v_min = std::max(int32_t(idx.y() - idxRadius.y()), 0);
+    uint32_t v_max = std::min(int32_t(std::ceil(idx.y() + idxRadius.y())), numTiles_.y());
+
+    for (uint32_t u = u_min; u < u_max; ++u) {
+      for (uint32_t v = v_min; v < v_max; ++v) {
+        tiles_[tileIdxToOffset(u, v)].indexes.push_back(i);
+      }
+    }
+  }
+
+  uint32_t tileCount = 0;
+  for (uint32_t i = 0; i < uint32_t(numTiles_.x()); ++i) {
+    for (uint32_t j = 0; j < uint32_t(numTiles_.y()); ++j) {
+      auto& tile = tiles_[tileIdxToOffset(i, j)];
+      tile.i = i;
+      tile.j = j;
+      tile.x = i * tileSize_ - offset_.x() + 0.5 * tileSize_;
+      tile.y = j * tileSize_ - offset_.y() + 0.5 * tileSize_;
+      tile.size = tileSize_;
+
+      std::sort(tile.indexes.begin(), tile.indexes.end());
+      if (tile.indexes.size() > 0) tileCount += 1;
+    }
+  }
+
+  std::cout << "#tiles  = " << tileCount << std::endl;
 }
 
-void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
+void KittiReader::retrieve(const Eigen::Vector3f& position, std::vector<uint32_t>& indexes,
+                           std::vector<PointcloudPtr>& points, std::vector<LabelsPtr>& labels) {
+  Eigen::Vector2f idx((position.x() + offset_.x()) / tileSize_, (position.y() + offset_.y()) / tileSize_);
+
+  std::cout << "retrieve: idx = " << idx << std::endl;
+  retrieve(idx.x(), idx.y(), indexes, points, labels);
+}
+
+void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
                            std::vector<LabelsPtr>& labels) {
   indexes.clear();
   points.clear();
@@ -62,39 +137,32 @@ void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::
 
   uint32_t scansRead = 0;
 
-  // find nearby scans.
-  Eigen::Vector4f midpoint = poses_[index].col(3);
-  for (uint32_t t = 0; t < velodyne_filenames_.size(); ++t) {
-    Eigen::Vector4f other_midpoint = poses_[t].col(3);
-    if ((midpoint - other_midpoint).norm() < maxDistance_) {
-      indexesAfter.push_back(t);
+  indexes = tiles_[tileIdxToOffset(i, j)].indexes;
+  for (uint32_t t : indexes) {
+    indexesAfter.push_back(t);
+    if (pointsCache_.find(t) == pointsCache_.end()) {
+      scansRead += 1;
 
-      indexes.push_back(t);
+      points.push_back(std::shared_ptr<Laserscan>(new Laserscan));
+      readPoints(velodyne_filenames_[t], *points.back());
+      pointsCache_[t] = points.back();
+      points.back()->pose = poses_[t];
 
-      if (pointsCache_.find(t) == pointsCache_.end()) {
-        scansRead += 1;
+      labels.push_back(std::shared_ptr<std::vector<uint32_t>>(new std::vector<uint32_t>()));
+      readLabels(label_filenames_[t], *labels.back());
+      labelCache_[t] = labels.back();
 
-        points.push_back(std::shared_ptr<Laserscan>(new Laserscan));
-        readPoints(velodyne_filenames_[t], *points.back());
-        pointsCache_[t] = points.back();
-        points.back()->pose = poses_[t];
-
-        labels.push_back(std::shared_ptr<std::vector<uint32_t>>(new std::vector<uint32_t>()));
-        readLabels(label_filenames_[t], *labels.back());
-        labelCache_[t] = labels.back();
-
-        if (points.back()->size() != labels.back()->size()) {
-          std::cout << "Filename: " << velodyne_filenames_[t] << std::endl;
-          std::cout << "Filename: " << label_filenames_[t] << std::endl;
-          std::cout << "num. points = " << points.back()->size() << " vs. num. labels = " << labels.back()->size()
-                    << std::endl;
-          throw std::runtime_error("Inconsistent number of labels.");
-        }
-
-      } else {
-        points.push_back(pointsCache_[t]);
-        labels.push_back(labelCache_[t]);
+      if (points.back()->size() != labels.back()->size()) {
+        std::cout << "Filename: " << velodyne_filenames_[t] << std::endl;
+        std::cout << "Filename: " << label_filenames_[t] << std::endl;
+        std::cout << "num. points = " << points.back()->size() << " vs. num. labels = " << labels.back()->size()
+                  << std::endl;
+        throw std::runtime_error("Inconsistent number of labels.");
       }
+
+    } else {
+      points.push_back(pointsCache_[t]);
+      labels.push_back(labelCache_[t]);
     }
   }
 
@@ -113,27 +181,26 @@ void KittiReader::retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::
     pointsCache_.erase(*it);
     labelCache_.erase(*it);
   }
+}
 
-  // my merge for reference:
-  //  uint32_t i_before = 0;
-  //  uint32_t i_after = 0;
-  //  for (; i_before < indexesBefore.size(); ++i_before) {
-  //    while (i_after < indexesAfter.size() && indexesAfter[i_after] < indexesBefore[i_before]) ++i_after;
-  //    if (i_after == indexesAfter.size()) break;
-  //    if (indexesAfter[i_after] == indexesBefore[i_before]) continue;
-  //    // if indexes does not match (index after must larger then index before), remove points from before.
-  //    pointsCache_.erase(indexesBefore[i_before]);
-  //    labelCache_.erase(indexesBefore[i_before]);
-  //  }
-  //
-  //  for (; i_before < indexesBefore.size(); ++i_before) {
-  //    pointsCache_.erase(indexesBefore[i_before]);
-  //    labelCache_.erase(indexesBefore[i_before]);
-  //  }
+const KittiReader::Tile& KittiReader::getTile(const Eigen::Vector3f& position) const {
+  Eigen::Vector2f idx((position.x() + offset_.x()) / tileSize_, (position.y() + offset_.y()) / tileSize_);
+  return tiles_[tileIdxToOffset(idx.x(), idx.y())];
+}
+const KittiReader::Tile& KittiReader::getTile(uint32_t i, uint32_t j) const {
+  return tiles_[tileIdxToOffset(i, j)];
+}
+
+void KittiReader::setTileSize(float size) {
+  tileSize_ = size;
 }
 
 void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels) {
   for (uint32_t i = 0; i < indexes.size(); ++i) {
+    if (labels[i]->size() == 0) {
+      std::cout << "0 labels?" << std::endl;
+      continue;
+    }
     std::ofstream out(label_filenames_[indexes[i]].c_str());
     out.write((const char*)&(*labels[i])[0], labels[i]->size() * sizeof(uint32_t));
     out.close();

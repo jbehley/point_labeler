@@ -63,6 +63,10 @@ class Viewport : public QGLWidget {
   void setGroundRemoval(bool value);
   void setGroundThreshold(float value);
 
+  void setScanIndex(uint32_t idx);
+
+  void setTileInfo(float x, float y, float tileSize);
+
  signals:
   void labelingChanged();
 
@@ -171,7 +175,6 @@ class Viewport : public QGLWidget {
   glow::GlProgram prgPolygonPoints_;
 
   int32_t pointSize_{1};
-  std::map<std::string, bool> drawing_options_;
 
   glow::GlUniform<Eigen::Matrix4f> mvp_{"mvp", Eigen::Matrix4f::Identity()};
   glow::GlUniform<Eigen::Matrix4f> mvp_inv_t_{"mvp_inv_t", Eigen::Matrix4f::Identity()};
@@ -200,6 +203,11 @@ class Viewport : public QGLWidget {
   glow::GlTextureRectangle texTriangles_;
   glow::GlBuffer<glow::vec2> bufTriangles_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   uint32_t numTriangles_{0};
+
+  uint32_t singleScanIdx_{0};
+
+  glow::vec2 tilePos_;
+  float tileSize_;
 };
 
 #endif /* POINTVIEW_H_ */

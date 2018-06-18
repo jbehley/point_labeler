@@ -31,7 +31,8 @@ class Mainframe : public QMainWindow {
   void labelBtnReleased(QWidget*);
 
  protected:
-  /** \brief set current scan and depending on mode the corresponding points of the viewport. **/
+  void setTileIndex(uint32_t i, uint32_t j);
+
   void setCurrentScanIdx(int32_t idx);
 
   void generateLabelButtons();
