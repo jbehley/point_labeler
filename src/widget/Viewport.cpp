@@ -107,7 +107,9 @@ void Viewport::initVertexBuffers() {
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
-void Viewport::setFixedAxis(AXIS axis) { mAxis = axis; }
+void Viewport::setFixedAxis(AXIS axis) {
+  mAxis = axis;
+}
 
 void Viewport::setMaximumScans(uint32_t numScans) {
   maxScans_ = numScans;
@@ -236,15 +238,21 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
 void Viewport::updateLabels() {
   for (uint32_t i = 0; i < points_.size(); ++i) {
+    if (bufferContent_.find(points_[i].get()) == bufferContent_.end()) continue;
+
     const BufferInfo& info = bufferContent_[points_[i].get()];
     // replace label information with labels from GPU.
     bufLabels_.get(*labels_[i], info.index * maxPointsPerScan_, info.size);
   }
 }
 
-void Viewport::setRadius(float value) { mRadius = value; }
+void Viewport::setRadius(float value) {
+  mRadius = value;
+}
 
-void Viewport::setLabel(uint32_t label) { mCurrentLabel = label; }
+void Viewport::setLabel(uint32_t label) {
+  mCurrentLabel = label;
+}
 
 void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
   mLabelColors = colors;
@@ -269,7 +277,9 @@ void Viewport::setMode(MODE mode) {
   updateGL();
 }
 
-void Viewport::setFlags(int32_t flags) { mFlags = flags; }
+void Viewport::setFlags(int32_t flags) {
+  mFlags = flags;
+}
 
 void Viewport::setOverwrite(bool value) {
   if (value)
@@ -283,9 +293,13 @@ void Viewport::setDrawingOption(const std::string& name, bool value) {
   updateGL();
 }
 
-void Viewport::setMinRange(float range) { minRange_ = range; }
+void Viewport::setMinRange(float range) {
+  minRange_ = range;
+}
 
-void Viewport::setMaxRange(float range) { maxRange_ = range; }
+void Viewport::setMaxRange(float range) {
+  maxRange_ = range;
+}
 
 void Viewport::setFilteredLabels(const std::vector<uint32_t>& labels) {
   std::vector<uint32_t> labels_before = mFilteredLabels;
@@ -615,7 +629,9 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
   event->accept();
 }
 
-void Viewport::keyPressEvent(QKeyEvent* event) { event->ignore(); }
+void Viewport::keyPressEvent(QKeyEvent* event) {
+  event->ignore();
+}
 
 void Viewport::setTileInfo(float x, float y, float tileSize) {
   std::cout << x << ", " << y << ", " << tileSize << std::endl;
