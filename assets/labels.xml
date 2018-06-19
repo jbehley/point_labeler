@@ -6,9 +6,9 @@
     <name>unlabeled</name>
     <description>all points with no special label.</description>
     <color>0 0 0</color>
-		<root>void</root>
-		<macro></macro>
-		<category>unlabeled</category>
+	<root>void</root>
+	<macro></macro>
+	<category>unlabeled</category>
   </label>
 
   <label>
@@ -347,5 +347,35 @@
     <category>traffic sign</category>
   </label>
 <!-- missing: nature, object, barrier, animal -->
+
+  <label>
+    <id>252</id>
+    <name>moving car</name>
+    <description>a moving car</description>
+    <color>255 255 125</color>
+    <root>object</root>
+    <macro></macro>
+    <category>moving</category>
+  </label>
+  
+  <label>
+    <id>253</id>
+    <name>moving bicyclist</name>
+    <description>a moving bicyclist.</description>
+    <color>125 255 255</color>
+    <root>object</root>
+    <macro></macro>
+    <category>moving</category>
+  </label>
+
+  <label>
+    <id>254</id>
+    <name>moving person</name>
+    <description>a moving person.</description>
+    <color>255 0 0</color>
+    <root>object</root>
+    <macro></macro>
+    <category>moving</category>
+  </label>
 
 </config>

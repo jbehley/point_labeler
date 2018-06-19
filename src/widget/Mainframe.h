@@ -31,6 +31,10 @@ class Mainframe : public QMainWindow {
   void labelBtnReleased(QWidget*);
 
  protected:
+
+  void forward();
+  void backward();
+
   void setTileIndex(uint32_t i, uint32_t j);
 
   void setCurrentScanIdx(int32_t idx);
@@ -46,6 +50,8 @@ class Mainframe : public QMainWindow {
 
   std::vector<uint32_t> filteredLabels;
   std::string filename;
+
+  void keyPressEvent(QKeyEvent* event);
 
  protected slots:
   void unsavedChanges();

@@ -113,7 +113,7 @@ void KittiReader::initialize(const QString& directory) {
         q[1] = std::abs(q[1]);
 
         // check for exact overlap (see Behley et al., ICRA, 2015)
-        if (std::min(q[0], q[1]) < e[0] && (q - e).norm() < maxDistance_) {
+        if (std::min(q[0], q[1]) < e[0] || (q - e).norm() < maxDistance_) {
           tile.indexes.push_back(i);
         }
       }
@@ -203,13 +203,9 @@ const KittiReader::Tile& KittiReader::getTile(const Eigen::Vector3f& position) c
   Eigen::Vector2f idx((position.x() + offset_.x()) / tileSize_, (position.y() + offset_.y()) / tileSize_);
   return tiles_[tileIdxToOffset(idx.x(), idx.y())];
 }
-const KittiReader::Tile& KittiReader::getTile(uint32_t i, uint32_t j) const {
-  return tiles_[tileIdxToOffset(i, j)];
-}
+const KittiReader::Tile& KittiReader::getTile(uint32_t i, uint32_t j) const { return tiles_[tileIdxToOffset(i, j)]; }
 
-void KittiReader::setTileSize(float size) {
-  tileSize_ = size;
-}
+void KittiReader::setTileSize(float size) { tileSize_ = size; }
 
 void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels) {
   for (uint32_t i = 0; i < indexes.size(); ++i) {

@@ -40,19 +40,9 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.mRadiusSlider, SIGNAL(valueChanged(int)), this, SLOT(changeRadius(int)));
   connect(ui.sldTimeline, &QSlider::valueChanged, [this](int value) { setCurrentScanIdx(value); });
-  connect(ui.btnForward, &QToolButton::released, [this]() {
-    int32_t value = ui.sldTimeline->value() + 1;
-    if (value < int32_t(reader_.count())) ui.sldTimeline->setValue(value);
-    ui.btnBackward->setEnabled(true);
-    if (value == int32_t(reader_.count()) - 1) ui.btnForward->setEnabled(false);
-  });
+  connect(ui.btnForward, &QToolButton::released, [this]() { forward(); });
 
-  connect(ui.btnBackward, &QToolButton::released, [this]() {
-    int32_t value = ui.sldTimeline->value() - 1;
-    if (value >= 0) ui.sldTimeline->setValue(value);
-    ui.btnForward->setEnabled(true);
-    if (value == 0) ui.btnBackward->setEnabled(false);
-  });
+  connect(ui.btnBackward, &QToolButton::released, [this]() { backward(); });
 
   connect(ui.chkFilterLabels, &QCheckBox::toggled, [this](bool value) { updateFiltering(value); });
 
@@ -201,7 +191,7 @@ void Mainframe::changeMode(int mode) {
 
     ui.btnPolygonMode->setChecked(false);
 
-    ui.mTools->setCurrentIndex(1);
+    //    ui.mTools->setCurrentIndex(1);
   } else if (mode == Viewport::POLYGON && ui.btnPolygonMode->isChecked()) /** PAINTMODE **/
   {
     std::cout << "triggered polygon mode." << std::endl;
@@ -308,9 +298,7 @@ void Mainframe::labelBtnReleased(QWidget* w) {
   }
 }
 
-void Mainframe::unsavedChanges() {
-  mChangesSinceLastSave = true;
-}
+void Mainframe::unsavedChanges() { mChangesSinceLastSave = true; }
 
 void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   std::vector<uint32_t> oldIndexes = indexes_;
@@ -337,11 +325,21 @@ void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   reader_.update(removedIndexes, removedLabels);
 }
 
-void Mainframe::setCurrentScanIdx(int32_t idx) {
-  std::cout << "setting scan." << std::endl;
-  ui.mViewportXYZ->setScanIndex(idx);
+void Mainframe::setCurrentScanIdx(int32_t idx) { ui.mViewportXYZ->setScanIndex(idx); }
+
+void Mainframe::forward() {
+  int32_t value = ui.sldTimeline->value() + 1;
+  if (value < int32_t(reader_.count())) ui.sldTimeline->setValue(value);
+  ui.btnBackward->setEnabled(true);
+  if (value == int32_t(reader_.count()) - 1) ui.btnForward->setEnabled(false);
 }
 
+void Mainframe::backward() {
+  int32_t value = ui.sldTimeline->value() - 1;
+  if (value >= 0) ui.sldTimeline->setValue(value);
+  ui.btnForward->setEnabled(true);
+  if (value == 0) ui.btnBackward->setEnabled(false);
+}
 void Mainframe::readConfig() {
   std::ifstream in("settings.cfg");
 
@@ -380,4 +378,13 @@ void Mainframe::readConfig() {
   }
 
   in.close();
+}
+
+void Mainframe::keyPressEvent(QKeyEvent* event) {
+  if (event->key() == Qt::Key_D || event->key() == Qt::Key_Right) {
+    if (ui.btnForward->isEnabled()) forward();
+
+  } else if (event->key() == Qt::Key_A || event->key() == Qt::Key_Left) {
+    if (ui.btnBackward->isEnabled()) backward();
+  }
 }
