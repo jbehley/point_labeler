@@ -63,25 +63,38 @@ void KittiReader::initialize(const QString& directory) {
     max.y() = std::max(t.y() + maxDistance_, max.y());
   }
 
-  std::cout << "tileSize = " << tileSize_ << std::endl;
-  std::cout << "min = " << min << ", max = " << max << std::endl;
+  //  std::cout << "tileSize = " << tileSize_ << std::endl;
+  //  std::cout << "min = " << min << ", max = " << max << std::endl;
 
   offset_.x() = std::ceil((std::abs(min.x()) - 0.5 * tileSize_) / tileSize_) * tileSize_ + 0.5 * tileSize_;
   offset_.y() = std::ceil((std::abs(min.y()) - 0.5 * tileSize_) / tileSize_) * tileSize_ + 0.5 * tileSize_;
 
-  std::cout << "offset = " << offset_ << std::endl;
+  //  std::cout << "offset = " << offset_ << std::endl;
 
   numTiles_.x() = std::ceil((std::abs(min.x()) - 0.5 * tileSize_) / tileSize_) +
                   std::ceil((max.x() - 0.5 * tileSize_) / tileSize_) + 1;
   numTiles_.y() = std::ceil((std::abs(min.y()) - 0.5 * tileSize_) / tileSize_) +
                   std::ceil((max.y() - 0.5 * tileSize_) / tileSize_) + 1;
 
-  std::cout << "numTiles = " << numTiles_ << std::endl;
+  //  std::cout << "numTiles = " << numTiles_ << std::endl;
 
   tiles_.resize(numTiles_.x() * numTiles_.y());
 
   Eigen::Vector2f idxRadius(maxDistance_ / tileSize_, maxDistance_ / tileSize_);
 
+  for (uint32_t i = 0; i < uint32_t(numTiles_.x()); ++i) {
+    for (uint32_t j = 0; j < uint32_t(numTiles_.y()); ++j) {
+      auto& tile = tiles_[tileIdxToOffset(i, j)];
+
+      tile.i = i;
+      tile.j = j;
+      tile.x = i * tileSize_ - offset_.x() + 0.5 * tileSize_;
+      tile.y = j * tileSize_ - offset_.y() + 0.5 * tileSize_;
+      tile.size = tileSize_;
+    }
+  }
+
+  Eigen::Vector2f e(0.5 * tileSize_, 0.5 * tileSize_);
   for (uint32_t i = 0; i < poses_.size(); ++i) {
     Eigen::Vector2f t = poses_[i].col(3).head(2);
     Eigen::Vector2f idx((t.x() + offset_.x()) / tileSize_, (t.y() + offset_.y()) / tileSize_);
@@ -94,7 +107,15 @@ void KittiReader::initialize(const QString& directory) {
 
     for (uint32_t u = u_min; u < u_max; ++u) {
       for (uint32_t v = v_min; v < v_max; ++v) {
-        tiles_[tileIdxToOffset(u, v)].indexes.push_back(i);
+        auto& tile = tiles_[tileIdxToOffset(u, v)];
+        Eigen::Vector2f q = t - Eigen::Vector2f(tile.x, tile.y);
+        q[0] = std::abs(q[0]);
+        q[1] = std::abs(q[1]);
+
+        // check for exact overlap (see Behley et al., ICRA, 2015)
+        if (std::min(q[0], q[1]) < e[0] && (q - e).norm() < maxDistance_) {
+          tile.indexes.push_back(i);
+        }
       }
     }
   }
@@ -103,11 +124,6 @@ void KittiReader::initialize(const QString& directory) {
   for (uint32_t i = 0; i < uint32_t(numTiles_.x()); ++i) {
     for (uint32_t j = 0; j < uint32_t(numTiles_.y()); ++j) {
       auto& tile = tiles_[tileIdxToOffset(i, j)];
-      tile.i = i;
-      tile.j = j;
-      tile.x = i * tileSize_ - offset_.x() + 0.5 * tileSize_;
-      tile.y = j * tileSize_ - offset_.y() + 0.5 * tileSize_;
-      tile.size = tileSize_;
 
       std::sort(tile.indexes.begin(), tile.indexes.end());
       if (tile.indexes.size() > 0) tileCount += 1;

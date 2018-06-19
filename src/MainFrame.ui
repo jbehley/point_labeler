@@ -38,13 +38,63 @@
       <property name="currentIndex">
        <number>0</number>
       </property>
+      <widget class="QWidget" name="page">
+       <attribute name="label">
+        <string>Tiles</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <widget class="TileSelectorWidget" name="wgtTileSelector" native="true">
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>180</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>180</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="chkShowSingleScan">
+          <property name="text">
+           <string>show single scan</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="chkShowAllPoints">
+          <property name="text">
+           <string>show all points</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
       <widget class="QWidget" name="page_2">
        <property name="geometry">
         <rect>
          <x>0</x>
          <y>0</y>
          <width>187</width>
-         <height>532</height>
+         <height>501</height>
         </rect>
        </property>
        <attribute name="label">
@@ -177,13 +227,6 @@
           </property>
           <property name="value">
            <double>-1.600000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="chkShowSingleScan">
-          <property name="text">
-           <string>show single scan</string>
           </property>
          </widget>
         </item>
@@ -564,6 +607,12 @@
    <class>Viewport</class>
    <extends>QWidget</extends>
    <header>widget/Viewport.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>TileSelectorWidget</class>
+   <extends>QWidget</extends>
+   <header>widget/TileSelectorWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

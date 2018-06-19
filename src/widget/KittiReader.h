@@ -49,6 +49,8 @@ class KittiReader {
   const Tile& getTile(const Eigen::Vector3f& pos) const;
   const Tile& getTile(uint32_t i, uint32_t j) const;
 
+  const Eigen::Vector2i& numTiles() const { return numTiles_; }
+
  protected:
   void readPoints(const std::string& filename, Laserscan& scan);
   void readLabels(const std::string& filename, std::vector<uint32_t>& labels);

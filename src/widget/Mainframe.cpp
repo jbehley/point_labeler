@@ -69,6 +69,10 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.chkShowSingleScan, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("single scan", value); });
 
+  connect(ui.wgtTileSelector, &TileSelectorWidget::tileSelected, [this](int32_t i, int32_t j) { setTileIndex(i, j); });
+  connect(ui.chkShowAllPoints, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("show all points", value); });
+
   /** load labels and colors **/
   std::map<uint32_t, std::string> label_names;
   std::map<uint32_t, glow::GlColor> label_colors;
@@ -142,6 +146,9 @@ void Mainframe::open() {
     ui.sldTimeline->setValue(0);
     const auto& tile = reader_.getTile(Eigen::Vector3f::Zero());
     ui.mViewportXYZ->setTileInfo(tile.x, tile.y, tile.size);
+
+    ui.wgtTileSelector->initialize(reader_.getTiles(), reader_.numTiles().x(), reader_.numTiles().y());
+    ui.wgtTileSelector->setSelected(tile.i, tile.j);
 
     lastDirectory = base_dir.absolutePath();
 
@@ -312,6 +319,8 @@ void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   reader_.retrieve(i, j, indexes_, points_, labels_);
 
   ui.mViewportXYZ->setPoints(points_, labels_);
+  const auto& tile = reader_.getTile(i, j);
+  ui.mViewportXYZ->setTileInfo(tile.x, tile.y, tile.size);
 
   // find difference.
   std::vector<uint32_t> diff_indexes;

@@ -23,6 +23,7 @@ uniform float groundThreshold;
 
 uniform vec2 tilePos;
 uniform float tileSize;
+uniform bool showAllPoints;
 
 out vec4 color;
 
@@ -36,7 +37,7 @@ void main()
   bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > groundThreshold); 
   
   vec2 v = (pose * vec4(in_vertex, 1.0)).xy - tilePos;
-  visible = visible && (abs(v.x) < 0.5 * tileSize && abs(v.y) < 0.5 * tileSize);
+  visible = visible && (showAllPoints || (abs(v.x) < 0.5 * tileSize && abs(v.y) < 0.5 * tileSize));
   
   if(!visible || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);
   

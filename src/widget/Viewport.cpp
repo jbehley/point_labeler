@@ -55,6 +55,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   drawingOption_["remission"] = true;
   drawingOption_["color"] = false;
   drawingOption_["single scan"] = false;
+  drawingOption_["show all points"] = false;
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
@@ -124,6 +125,9 @@ void Viewport::setMaximumScans(uint32_t numScans) {
 
 void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<LabelsPtr>& l) {
   std::cout << "Setting points..." << std::flush;
+
+  // FIXME: improve usage of resources:
+  //   Use transform feedback to get points inside the tile.
 
   // determine which labels need to be updated.
   std::vector<uint32_t> indexes;
@@ -405,6 +409,7 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
     prgDrawPoints_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
     prgDrawPoints_.setUniform(GlUniform<float>("tileSize", tileSize_));
+    prgDrawPoints_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
 
     bool showSingleScan = drawingOption_["single scan"];
 

@@ -15,9 +15,17 @@
 [x] save on quit.
 [x] min/max range of points in laserscan.
 [ ] remove ground by grid-based  segmentation of single scan.
+  -- use depth buffer to find minimum height, after loading points into buffers?
+[x] Use tiles instead of timestamps.
+[ ] load scans concurrently and have indicator for loading.) [spinner over viewpoint?]
+[ ] center camera on loaded scans after loading.
 
-## Other ideas.
+
+## Future work
+
+[ ] Only load points inside the tile into the GlBuffer. (Transform Feedback)
 [ ] do projections only once (avoid the matrixmultiply?)
+
 
 ## Future work
 1. integrate pcp (?)
