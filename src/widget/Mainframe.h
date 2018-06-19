@@ -4,15 +4,16 @@
 #include <stdint.h>
 #include <QtCore/QSignalMapper>
 #include <QtWidgets/QMainWindow>
+#include <future>
+#include "KittiReader.h"
 #include "LabelButton.h"
+#include "common.h"
 #include "data/geometry.h"
 #include "data/transform.h"
 #include "ui_MainFrame.h"
-#include "common.h"
-#include "KittiReader.h"
+#include "waitingspinnerwidget.h"
 
 // TODO: undo.
-
 
 /** \brief main widget showing the point cloud and tools to label a point cloud/multiple point clouds. **/
 class Mainframe : public QMainWindow {
@@ -30,7 +31,15 @@ class Mainframe : public QMainWindow {
   void updateFiltering(bool value);
   void labelBtnReleased(QWidget*);
 
+ signals:
+  void readerStarted();
+  void readerFinshed();
+
  protected:
+  void readAsync(uint32_t i, uint32_t j);
+
+  void updateScans();
+  void activateSpinner();
 
   void forward();
   void backward();
@@ -69,6 +78,8 @@ class Mainframe : public QMainWindow {
   Point3f midpoint;
 
   KittiReader reader_;
+  std::future<void> readerFuture_;
+  WaitingSpinnerWidget* spinner{nullptr};
 };
 
 #endif /* MAINFRAME_H_ */

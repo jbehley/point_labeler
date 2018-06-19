@@ -63,6 +63,9 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.chkShowAllPoints, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("show all points", value); });
 
+  connect(this, &Mainframe::readerFinshed, this, &Mainframe::updateScans);
+  connect(this, &Mainframe::readerStarted, this, &Mainframe::activateSpinner);
+
   /** load labels and colors **/
   std::map<uint32_t, std::string> label_names;
   std::map<uint32_t, glow::GlColor> label_colors;
@@ -130,14 +133,11 @@ void Mainframe::open() {
 
     //    if (ui.sldTimeline->value() == 0) setCurrentScanIdx(0);
     //    ui.sldTimeline->setValue(0);
-    reader_.retrieve(Eigen::Vector3f::Zero(), indexes_, points_, labels_);
-    ui.mViewportXYZ->setPoints(points_, labels_);
-    ui.sldTimeline->setMaximum(indexes_.size());
-    ui.sldTimeline->setValue(0);
     const auto& tile = reader_.getTile(Eigen::Vector3f::Zero());
-    ui.mViewportXYZ->setTileInfo(tile.x, tile.y, tile.size);
-
+    readerFuture_ = std::async(std::launch::async, &Mainframe::readAsync, this, tile.i, tile.j);
     ui.wgtTileSelector->initialize(reader_.getTiles(), reader_.numTiles().x(), reader_.numTiles().y());
+
+    //    ui.mViewportXYZ->setTileInfo(tile.x, tile.y, tile.size);
     ui.wgtTileSelector->setSelected(tile.i, tile.j);
 
     lastDirectory = base_dir.absolutePath();
@@ -298,17 +298,35 @@ void Mainframe::labelBtnReleased(QWidget* w) {
   }
 }
 
-void Mainframe::unsavedChanges() { mChangesSinceLastSave = true; }
+void Mainframe::unsavedChanges() {
+  mChangesSinceLastSave = true;
+}
 
 void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
+  if (readerFuture_.valid()) readerFuture_.wait();
+  readerFuture_ = std::async(std::launch::async, &Mainframe::readAsync, this, i, j);
+}
+
+void Mainframe::setCurrentScanIdx(int32_t idx) {
+  ui.mViewportXYZ->setScanIndex(idx);
+}
+
+void Mainframe::readAsync(uint32_t i, uint32_t j) {
+  // TODO progress indicator.
+  emit readerStarted();
+
+  std::vector<uint32_t> indexes;
+  std::vector<PointcloudPtr> points;
+  std::vector<LabelsPtr> labels;
+
   std::vector<uint32_t> oldIndexes = indexes_;
   std::vector<LabelsPtr> oldLabels = labels_;
 
-  reader_.retrieve(i, j, indexes_, points_, labels_);
+  reader_.retrieve(i, j, indexes, points, labels);
 
-  ui.mViewportXYZ->setPoints(points_, labels_);
-  const auto& tile = reader_.getTile(i, j);
-  ui.mViewportXYZ->setTileInfo(tile.x, tile.y, tile.size);
+  indexes_ = indexes;
+  points_ = points;
+  labels_ = labels;
 
   // find difference.
   std::vector<uint32_t> diff_indexes;
@@ -323,9 +341,38 @@ void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   }
   // only update really needed label files.
   reader_.update(removedIndexes, removedLabels);
+
+  const auto& tile = reader_.getTile(i, j);
+  ui.mViewportXYZ->setTileInfo(tile.x, tile.y, tile.size);
+
+  emit readerFinshed();
 }
 
-void Mainframe::setCurrentScanIdx(int32_t idx) { ui.mViewportXYZ->setScanIndex(idx); }
+void Mainframe::activateSpinner() {
+  spinner = new WaitingSpinnerWidget(statusBar(), false, false);
+//  statusBar()->addPermanentWidget(spinner);
+
+  spinner->setInnerRadius(7);
+  spinner->setLineLength(3);
+  spinner->start();
+  statusBar()->showMessage("     Reading scans...");
+}
+
+void Mainframe::updateScans() {
+  if (spinner != nullptr) {
+    spinner->stop();
+    statusBar()->removeWidget(spinner);
+    delete spinner;
+    spinner = nullptr;
+  }
+
+  statusBar()->clearMessage();
+
+  ui.mViewportXYZ->setPoints(points_, labels_);
+
+  ui.sldTimeline->setMaximum(indexes_.size());
+  ui.sldTimeline->setValue(0);
+}
 
 void Mainframe::forward() {
   int32_t value = ui.sldTimeline->value() + 1;

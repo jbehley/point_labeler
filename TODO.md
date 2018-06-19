@@ -17,8 +17,10 @@
 [ ] remove ground by grid-based  segmentation of single scan.
   -- use depth buffer to find minimum height, after loading points into buffers?
 [x] Use tiles instead of timestamps.
-[ ] load scans concurrently and have indicator for loading.) [spinner over viewpoint?]
+[x] load scans concurrently and have indicator for loading.) [spinner over viewpoint?]
 [ ] center camera on loaded scans after loading.
+[ ] read scans incrementally. interupt reading if tile changes instead of waiting for finishing reading.
+  -- also have a proper progress indicator.
 
 
 ## Future work

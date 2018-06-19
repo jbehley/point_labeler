@@ -78,6 +78,7 @@ add_executable(labeler
   src/widget/Viewport.cpp
   src/widget/KittiReader.cpp
   src/widget/TileSelectorWidget.cpp
+  src/widget/waitingspinnerwidget.cpp
 )
 
 if(NOT GTEST_FOUND)
