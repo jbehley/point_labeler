@@ -95,6 +95,7 @@ void Mainframe::closeEvent(QCloseEvent* event) {
   //      return;
   //    }
   //  }
+  statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
   reader_.update(indexes_, labels_);
 
@@ -153,10 +154,12 @@ void Mainframe::open() {
 }
 
 void Mainframe::save() {
+  statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
   reader_.update(indexes_, labels_);
 
   mChangesSinceLastSave = false;
+  statusBar()->clearMessage();
 }
 
 void Mainframe::changeRadius(int value) {
@@ -209,7 +212,6 @@ void Mainframe::changeMode(int mode) {
 void Mainframe::generateLabelButtons() {
   const int BtnsPerRow = 5;
 
-  std::map<uint32_t, std::string> label_names;
   std::map<uint32_t, GlColor> label_colors;
 
   getLabelNames("labels.xml", label_names);
@@ -242,6 +244,7 @@ void Mainframe::generateLabelButtons() {
     newButton->setFixedSize(30, 30);
 
     newButton->setStatusTip(QString::fromStdString(name));
+    newButton->setToolTip(QString::fromStdString(name));
 
     /* connect the button with mapper which dispatches a signal with the index of the clicked button */
     labelButtonMapper->setMapping(newButton, newButton);
@@ -296,6 +299,9 @@ void Mainframe::labelBtnReleased(QWidget* w) {
     filteredLabels = tempFilteredLabels;
     updateFiltering(ui.chkFilterLabels->isChecked());
   }
+
+  ui.txtSelectedLabel->setText(QString::fromStdString(label_names[label_id]));
+
 }
 
 void Mainframe::unsavedChanges() {
@@ -350,12 +356,13 @@ void Mainframe::readAsync(uint32_t i, uint32_t j) {
 
 void Mainframe::activateSpinner() {
   spinner = new WaitingSpinnerWidget(statusBar(), false, false);
-//  statusBar()->addPermanentWidget(spinner);
+  //  statusBar()->addPermanentWidget(spinner);
 
   spinner->setInnerRadius(7);
   spinner->setLineLength(3);
   spinner->start();
   statusBar()->showMessage("     Reading scans...");
+  ui.wgtTileSelector->setEnabled(false);
 }
 
 void Mainframe::updateScans() {
@@ -372,6 +379,7 @@ void Mainframe::updateScans() {
 
   ui.sldTimeline->setMaximum(indexes_.size());
   ui.sldTimeline->setValue(0);
+  ui.wgtTileSelector->setEnabled(true);
 }
 
 void Mainframe::forward() {

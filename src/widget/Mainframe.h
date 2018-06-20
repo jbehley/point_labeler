@@ -72,6 +72,7 @@ class Mainframe : public QMainWindow {
   std::map<LabelButton*, uint32_t> labelIds;
   std::map<int32_t, uint32_t> idxLabelMap;
   std::map<uint32_t, int32_t> labelIdxMap;
+  std::map<uint32_t, std::string> label_names;
   bool mChangesSinceLastSave;
   QString lastDirectory;
 

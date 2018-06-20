@@ -122,7 +122,7 @@
      <x>0</x>
      <y>0</y>
      <width>916</width>
-     <height>27</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -272,9 +272,9 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>0</y>
+          <y>-35</y>
           <width>219</width>
-          <height>398</height>
+          <height>419</height>
          </rect>
         </property>
         <attribute name="label">
@@ -324,6 +324,19 @@
              <number>2</number>
             </property>
            </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="txtSelectedLabel">
+           <property name="font">
+            <font>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
           </widget>
          </item>
          <item>
@@ -564,8 +577,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>232</width>
-          <height>141</height>
+          <width>146</width>
+          <height>126</height>
          </rect>
         </property>
         <attribute name="label">
