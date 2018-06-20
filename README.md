@@ -1,27 +1,43 @@
 # point cloud annotator (PCA)
 
- Tool for labeling of single point clouds or a stream of point clouds, which we used over the years to label
- many, many point clouds. From this experience, we hope to provide all the tools and features you need to 
- label even complicated objects effortlessly.
+ Tool for labeling of single point clouds or a stream of point clouds. 
+ 
+ Given the poses of a KITTI point cloud dataset, we load tiles of overlapping point clouds. Thus, multiple point clouds 
+ are labeled at once in a certain area. 
 
-## Features:
- - Support for kitti point clouds.
+
+## Features
+ - Support for KITTI Vision Benchmark Point Clouds.
  - Human-readable label description files in xml allow to define label names, ids, and colors.
- - Modern OpenGL shaders and view frustrum culling for rendering of even millions of points.
+ - Modern OpenGL shaders for rendering of even millions of points.
  - Tools for labeling of individual points, areas, and filling segments.
  - Filtering of labels makes it easy to label even complicated structures with ease.
- - Mulitple viewport showing fixed or variable views of the scene.
-
-## Requirements
- We are building on matured technology, available on many platforms. The PCA should work on Linux, Mac, and Windows.
  
+## Requirements
+
  - modern c++
  - boost, Qt5, cmake
- - opengl, etc.
- - glow.
+ - opengl, glew
+ - glow
  
+## Build
+
+ TODO: setup.sh
+ 
+## Folder structure
+
+When loading a dataset, the data must be organized as follows:
+
+<pre>
+point cloud folder
+├── velodyne/             -- directory containing ".bin" files with Velodyne point clouds.   
+├── labels/   [optional]  -- label directory, will be generated if not present.  
+├── image_2/  [optional]  -- directory containing ".png" files from the color   camera.  
+├── calib.txt [optional]  -- calibration of velodyne vs. camera. needed for projection of point cloud into camera.  
+└── poses.txt             -- file containing the poses of every scan.
+</pre>
+ 
+
 ## TODO
- 
-- shader-based visualization
-- project/unproject for querying of hitted points...
-- Loading & saving with python scripts for simple extensibility? 
+
+ See TODO.md.
