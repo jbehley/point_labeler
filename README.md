@@ -56,7 +56,7 @@ catkin deps fetch
 ```
 Then, build the project:
 ```bash
-catkin build fast_change_detection
+catkin build point_labeler
 ```
 Now the project root directory (e.g. `~/catkin_ws/src/point_labeler`) should contain a `bin` directory containing the labeler.
 
