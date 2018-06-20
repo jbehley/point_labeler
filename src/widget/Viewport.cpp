@@ -7,8 +7,8 @@
 #include <glow/glutil.h>
 #include <algorithm>
 #include <chrono>
-#include "rv/Stopwatch.h"
 #include <fstream>
+#include "rv/Stopwatch.h"
 
 using namespace glow;
 using namespace rv;
@@ -122,9 +122,7 @@ void Viewport::initVertexBuffers() {
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
-void Viewport::setFixedAxis(AXIS axis) {
-  mAxis = axis;
-}
+void Viewport::setFixedAxis(AXIS axis) { mAxis = axis; }
 
 void Viewport::setMaximumScans(uint32_t numScans) {
   maxScans_ = numScans;
@@ -140,6 +138,8 @@ void Viewport::setMaximumScans(uint32_t numScans) {
 
 void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<LabelsPtr>& l) {
   std::cout << "Setting points..." << std::flush;
+
+  glow::_CheckGlError(__FILE__, __LINE__);
 
   // FIXME: improve usage of resources:
   //   Use transform feedback to get points inside the tile.
@@ -247,7 +247,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
   // generate height map.
 
-  float groundResolution = 0.1;
+  float groundResolution = 0.2f;
   uint32_t width = tileSize_ / groundResolution;
   uint32_t height = tileSize_ / groundResolution;
 
@@ -258,10 +258,10 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     // update also depth buffer.
     GlRenderbuffer depthbuffer(fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height(),
                                RenderbufferFormat::DEPTH_STENCIL);
+    fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texMinimumHeightMap_);
     fbMinimumHeightMap_.attach(FramebufferAttachment::DEPTH_STENCIL, depthbuffer);
   }
 
-  std::cout << fbMinimumHeightMap_.width() << "," << fbMinimumHeightMap_.height() << std::endl;
   GLint vp[4];
   glGetIntegerv(GL_VIEWPORT, vp);
 
@@ -299,12 +299,13 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
   glDepthFunc(GL_LEQUAL);
 
-//  std::vector<float> data;
-//  texMinimumHeightMap_.download(data);
-////  std::ofstream out("texture.txt");
-////  for (auto v : data) out << v << ", ";
-////  out << std::endl;
-////  out.close();
+  //  std::vector<float> data;
+  //  texMinimumHeightMap_.download(data);
+  ////  std::ofstream out("texture.txt");
+  ////  for (auto v : data) out << v << ", ";
+  ////  out << std::endl;
+  ////  out.close();
+  glow::_CheckGlError(__FILE__, __LINE__);
 
   std::cout << "Loaded " << loadedScans << " of total " << points_.size() << " scans." << std::endl;
   std::cout << "memcpy: " << memcpy_time << " s / " << total_time << " s." << std::endl;
@@ -313,6 +314,8 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 }
 
 void Viewport::updateLabels() {
+  glow::_CheckGlError(__FILE__, __LINE__);
+
   for (uint32_t i = 0; i < points_.size(); ++i) {
     if (bufferContent_.find(points_[i].get()) == bufferContent_.end()) continue;
 
@@ -320,15 +323,13 @@ void Viewport::updateLabels() {
     // replace label information with labels from GPU.
     bufLabels_.get(*labels_[i], info.index * maxPointsPerScan_, info.size);
   }
+
+  glow::_CheckGlError(__FILE__, __LINE__);
 }
 
-void Viewport::setRadius(float value) {
-  mRadius = value;
-}
+void Viewport::setRadius(float value) { mRadius = value; }
 
-void Viewport::setLabel(uint32_t label) {
-  mCurrentLabel = label;
-}
+void Viewport::setLabel(uint32_t label) { mCurrentLabel = label; }
 
 void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
   mLabelColors = colors;
@@ -353,9 +354,7 @@ void Viewport::setMode(MODE mode) {
   updateGL();
 }
 
-void Viewport::setFlags(int32_t flags) {
-  mFlags = flags;
-}
+void Viewport::setFlags(int32_t flags) { mFlags = flags; }
 
 void Viewport::setOverwrite(bool value) {
   if (value)
@@ -369,13 +368,9 @@ void Viewport::setDrawingOption(const std::string& name, bool value) {
   updateGL();
 }
 
-void Viewport::setMinRange(float range) {
-  minRange_ = range;
-}
+void Viewport::setMinRange(float range) { minRange_ = range; }
 
-void Viewport::setMaxRange(float range) {
-  maxRange_ = range;
-}
+void Viewport::setMaxRange(float range) { maxRange_ = range; }
 
 void Viewport::setFilteredLabels(const std::vector<uint32_t>& labels) {
   std::vector<uint32_t> labels_before = mFilteredLabels;
@@ -452,6 +447,8 @@ void Viewport::resizeGL(int w, int h) {
 }
 
 void Viewport::paintGL() {
+  glow::_CheckGlError(__FILE__, __LINE__);
+
   glEnable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPointSize(pointSize_);
@@ -488,7 +485,7 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
     prgDrawPoints_.setUniform(GlUniform<float>("tileSize", tileSize_));
     prgDrawPoints_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
-    prgDrawPoints_.setUniform(GlUniform<uint32_t>("heightMap", 1));
+    prgDrawPoints_.setUniform(GlUniform<int32_t>("heightMap", 1));
 
     bool showSingleScan = drawingOption_["single scan"];
 
@@ -545,6 +542,8 @@ void Viewport::paintGL() {
 
     texLabelColors_.release();
   }
+
+  glow::_CheckGlError(__FILE__, __LINE__);
 }
 
 std::ostream& operator<<(std::ostream& os, const vec2& v) {
@@ -712,9 +711,7 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
   event->accept();
 }
 
-void Viewport::keyPressEvent(QKeyEvent* event) {
-  event->ignore();
-}
+void Viewport::keyPressEvent(QKeyEvent* event) { event->ignore(); }
 
 void Viewport::setTileInfo(float x, float y, float tileSize) {
   std::cout << x << ", " << y << ", " << tileSize << std::endl;
@@ -744,6 +741,11 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<float>("minRange", minRange_));
   prgUpdateLabels_.setUniform(GlUniform<bool>("removeGround", removeGround_));
   prgUpdateLabels_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
+  prgUpdateLabels_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+  prgUpdateLabels_.setUniform(GlUniform<float>("tileSize", tileSize_));
+  prgUpdateLabels_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
+  prgUpdateLabels_.setUniform(GlUniform<int32_t>("heightMap", 1));
+
   if (mMode == Viewport::PAINT) prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 0));
   if (mMode == Viewport::POLYGON) {
     prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 1));
@@ -753,6 +755,9 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   glActiveTexture(GL_TEXTURE0);
   texTriangles_.bind();
 
+  glActiveTexture(GL_TEXTURE1);
+  texMinimumHeightMap_.bind();
+
   glEnable(GL_RASTERIZER_DISCARD);
 
   for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
@@ -760,6 +765,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
     mvp_ = projection_ * mCamera.matrix() * conversion_ * it->first->pose;
 
     prgUpdateLabels_.setUniform(mvp_);
+    prgUpdateLabels_.setUniform(GlUniform<Eigen::Matrix4f>("pose", it->first->pose));
 
     tfUpdateLabels_.begin(TransformFeedbackMode::POINTS);
     glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
@@ -770,7 +776,10 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 
   glDisable(GL_RASTERIZER_DISCARD);
 
+  glActiveTexture(GL_TEXTURE0);
   texTriangles_.release();
+  glActiveTexture(GL_TEXTURE1);
+  texMinimumHeightMap_.release();
   //  std::cout << Stopwatch::toc() << " s." << std::endl;
 
   emit labelingChanged();

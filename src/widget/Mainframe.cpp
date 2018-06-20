@@ -303,18 +303,14 @@ void Mainframe::labelBtnReleased(QWidget* w) {
   ui.txtSelectedLabel->setText(QString::fromStdString(label_names[label_id]));
 }
 
-void Mainframe::unsavedChanges() {
-  mChangesSinceLastSave = true;
-}
+void Mainframe::unsavedChanges() { mChangesSinceLastSave = true; }
 
 void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   if (readerFuture_.valid()) readerFuture_.wait();
   readerFuture_ = std::async(std::launch::async, &Mainframe::readAsync, this, i, j);
 }
 
-void Mainframe::setCurrentScanIdx(int32_t idx) {
-  ui.mViewportXYZ->setScanIndex(idx);
-}
+void Mainframe::setCurrentScanIdx(int32_t idx) { ui.mViewportXYZ->setScanIndex(idx); }
 
 void Mainframe::readAsync(uint32_t i, uint32_t j) {
   // TODO progress indicator.
@@ -375,8 +371,9 @@ void Mainframe::updateScans() {
   }
 
   statusBar()->clearMessage();
-
+  glow::_CheckGlError(__FILE__, __LINE__);
   ui.mViewportXYZ->setPoints(points_, labels_);
+  glow::_CheckGlError(__FILE__, __LINE__);
 
   ui.sldTimeline->setMaximum(indexes_.size());
   ui.sldTimeline->setValue(0);

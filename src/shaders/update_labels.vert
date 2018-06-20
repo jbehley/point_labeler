@@ -6,6 +6,7 @@ layout (location = 2) in uint  in_label;
 layout (location = 3) in uint  in_visible;
 
 uniform mat4 mvp;
+uniform mat4 pose;
 uniform int width;
 uniform int height;
 uniform vec2 window_pos;
@@ -21,6 +22,12 @@ uniform int numTriangles;
 
 uniform bool removeGround;
 uniform float groundThreshold;
+
+uniform sampler2D heightMap;
+
+uniform vec2 tilePos;
+uniform float tileSize;
+uniform bool showAllPoints;
 
 out uint out_label;
 
@@ -52,8 +59,11 @@ void main()
   vec3 pos =  vec3(0.5f * (point.x + 1.0) * width, 0.5f * (point.y + 1.0) * height, 0.5f * (point.z + 1.0)); 
   pos.y = height - pos.y;
   
-  bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > groundThreshold); 
+  vec4 v_global = pose * vec4(in_vertex, 1.0);
+  vec2 v = (pose * vec4(in_vertex, 1.0)).xy - tilePos;
   
+  bool visible = (in_visible > uint(0)) && (!removeGround || v_global.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
+  visible = visible && (showAllPoints || (abs(v.x) < 0.5 * tileSize && abs(v.y) < 0.5 * tileSize));
 
   if(visible && !(range < minRange || range > maxRange))
   {

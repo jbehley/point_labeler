@@ -34,15 +34,17 @@ void main()
   
   float range = length(in_vertex);
   gl_Position = mvp * vec4(in_vertex, 1.0);
+  
+  vec4 v_global = pose * vec4(in_vertex, 1.0);
   vec2 v = (pose * vec4(in_vertex, 1.0)).xy - tilePos;
+  
     
-  bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
+  bool visible = (in_visible > uint(0)) && (!removeGround || v_global.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
   
 
   visible = visible && (showAllPoints || (abs(v.x) < 0.5 * tileSize && abs(v.y) < 0.5 * tileSize));
   
   if(!visible || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);
-  
   
   
   if(useRemission)
