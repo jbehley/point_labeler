@@ -1,0 +1,8 @@
+BasedOnStyle: Google
+IndentWidth: 2
+
+---
+Language: Cpp
+ColumnLimit: 120
+Standard:        Cpp11
+
