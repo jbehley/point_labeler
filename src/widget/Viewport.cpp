@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <chrono>
 #include "rv/Stopwatch.h"
+#include <fstream>
 
 using namespace glow;
 using namespace rv;
@@ -22,6 +23,8 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       mRadius(5),
       buttonPressed(false),
       texLabelColors_(256, 1, TextureFormat::RGB),
+      fbMinimumHeightMap_(100, 100),
+      texMinimumHeightMap_(100, 100, TextureFormat::R_FLOAT),
       texTriangles_(3 * 100, 1, TextureFormat::RGB) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
@@ -63,6 +66,14 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   texTriangles_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texTriangles_.setMagnifyingOperation(TexRectMagOp::NEAREST);
 
+  texMinimumHeightMap_.setMinifyingOperation(TexMinOp::NEAREST);
+  texMinimumHeightMap_.setMagnifyingOperation(TexMagOp::NEAREST);
+
+  fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texMinimumHeightMap_);
+  GlRenderbuffer depthbuffer(fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height(),
+                             RenderbufferFormat::DEPTH_STENCIL);
+  fbMinimumHeightMap_.attach(FramebufferAttachment::DEPTH_STENCIL, depthbuffer);
+
   setAutoFillBackground(false);
 
   glow::_CheckGlError(__FILE__, __LINE__);
@@ -93,6 +104,10 @@ void Viewport::initPrograms() {
   prgPolygonPoints_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/draw_polygon.vert"));
   prgPolygonPoints_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgPolygonPoints_.link();
+
+  prgMinimumHeightMap_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/gen_heightmap.vert"));
+  prgMinimumHeightMap_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/gen_heightmap.frag"));
+  prgMinimumHeightMap_.link();
 }
 
 void Viewport::initVertexBuffers() {
@@ -229,6 +244,67 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   float total_time = Stopwatch::toc();
 
   glow::_CheckGlError(__FILE__, __LINE__);
+
+  // generate height map.
+
+  float groundResolution = 0.1;
+  uint32_t width = tileSize_ / groundResolution;
+  uint32_t height = tileSize_ / groundResolution;
+
+  if (fbMinimumHeightMap_.width() != width || fbMinimumHeightMap_.height() != height) {
+    fbMinimumHeightMap_.resize(width, height);
+    texMinimumHeightMap_.resize(width, height);
+
+    // update also depth buffer.
+    GlRenderbuffer depthbuffer(fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height(),
+                               RenderbufferFormat::DEPTH_STENCIL);
+    fbMinimumHeightMap_.attach(FramebufferAttachment::DEPTH_STENCIL, depthbuffer);
+  }
+
+  std::cout << fbMinimumHeightMap_.width() << "," << fbMinimumHeightMap_.height() << std::endl;
+  GLint vp[4];
+  glGetIntegerv(GL_VIEWPORT, vp);
+
+  glViewport(0, 0, fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height());
+
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LESS);
+
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  fbMinimumHeightMap_.bind();
+  prgMinimumHeightMap_.bind();
+  vao_points_.bind();
+
+  prgMinimumHeightMap_.setUniform(GlUniform<float>("minHeight", -3.0f));
+  prgMinimumHeightMap_.setUniform(GlUniform<float>("maxHeight", 2.0f));
+
+  prgMinimumHeightMap_.setUniform(GlUniform<float>("maxRange", maxRange_));
+  prgMinimumHeightMap_.setUniform(GlUniform<float>("minRange", minRange_));
+
+  prgMinimumHeightMap_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+  prgMinimumHeightMap_.setUniform(GlUniform<float>("tileSize", tileSize_));
+
+  for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
+    prgMinimumHeightMap_.setUniform(GlUniform<Eigen::Matrix4f>("pose", it->first->pose));
+
+    glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
+  }
+
+  vao_points_.release();
+  prgMinimumHeightMap_.release();
+  fbMinimumHeightMap_.release();
+
+  glViewport(vp[0], vp[1], vp[2], vp[3]);
+
+  glDepthFunc(GL_LEQUAL);
+
+//  std::vector<float> data;
+//  texMinimumHeightMap_.download(data);
+////  std::ofstream out("texture.txt");
+////  for (auto v : data) out << v << ", ";
+////  out << std::endl;
+////  out.close();
 
   std::cout << "Loaded " << loadedScans << " of total " << points_.size() << " scans." << std::endl;
   std::cout << "memcpy: " << memcpy_time << " s / " << total_time << " s." << std::endl;
@@ -412,11 +488,15 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
     prgDrawPoints_.setUniform(GlUniform<float>("tileSize", tileSize_));
     prgDrawPoints_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
+    prgDrawPoints_.setUniform(GlUniform<uint32_t>("heightMap", 1));
 
     bool showSingleScan = drawingOption_["single scan"];
 
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.bind();
+
+    glActiveTexture(GL_TEXTURE1);
+    texMinimumHeightMap_.bind();
 
     for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
       if (showSingleScan && (it->first != points_[singleScanIdx_].get())) continue;
@@ -428,7 +508,10 @@ void Viewport::paintGL() {
       glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
     }
 
+    glActiveTexture(GL_TEXTURE0);
     texLabelColors_.release();
+    glActiveTexture(GL_TEXTURE1);
+    texMinimumHeightMap_.release();
   }
 
   glDisable(GL_DEPTH_TEST);

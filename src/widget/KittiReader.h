@@ -35,10 +35,10 @@ class KittiReader {
   //                std::vector<LabelsPtr>& labels);
 
   void retrieve(const Eigen::Vector3f& position, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
-                std::vector<LabelsPtr>& labels);
+                std::vector<LabelsPtr>& labels, std::vector<ColorsPtr>& colors);
 
   void retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
-                std::vector<LabelsPtr>& labels);
+                std::vector<LabelsPtr>& labels, std::vector<ColorsPtr>& colors);
 
   void update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels);
 

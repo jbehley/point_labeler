@@ -301,7 +301,6 @@ void Mainframe::labelBtnReleased(QWidget* w) {
   }
 
   ui.txtSelectedLabel->setText(QString::fromStdString(label_names[label_id]));
-
 }
 
 void Mainframe::unsavedChanges() {
@@ -324,15 +323,17 @@ void Mainframe::readAsync(uint32_t i, uint32_t j) {
   std::vector<uint32_t> indexes;
   std::vector<PointcloudPtr> points;
   std::vector<LabelsPtr> labels;
+  std::vector<ColorsPtr> colors;
 
   std::vector<uint32_t> oldIndexes = indexes_;
   std::vector<LabelsPtr> oldLabels = labels_;
 
-  reader_.retrieve(i, j, indexes, points, labels);
+  reader_.retrieve(i, j, indexes, points, labels, colors);
 
   indexes_ = indexes;
   points_ = points;
   labels_ = labels;
+  colors_ = colors;
 
   // find difference.
   std::vector<uint32_t> diff_indexes;

@@ -56,6 +56,7 @@ class Mainframe : public QMainWindow {
   std::vector<uint32_t> indexes_;
   std::vector<PointcloudPtr> points_;
   std::vector<LabelsPtr> labels_;
+  std::vector<ColorsPtr> colors_;
 
   std::vector<uint32_t> filteredLabels;
   std::string filename;

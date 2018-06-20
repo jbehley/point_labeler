@@ -6,6 +6,7 @@ layout (location = 2) in uint  in_label;
 layout (location = 3) in uint  in_visible;
 
 uniform sampler2DRect label_colors;
+uniform sampler2D heightMap;
 
 #include "shaders/color.glsl"
 
@@ -33,10 +34,11 @@ void main()
   
   float range = length(in_vertex);
   gl_Position = mvp * vec4(in_vertex, 1.0);
-  
-  bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > groundThreshold); 
-  
   vec2 v = (pose * vec4(in_vertex, 1.0)).xy - tilePos;
+    
+  bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
+  
+
   visible = visible && (showAllPoints || (abs(v.x) < 0.5 * tileSize && abs(v.y) < 0.5 * tileSize));
   
   if(!visible || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);

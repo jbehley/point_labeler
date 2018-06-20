@@ -56,6 +56,8 @@ COMPILE_SHADERS(${VIZ_SHADER_SRC}
   src/shaders/draw_polygon.vert
   src/shaders/update_visibility.vert
   src/shaders/update_labels.vert
+  src/shaders/gen_heightmap.vert
+  src/shaders/gen_heightmap.frag
 )
 
 add_executable(labeler 

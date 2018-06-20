@@ -134,15 +134,16 @@ void KittiReader::initialize(const QString& directory) {
 }
 
 void KittiReader::retrieve(const Eigen::Vector3f& position, std::vector<uint32_t>& indexes,
-                           std::vector<PointcloudPtr>& points, std::vector<LabelsPtr>& labels) {
+                           std::vector<PointcloudPtr>& points, std::vector<LabelsPtr>& labels,
+                           std::vector<ColorsPtr>& colors) {
   Eigen::Vector2f idx((position.x() + offset_.x()) / tileSize_, (position.y() + offset_.y()) / tileSize_);
 
   std::cout << "retrieve: idx = " << idx << std::endl;
-  retrieve(idx.x(), idx.y(), indexes, points, labels);
+  retrieve(idx.x(), idx.y(), indexes, points, labels, colors);
 }
 
 void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
-                           std::vector<LabelsPtr>& labels) {
+                           std::vector<LabelsPtr>& labels, std::vector<ColorsPtr>& colors) {
   indexes.clear();
   points.clear();
   labels.clear();
@@ -203,9 +204,13 @@ const KittiReader::Tile& KittiReader::getTile(const Eigen::Vector3f& position) c
   Eigen::Vector2f idx((position.x() + offset_.x()) / tileSize_, (position.y() + offset_.y()) / tileSize_);
   return tiles_[tileIdxToOffset(idx.x(), idx.y())];
 }
-const KittiReader::Tile& KittiReader::getTile(uint32_t i, uint32_t j) const { return tiles_[tileIdxToOffset(i, j)]; }
+const KittiReader::Tile& KittiReader::getTile(uint32_t i, uint32_t j) const {
+  return tiles_[tileIdxToOffset(i, j)];
+}
 
-void KittiReader::setTileSize(float size) { tileSize_ = size; }
+void KittiReader::setTileSize(float size) {
+  tileSize_ = size;
+}
 
 void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels) {
   for (uint32_t i = 0; i < indexes.size(); ++i) {

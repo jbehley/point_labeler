@@ -174,6 +174,10 @@ class Viewport : public QGLWidget {
   glow::GlProgram prgUpdateVisibility_;
   glow::GlProgram prgPolygonPoints_;
 
+  glow::GlFramebuffer fbMinimumHeightMap_;
+  glow::GlTexture texMinimumHeightMap_;
+  glow::GlProgram prgMinimumHeightMap_;
+
   int32_t pointSize_{1};
 
   glow::GlUniform<Eigen::Matrix4f> mvp_{"mvp", Eigen::Matrix4f::Identity()};
