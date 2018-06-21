@@ -14,6 +14,6 @@
   <run_depend>glow</run_depend>
   
   <export>
-    <git_url target="glow" url="git@gitlab.ipb.uni-bonn.de:jbehley/glow.git"/>
+    <git_url target="glow" url="https://github.com/jbehley/glow.git"/>
   </export>
 </package>
