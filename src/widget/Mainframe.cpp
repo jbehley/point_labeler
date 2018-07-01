@@ -25,8 +25,10 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.actionSave, SIGNAL(triggered()), this, SLOT(save()));
 
   /** initialize the paint button mapping **/
-  connect(ui.btnBrushMode, &QToolButton::released, [this]() { changeMode(Viewport::PAINT); });
-  connect(ui.btnPolygonMode, &QToolButton::toggled, [this]() { changeMode(Viewport::POLYGON); });
+  connect(ui.btnBrushMode, &QToolButton::toggled, [this](bool checked) { changeMode(Viewport::PAINT, checked); });
+  connect(ui.btnPolygonMode, &QToolButton::toggled, [this](bool checked) { changeMode(Viewport::POLYGON, checked); });
+  connect(ui.actionPaintMode, &QAction::toggled, [this](bool checked) { changeMode(Viewport::PAINT, checked); });
+  connect(ui.actionPolygonMode, &QAction::toggled, [this](bool checked) { changeMode(Viewport::POLYGON, checked); });
 
   connect(ui.mViewportXYZ, SIGNAL(labelingChanged()), this, SLOT(unsavedChanges()));
 
@@ -78,6 +80,8 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   generateLabelButtons();
 
   readConfig();
+
+  initializeIcons();
 }
 
 Mainframe::~Mainframe() {}
@@ -143,7 +147,7 @@ void Mainframe::open() {
 
     lastDirectory = base_dir.absolutePath();
 
-    changeMode(Viewport::NONE);
+    changeMode(Viewport::NONE, true);
 
     QString title = "Point Labeler - ";
     title += QFileInfo(retValue).completeBaseName();
@@ -184,28 +188,44 @@ void Mainframe::changeRadius(int value) {
   ui.mViewportXYZ->setRadius(value);
 }
 
-void Mainframe::changeMode(int mode) {
-  ui.mViewportXYZ->setMode(Viewport::NONE);
+void Mainframe::changeMode(int mode, bool checked) {
+  //  std::cout << "called changedMode(" << ((mode == Viewport::PAINT) ? "PAINT" : "POLYGON") << ", "
+  //            << (checked ? "true" : "false") << std::endl;
 
-  if (mode == Viewport::PAINT && ui.btnBrushMode->isChecked()) /** PAINTMODE **/
+  // TODO find better way.
+
+  if (mode == Viewport::PAINT && checked) /** PAINTMODE **/
   {
     std::cout << "triggered paint mode." << std::endl;
     ui.mViewportXYZ->setMode(Viewport::PAINT);
 
     ui.btnPolygonMode->setChecked(false);
+    ui.actionPolygonMode->setChecked(false);
+
+    ui.btnBrushMode->setChecked(true);
+    ui.actionPaintMode->setChecked(true);
 
     //    ui.mTools->setCurrentIndex(1);
-  } else if (mode == Viewport::POLYGON && ui.btnPolygonMode->isChecked()) /** PAINTMODE **/
+  } else if (mode == Viewport::POLYGON && checked) /** PAINTMODE **/
   {
     std::cout << "triggered polygon mode." << std::endl;
     ui.mViewportXYZ->setMode(Viewport::POLYGON);
 
     ui.btnBrushMode->setChecked(false);
+    ui.actionPaintMode->setChecked(false);
+
+    ui.btnPolygonMode->setChecked(true);
+    ui.actionPolygonMode->setChecked(true);
 
     //    ui.mTools->setCurrentIndex(1);
-  } else if (mode == Viewport::NONE) {
+  } else if ((!ui.btnBrushMode->isChecked() && !ui.btnPolygonMode->isChecked()) ||
+             (!ui.actionPaintMode->isChecked() && !ui.actionPolygonMode->isChecked())) {
     ui.btnPolygonMode->setChecked(false);
     ui.btnBrushMode->setChecked(false);
+    ui.actionPaintMode->setChecked(false);
+    ui.actionPolygonMode->setChecked(false);
+
+    ui.mViewportXYZ->setMode(Viewport::NONE);
   }
 }
 
@@ -431,6 +451,25 @@ void Mainframe::readConfig() {
   }
 
   in.close();
+}
+
+void Mainframe::initializeIcons() {
+  std::string assertDir = QDir::currentPath().toStdString() + "/../assets/";
+  std::cout << QDir::currentPath().toStdString() << std::endl;
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "brush.png")));
+
+    ui.actionPaintMode->setIcon(icon);
+    ui.btnBrushMode->setIcon(icon);
+  }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "polygon.png")));
+    ui.actionPolygonMode->setIcon(icon);
+    ui.btnPolygonMode->setIcon(icon);
+  }
 }
 
 void Mainframe::keyPressEvent(QKeyEvent* event) {

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>916</width>
-    <height>627</height>
+    <height>746</height>
    </rect>
   </property>
   <property name="focusPolicy">
@@ -162,6 +162,8 @@
    <addaction name="actionOpen"/>
    <addaction name="actionSave"/>
    <addaction name="separator"/>
+   <addaction name="actionPaintMode"/>
+   <addaction name="actionPolygonMode"/>
   </widget>
   <widget class="QDockWidget" name="dockWidget">
    <property name="minimumSize">
@@ -272,9 +274,9 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>-35</y>
+          <y>-153</y>
           <width>219</width>
-          <height>419</height>
+          <height>418</height>
          </rect>
         </property>
         <attribute name="label">
@@ -577,8 +579,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>146</width>
-          <height>126</height>
+          <width>232</width>
+          <height>265</height>
          </rect>
         </property>
         <attribute name="label">
@@ -668,12 +670,12 @@
     <string>Paint</string>
    </property>
   </action>
-  <action name="actionCylinderMode">
+  <action name="actionPolygonMode">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Cylinder</string>
+    <string>Polygon</string>
    </property>
   </action>
   <action name="actionNewCylinder">

@@ -26,7 +26,7 @@ class Mainframe : public QMainWindow {
   void open();
   void save();
   void changeRadius(int radius);
-  void changeMode(int mode);
+  void changeMode(int mode, bool checked);
 
   void updateFiltering(bool value);
   void labelBtnReleased(QWidget*);
@@ -52,6 +52,8 @@ class Mainframe : public QMainWindow {
   void closeEvent(QCloseEvent* event);
 
   void readConfig();
+
+  void initializeIcons();
 
   std::vector<uint32_t> indexes_;
   std::vector<PointcloudPtr> points_;
