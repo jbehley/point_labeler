@@ -10,6 +10,8 @@
 #include <fstream>
 #include "rv/Stopwatch.h"
 
+#include <glow/GlState.h>
+
 using namespace glow;
 using namespace rv;
 
@@ -148,12 +150,17 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   std::vector<uint32_t> indexes;
   index_difference(labels_, l, indexes);
 
+  glow::GlBuffer<uint32_t> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  bufReadBuffer.resize(maxPointsPerScan_);
+
   for (auto index : indexes) {
     if (bufferContent_.find(points_[index].get()) == bufferContent_.end()) continue;
-    const BufferInfo& info = bufferContent_[points_[index].get()];
 
+    const BufferInfo& info = bufferContent_[points_[index].get()];
     // replace label information with labels from GPU.
-    bufLabels_.get(*labels_[index], info.index * maxPointsPerScan_, info.size);
+    // copy first to other buffer and read from that.
+    bufLabels_.copyTo(info.index * maxPointsPerScan_, info.size, bufReadBuffer, 0);
+    bufReadBuffer.get(*labels_[index], 0, info.size);
   }
 
   points_ = p;
@@ -316,12 +323,17 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 void Viewport::updateLabels() {
   glow::_CheckGlError(__FILE__, __LINE__);
 
+  glow::GlBuffer<uint32_t> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  bufReadBuffer.resize(maxPointsPerScan_);
+
   for (uint32_t i = 0; i < points_.size(); ++i) {
     if (bufferContent_.find(points_[i].get()) == bufferContent_.end()) continue;
 
     const BufferInfo& info = bufferContent_[points_[i].get()];
     // replace label information with labels from GPU.
-    bufLabels_.get(*labels_[i], info.index * maxPointsPerScan_, info.size);
+    // copy first to other buffer and read from that.
+    bufLabels_.copyTo(info.index * maxPointsPerScan_, info.size, bufReadBuffer, 0);
+    bufReadBuffer.get(*labels_[i], 0, info.size);
   }
 
   glow::_CheckGlError(__FILE__, __LINE__);
@@ -722,7 +734,7 @@ void Viewport::setTileInfo(float x, float y, float tileSize) {
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label) {
   if (points_.size() == 0 || labels_.size() == 0) return;
 
-  //  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::endl;
+  //  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::flush;
   //  Stopwatch::tic();
 
   bool showSingleScan = drawingOption_["single scan"];
@@ -760,6 +772,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 
   glEnable(GL_RASTERIZER_DISCARD);
 
+  uint32_t numIters = 0;
   for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
     if (showSingleScan && (it->first != points_[singleScanIdx_].get())) continue;
     mvp_ = projection_ * mCamera.matrix() * conversion_ * it->first->pose;
@@ -772,7 +785,10 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
     tfUpdateLabels_.end();
 
     bufUpdatedLabels_.copyTo(bufLabels_, it->second.index * maxPointsPerScan_);
+    numIters += 1;
   }
+
+  //  std::cout << numIters << " iters took " << std::flush;
 
   glDisable(GL_RASTERIZER_DISCARD);
 
