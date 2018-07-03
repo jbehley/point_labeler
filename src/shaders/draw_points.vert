@@ -44,7 +44,8 @@ void main()
 
   visible = visible && (showAllPoints || (abs(v.x) < 0.5 * tileSize && abs(v.y) < 0.5 * tileSize));
   
-  if(!visible || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);
+  // if(!visible || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);
+  if(!visible) gl_Position = vec4(-10, -10, -10, 1);
   
   
   if(useRemission)

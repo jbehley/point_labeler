@@ -36,6 +36,8 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   conversion_ = RoSe2GL::matrix;
 
+  // FIXME: make max_size depending on memory. (have setting like AvailableMemory that specifies how much memory should
+  // be used by program!)
   uint32_t max_size = maxScans_ * maxPointsPerScan_;
 
   bufPoses_.resize(maxScans_);
@@ -43,16 +45,26 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   bufRemissions_.resize(max_size);
   bufVisible_.resize(max_size);
   bufLabels_.resize(max_size);
+  bufScanIndexes_.resize(max_size);
+
+  bufTempPoints_.reserve(maxPointsPerScan_);
+  bufTempRemissions_.reserve(maxPointsPerScan_);
+  bufTempLabels_.reserve(maxPointsPerScan_);
+  bufTempVisible_.reserve(maxPointsPerScan_);
 
   bufPolygonPoints_.reserve(100);
 
   bufUpdatedLabels_.resize(maxPointsPerScan_);
-  std::vector<std::string> update_varyings{"out_label"};
-  tfUpdateLabels_.attach(update_varyings, bufUpdatedLabels_);
+  tfUpdateLabels_.attach({"out_label"}, bufUpdatedLabels_);
 
   bufUpdatedVisiblity_.resize(maxPointsPerScan_);
-  std::vector<std::string> visibility_varyings{"out_visible"};
-  tfUpdateVisibility_.attach(visibility_varyings, bufUpdatedVisiblity_);
+  tfUpdateVisibility_.attach({"out_visible"}, bufUpdatedVisiblity_);
+
+  tfFillTilePoints_.attach({"out_point"}, bufPoints_);
+  tfFillTilePoints_.attach({"out_remission"}, bufRemissions_);
+  tfFillTilePoints_.attach({"out_label"}, bufLabels_);
+  tfFillTilePoints_.attach({"out_visible"}, bufVisible_);
+  tfFillTilePoints_.attach({"out_scanindex"}, bufScanIndexes_);
 
   initPrograms();
   initVertexBuffers();
@@ -110,6 +122,14 @@ void Viewport::initPrograms() {
   prgMinimumHeightMap_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/gen_heightmap.vert"));
   prgMinimumHeightMap_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/gen_heightmap.frag"));
   prgMinimumHeightMap_.link();
+
+  prgFillTilePoints_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/fill_tile_points.vert"));
+  prgFillTilePoints_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/fill_tile_points.geom"));
+  prgFillTilePoints_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/empty.frag"));
+  prgFillTilePoints_.attach(tfFillTilePoints_);
+  prgFillTilePoints_.link();
+
+  glow::_CheckGlError(__FILE__, __LINE__);
 }
 
 void Viewport::initVertexBuffers() {
@@ -117,6 +137,13 @@ void Viewport::initVertexBuffers() {
   vao_points_.setVertexAttribute(1, bufRemissions_, 1, AttributeType::FLOAT, false, sizeof(float), nullptr);
   vao_points_.setVertexAttribute(2, bufLabels_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
   vao_points_.setVertexAttribute(3, bufVisible_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
+
+  vao_temp_points_.setVertexAttribute(0, bufTempPoints_, 3, AttributeType::FLOAT, false, sizeof(Point3f), nullptr);
+  vao_temp_points_.setVertexAttribute(1, bufTempRemissions_, 1, AttributeType::FLOAT, false, sizeof(float), nullptr);
+  vao_temp_points_.setVertexAttribute(2, bufTempLabels_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t),
+                                      nullptr);
+  vao_temp_points_.setVertexAttribute(3, bufTempVisible_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t),
+                                      nullptr);
 
   vao_polygon_points_.setVertexAttribute(0, bufPolygonPoints_, 2, AttributeType::FLOAT, false, sizeof(vec2), nullptr);
 
@@ -146,108 +173,129 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   // FIXME: improve usage of resources:
   //   Use transform feedback to get points inside the tile.
 
+  // (1) fill single buffer with points and labels. (for each pointcloud)
+
+  // (2) Determine points inside tile (+ 1m boundary.) and output in transform feedback
+  //    - point coordinates, labels, and index of label in complete point cloud.
+
+  // (3) Use single draw call for drawing points, labels, etc. & update labels.
+
   // determine which labels need to be updated.
-  std::vector<uint32_t> indexes;
-  index_difference(labels_, l, indexes);
+  //  std::vector<uint32_t> indexes;
+  //  index_difference(labels_, l, indexes);
 
-  glow::GlBuffer<uint32_t> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
-  bufReadBuffer.resize(maxPointsPerScan_);
+  //  glow::GlBuffer<uint32_t> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  //  bufReadBuffer.resize(maxPointsPerScan_);
+  //
+  //  for (auto index : indexes) {
+  //    if (bufferContent_.find(points_[index].get()) == bufferContent_.end()) continue;
+  //
+  //    const BufferInfo& info = bufferContent_[points_[index].get()];
+  //    // replace label information with labels from GPU.
+  //    // copy first to other buffer and read from that.
+  //    bufLabels_.copyTo(info.index * maxPointsPerScan_, info.size, bufReadBuffer, 0);
+  //    bufReadBuffer.get(*labels_[index], 0, info.size);
+  //  }
 
-  for (auto index : indexes) {
-    if (bufferContent_.find(points_[index].get()) == bufferContent_.end()) continue;
-
-    const BufferInfo& info = bufferContent_[points_[index].get()];
-    // replace label information with labels from GPU.
-    // copy first to other buffer and read from that.
-    bufLabels_.copyTo(info.index * maxPointsPerScan_, info.size, bufReadBuffer, 0);
-    bufReadBuffer.get(*labels_[index], 0, info.size);
-  }
+  updateLabels();
 
   points_ = p;
   labels_ = l;
   glow::_CheckGlError(__FILE__, __LINE__);
 
   // TODO: on unload => fetch labels and update labels in file.
+  Stopwatch::tic();
 
   {
-    // first remove entries using a set_difference
-    std::vector<Laserscan*> before;
-    std::vector<Laserscan*> after;
-    for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) before.push_back(it->first);
-    for (auto it = p.begin(); it != p.end(); ++it) after.push_back(it->get());
+    ScopedBinder<GlVertexArray> vaoBinder(vao_temp_points_);
+    glow::_CheckGlError(__FILE__, __LINE__);
+    ScopedBinder<GlProgram> programBinder(prgFillTilePoints_);
+    glow::_CheckGlError(__FILE__, __LINE__);
+    ScopedBinder<GlTransformFeedback> feedbackBinder(tfFillTilePoints_);
 
-    std::sort(before.begin(), before.end());
-    std::sort(after.begin(), after.end());
+    glow::_CheckGlError(__FILE__, __LINE__);
 
-    std::vector<Laserscan*> needsDelete(before.size());
-    std::vector<Laserscan*>::iterator end =
-        std::set_difference(before.begin(), before.end(), after.begin(), after.end(), needsDelete.begin());
+    prgFillTilePoints_.setUniform(GlUniform<float>("maxRange", maxRange_));
+    prgFillTilePoints_.setUniform(GlUniform<float>("minRange", minRange_));
+    prgFillTilePoints_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+    prgFillTilePoints_.setUniform(GlUniform<float>("tileSize", tileSize_));
+    prgFillTilePoints_.setUniform(GlUniform<float>("tileBoundary", tileBoundary_));
 
-    for (auto it = needsDelete.begin(); it != end; ++it) {
-      bufferContent_.erase(*it);
-    }
-  }
+    glow::_CheckGlError(__FILE__, __LINE__);
 
-  std::vector<int32_t> usedIndexes;
-  for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
-    usedIndexes.push_back(it->second.index);
-  }
+    glEnable(GL_RASTERIZER_DISCARD);
+    tfFillTilePoints_.begin(TransformFeedbackMode::POINTS);
 
-  std::sort(usedIndexes.begin(), usedIndexes.end());
-  usedIndexes.push_back(maxScans_);
+    for (uint32_t t = 0; t < points_.size(); ++t) {
+      prgFillTilePoints_.setUniform(GlUniform<float>("maxRange", maxRange_));
+      prgFillTilePoints_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[t]->pose));
 
-  std::vector<int32_t> freeIndexes;
-  for (int32_t j = 0; j < usedIndexes[0]; ++j) freeIndexes.push_back(j);
-  for (uint32_t i = 0; i < usedIndexes.size() - 1; ++i) {
-    for (int32_t j = usedIndexes[i] + 1; j < usedIndexes[i + 1]; ++j) freeIndexes.push_back(j);
-  }
-
-  uint32_t nextFree = 0;
-  uint32_t loadedScans = 0;
-  float memcpy_time = 0.0f;
-
-  Stopwatch::tic();
-  for (uint32_t i = 0; i < points_.size(); ++i) {
-    if (bufferContent_.find(points_[i].get()) == bufferContent_.end()) {
-      if (nextFree == freeIndexes.size()) {
-        std::cerr << "Warning: insufficient memory for scan." << std::endl;
-        break;
-      }
-
-      int32_t index = freeIndexes[nextFree++];
-      //      std::cout << index << std::endl;
-
-      // not already loaded to buffer, need to transfer data to next free spot.
-      uint32_t num_points = std::min(maxPointsPerScan_, points_[i]->size());
-      if (points_[i]->size() >= maxPointsPerScan_) std::cerr << "warning: losing some points" << std::endl;
+      uint32_t num_points = points_[t]->size();
 
       std::vector<uint32_t> visible(num_points, 1);
 
-      for (uint32_t j = 0; j < num_points; ++j) {
-        if (std::find(mFilteredLabels.begin(), mFilteredLabels.end(), (*labels_[i])[j]) != mFilteredLabels.end()) {
-          visible[j] = 0;
+      for (uint32_t i = 0; i < num_points; ++i) {
+        if (std::find(mFilteredLabels.begin(), mFilteredLabels.end(), (*labels_[t])[i]) != mFilteredLabels.end()) {
+          visible[i] = 0;
         }
       }
 
-      Stopwatch::tic();
+      // copy data from CPU -> GPU.
+      bufTempPoints_.assign(points_[t]->points);
+      if (points_[t]->hasRemissions()) bufTempRemissions_.assign(points_[t]->remissions);
+      bufTempLabels_.assign(*(labels_[t]));
+      bufTempVisible_.assign(visible);
 
-      BufferInfo info;
-      info.index = index;
-      info.size = num_points;
+      prgFillTilePoints_.setUniform(GlUniform<uint32_t>("scan", t));
 
-      bufferContent_[points_[i].get()] = info;
-      bufPoses_[index] = points_[i]->pose;
-      bufPoints_.replace(index * maxPointsPerScan_, &points_[i]->points[0], num_points);
-      if (points_[i]->hasRemissions())
-        bufRemissions_.replace(index * maxPointsPerScan_, &points_[i]->remissions[0], num_points);
-      bufLabels_.replace(index * maxPointsPerScan_, &(*labels_[i])[0], num_points);
-      bufVisible_.replace(index * maxPointsPerScan_, &visible[0], num_points);
-
-      memcpy_time += Stopwatch::toc();
-
-      loadedScans += 1;
+      // extract tile points.
+      glDrawArrays(GL_POINTS, 0, points_[t]->size());
     }
+
+    uint32_t numCopiedPoints = tfFillTilePoints_.end();
+
+    bufPoints_.resize(numCopiedPoints);
+    bufRemissions_.resize(numCopiedPoints);
+    bufLabels_.resize(numCopiedPoints);
+    bufVisible_.resize(numCopiedPoints);
+    bufScanIndexes_.resize(numCopiedPoints);
+
+    glDisable(GL_RASTERIZER_DISCARD);
+
+    // get per scan information from  scan indexes.
+    scanInfos_.clear();
+
+    glow::_CheckGlError(__FILE__, __LINE__);
+
+//    std::vector<glow::vec2> scanIndexes;
+//    glow::GlBuffer<glow::vec2> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+//    bufReadBuffer.resize(maxPointsPerScan_);
+//
+//    ScanInfo current;
+//    int32_t currentScanIndex{-1};
+//
+//    uint32_t count = 0;
+//    while (count * maxPointsPerScan_ < bufScanIndexes_.size()) {
+//      uint32_t read_size = std::min<uint32_t>(maxPointsPerScan_, bufScanIndexes_.size() - count * maxPointsPerScan_);
+//      bufScanIndexes_.copyTo(count * maxPointsPerScan_, read_size, bufReadBuffer, 0);
+//      bufReadBuffer.get(scanIndexes, 0, read_size);
+//
+//      for (uint32_t i = 0; i < read_size; ++i) {
+//        if (currentScanIndex != int32_t(scanIndexes[i].x)) {
+//          if (currentScanIndex > -1) scanInfos_.push_back(current);
+//          current.start = count * maxPointsPerScan_ + i;
+//          current.size = 0;
+//          currentScanIndex = uint32_t(scanIndexes[i].x);
+//        }
+//        current.size += 1;
+//      }
+//
+//      ++count;
+//    }
+
+    std::cout << "copied " << scanInfos_.size() << " scans with " << numCopiedPoints << " points" << std::endl;
   }
+
   float total_time = Stopwatch::toc();
 
   glow::_CheckGlError(__FILE__, __LINE__);
@@ -286,17 +334,17 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   prgMinimumHeightMap_.setUniform(GlUniform<float>("minHeight", -3.0f));
   prgMinimumHeightMap_.setUniform(GlUniform<float>("maxHeight", 2.0f));
 
-  prgMinimumHeightMap_.setUniform(GlUniform<float>("maxRange", maxRange_));
-  prgMinimumHeightMap_.setUniform(GlUniform<float>("minRange", minRange_));
+  //  prgMinimumHeightMap_.setUniform(GlUniform<float>("maxRange", maxRange_));
+  //  prgMinimumHeightMap_.setUniform(GlUniform<float>("minRange", minRange_));
 
   prgMinimumHeightMap_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
   prgMinimumHeightMap_.setUniform(GlUniform<float>("tileSize", tileSize_));
 
-  for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
-    prgMinimumHeightMap_.setUniform(GlUniform<Eigen::Matrix4f>("pose", it->first->pose));
+  //  for (auto it = scanInfos_.begin(); it != scanInfos_.end(); ++it) {
+  //  prgMinimumHeightMap_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
 
-    glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
-  }
+  glDrawArrays(GL_POINTS, 0, bufPoints_.size());
+  //  }
 
   vao_points_.release();
   prgMinimumHeightMap_.release();
@@ -314,8 +362,8 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   ////  out.close();
   glow::_CheckGlError(__FILE__, __LINE__);
 
-  std::cout << "Loaded " << loadedScans << " of total " << points_.size() << " scans." << std::endl;
-  std::cout << "memcpy: " << memcpy_time << " s / " << total_time << " s." << std::endl;
+  //  std::cout << "Loaded " << loadedScans << " of total " << points_.size() << " scans." << std::endl;
+  //  std::cout << "memcpy: " << memcpy_time << " s / " << total_time << " s." << std::endl;
 
   updateGL();
 }
@@ -323,18 +371,19 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 void Viewport::updateLabels() {
   glow::_CheckGlError(__FILE__, __LINE__);
 
-  glow::GlBuffer<uint32_t> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
-  bufReadBuffer.resize(maxPointsPerScan_);
-
-  for (uint32_t i = 0; i < points_.size(); ++i) {
-    if (bufferContent_.find(points_[i].get()) == bufferContent_.end()) continue;
-
-    const BufferInfo& info = bufferContent_[points_[i].get()];
-    // replace label information with labels from GPU.
-    // copy first to other buffer and read from that.
-    bufLabels_.copyTo(info.index * maxPointsPerScan_, info.size, bufReadBuffer, 0);
-    bufReadBuffer.get(*labels_[i], 0, info.size);
-  }
+  // FIXME: update.
+  //  glow::GlBuffer<uint32_t> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  //  bufReadBuffer.resize(maxPointsPerScan_);
+  //
+  //  for (uint32_t i = 0; i < points_.size(); ++i) {
+  //    if (bufferContent_.find(points_[i].get()) == bufferContent_.end()) continue;
+  //
+  //    const BufferInfo& info = bufferContent_[points_[i].get()];
+  //    // replace label information with labels from GPU.
+  //    // copy first to other buffer and read from that.
+  //    bufLabels_.copyTo(info.index * maxPointsPerScan_, info.size, bufReadBuffer, 0);
+  //    bufReadBuffer.get(*labels_[i], 0, info.size);
+  //  }
 
   glow::_CheckGlError(__FILE__, __LINE__);
 }
@@ -419,24 +468,26 @@ void Viewport::setScanIndex(uint32_t idx) {
 }
 
 void Viewport::setLabelVisibility(uint32_t label, bool visible) {
-  ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
-  ScopedBinder<GlProgram> programBinder(prgUpdateVisibility_);
-  ScopedBinder<GlTransformFeedback> feedbackBinder(tfUpdateVisibility_);
+  // update.
 
-  prgUpdateVisibility_.setUniform(GlUniform<uint32_t>("label", label));
-  prgUpdateVisibility_.setUniform(GlUniform<uint32_t>("visibility", visible ? 1 : 0));
-
-  glEnable(GL_RASTERIZER_DISCARD);
-
-  for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
-    tfUpdateVisibility_.begin(TransformFeedbackMode::POINTS);
-    glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
-    tfUpdateVisibility_.end();
-
-    bufUpdatedVisiblity_.copyTo(bufVisible_, it->second.index * maxPointsPerScan_);
-  }
-
-  glDisable(GL_RASTERIZER_DISCARD);
+  //  ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
+  //  ScopedBinder<GlProgram> programBinder(prgUpdateVisibility_);
+  //  ScopedBinder<GlTransformFeedback> feedbackBinder(tfUpdateVisibility_);
+  //
+  //  prgUpdateVisibility_.setUniform(GlUniform<uint32_t>("label", label));
+  //  prgUpdateVisibility_.setUniform(GlUniform<uint32_t>("visibility", visible ? 1 : 0));
+  //
+  //  glEnable(GL_RASTERIZER_DISCARD);
+  //
+  //  for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
+  //    tfUpdateVisibility_.begin(TransformFeedbackMode::POINTS);
+  //    glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
+  //    tfUpdateVisibility_.end();
+  //
+  //    bufUpdatedVisiblity_.copyTo(bufVisible_, it->second.index * maxPointsPerScan_);
+  //  }
+  //
+  //  glDisable(GL_RASTERIZER_DISCARD);
 }
 
 void Viewport::initializeGL() {
@@ -516,6 +567,12 @@ void Viewport::paintGL() {
 
       glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
     }
+
+    mvp_ = projection_ * view_ * conversion_;
+    prgDrawPoints_.setUniform(mvp_);
+    prgDrawPoints_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
+
+    glDrawArrays(GL_POINTS, 0, bufPoints_.size());
 
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.release();
@@ -733,6 +790,8 @@ void Viewport::setTileInfo(float x, float y, float tileSize) {
 
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label) {
   if (points_.size() == 0 || labels_.size() == 0) return;
+
+  return;
 
   //  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::flush;
   //  Stopwatch::tic();

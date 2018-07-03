@@ -213,7 +213,7 @@ void Mainframe::changeMode(int mode, bool checked) {
 
   if (checked) {
     if (mode == Viewport::PAINT) {
-      std::cout << "triggered paint mode." << std::endl;
+//      std::cout << "triggered paint mode." << std::endl;
       ui.mViewportXYZ->setMode(Viewport::PAINT);
 
       ui.btnPolygonMode->setChecked(false);
@@ -226,7 +226,7 @@ void Mainframe::changeMode(int mode, bool checked) {
     }
 
     if (mode == Viewport::POLYGON) {
-      std::cout << "triggered polygon mode." << std::endl;
+//      std::cout << "triggered polygon mode." << std::endl;
       ui.mViewportXYZ->setMode(Viewport::POLYGON);
 
       ui.btnBrushMode->setChecked(false);

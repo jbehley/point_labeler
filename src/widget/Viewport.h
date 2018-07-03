@@ -150,10 +150,19 @@ class Viewport : public QGLWidget {
   uint32_t maxScans_{50};
   uint32_t maxPointsPerScan_{150000};
   std::vector<Eigen::Matrix4f> bufPoses_;
+
+  // todo: rename to TilePoints, TileRemissions, TileLabels, TileVisible, TileScanIndexes.
   glow::GlBuffer<Point3f> bufPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<float> bufRemissions_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<uint32_t> bufLabels_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<uint32_t> bufVisible_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<glow::vec2> bufScanIndexes_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+
+  // buffers used for copying points to tile buffers.
+  glow::GlBuffer<Point3f> bufTempPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<float> bufTempRemissions_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<uint32_t> bufTempLabels_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<uint32_t> bufTempVisible_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
   glow::GlTransformFeedback tfUpdateLabels_;
   glow::GlBuffer<uint32_t> bufUpdatedLabels_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
@@ -161,18 +170,22 @@ class Viewport : public QGLWidget {
   glow::GlTransformFeedback tfUpdateVisibility_;
   glow::GlBuffer<uint32_t> bufUpdatedVisiblity_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
+  glow::GlTransformFeedback tfFillTilePoints_;
+
   glow::GlTextureRectangle texLabelColors_;
 
   glow::GlVertexArray vao_no_points_;
   glow::GlVertexArray vao_points_;
   glow::GlVertexArray vao_polygon_points_;
   glow::GlVertexArray vao_triangles_;
+  glow::GlVertexArray vao_temp_points_;
 
   glow::GlProgram prgDrawPose_;
   glow::GlProgram prgDrawPoints_;
   glow::GlProgram prgUpdateLabels_;
   glow::GlProgram prgUpdateVisibility_;
   glow::GlProgram prgPolygonPoints_;
+  glow::GlProgram prgFillTilePoints_;
 
   glow::GlFramebuffer fbMinimumHeightMap_;
   glow::GlTexture texMinimumHeightMap_;
@@ -212,6 +225,14 @@ class Viewport : public QGLWidget {
 
   glow::vec2 tilePos_;
   float tileSize_;
+  float tileBoundary_{2.0f};
+
+  struct ScanInfo {
+    uint32_t start;
+    uint32_t size;
+  };
+
+  std::vector<ScanInfo> scanInfos_;
 };
 
 #endif /* POINTVIEW_H_ */
