@@ -25,10 +25,14 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.actionSave, SIGNAL(triggered()), this, SLOT(save()));
 
   /** initialize the paint button mapping **/
-  connect(ui.btnBrushMode, &QToolButton::toggled, [this](bool checked) { changeMode(Viewport::PAINT, checked); });
-  connect(ui.btnPolygonMode, &QToolButton::toggled, [this](bool checked) { changeMode(Viewport::POLYGON, checked); });
-  connect(ui.actionPaintMode, &QAction::toggled, [this](bool checked) { changeMode(Viewport::PAINT, checked); });
-  connect(ui.actionPolygonMode, &QAction::toggled, [this](bool checked) { changeMode(Viewport::POLYGON, checked); });
+  connect(ui.btnBrushMode, &QToolButton::released,
+          [this]() { changeMode(Viewport::PAINT, ui.btnBrushMode->isChecked()); });
+  connect(ui.btnPolygonMode, &QToolButton::released,
+          [this]() { changeMode(Viewport::POLYGON, ui.btnPolygonMode->isChecked()); });
+  connect(ui.actionPaintMode, &QAction::triggered,
+          [this]() { changeMode(Viewport::PAINT, ui.actionPaintMode->isChecked()); });
+  connect(ui.actionPolygonMode, &QAction::triggered,
+          [this]() { changeMode(Viewport::POLYGON, ui.actionPolygonMode->isChecked()); });
 
   connect(ui.mViewportXYZ, SIGNAL(labelingChanged()), this, SLOT(unsavedChanges()));
 
@@ -193,39 +197,46 @@ void Mainframe::changeMode(int mode, bool checked) {
   //            << (checked ? "true" : "false") << std::endl;
 
   // TODO find better way.
-
-  if (mode == Viewport::PAINT && checked) /** PAINTMODE **/
-  {
-    std::cout << "triggered paint mode." << std::endl;
-    ui.mViewportXYZ->setMode(Viewport::PAINT);
-
-    ui.btnPolygonMode->setChecked(false);
-    ui.actionPolygonMode->setChecked(false);
-
-    ui.btnBrushMode->setChecked(true);
-    ui.actionPaintMode->setChecked(true);
-
-    //    ui.mTools->setCurrentIndex(1);
-  } else if (mode == Viewport::POLYGON && checked) /** PAINTMODE **/
-  {
-    std::cout << "triggered polygon mode." << std::endl;
-    ui.mViewportXYZ->setMode(Viewport::POLYGON);
-
-    ui.btnBrushMode->setChecked(false);
-    ui.actionPaintMode->setChecked(false);
-
-    ui.btnPolygonMode->setChecked(true);
-    ui.actionPolygonMode->setChecked(true);
-
-    //    ui.mTools->setCurrentIndex(1);
-  } else if ((!ui.btnBrushMode->isChecked() && !ui.btnPolygonMode->isChecked()) ||
-             (!ui.actionPaintMode->isChecked() && !ui.actionPolygonMode->isChecked())) {
-    ui.btnPolygonMode->setChecked(false);
-    ui.btnBrushMode->setChecked(false);
-    ui.actionPaintMode->setChecked(false);
-    ui.actionPolygonMode->setChecked(false);
-
+  if (!checked) {
     ui.mViewportXYZ->setMode(Viewport::NONE);
+
+    if (mode == Viewport::PAINT) {
+      ui.btnBrushMode->setChecked(false);
+      ui.actionPaintMode->setChecked(false);
+    }
+
+    if (mode == Viewport::POLYGON) {
+      ui.btnPolygonMode->setChecked(false);
+      ui.actionPolygonMode->setChecked(false);
+    }
+  }
+
+  if (checked) {
+    if (mode == Viewport::PAINT) {
+      std::cout << "triggered paint mode." << std::endl;
+      ui.mViewportXYZ->setMode(Viewport::PAINT);
+
+      ui.btnPolygonMode->setChecked(false);
+      ui.actionPolygonMode->setChecked(false);
+
+      ui.btnBrushMode->setChecked(true);
+      ui.actionPaintMode->setChecked(true);
+
+      //    ui.mTools->setCurrentIndex(1);
+    }
+
+    if (mode == Viewport::POLYGON) {
+      std::cout << "triggered polygon mode." << std::endl;
+      ui.mViewportXYZ->setMode(Viewport::POLYGON);
+
+      ui.btnBrushMode->setChecked(false);
+      ui.actionPaintMode->setChecked(false);
+
+      ui.btnPolygonMode->setChecked(true);
+      ui.actionPolygonMode->setChecked(true);
+
+      //    ui.mTools->setCurrentIndex(1);
+    }
   }
 }
 
