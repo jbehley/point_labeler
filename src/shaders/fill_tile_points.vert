@@ -19,8 +19,7 @@ uniform float tileBoundary;
 out POINT
 {
   bool valid;
-  vec3 point;
-  float remission;
+  vec4 point;
   uint label;
   uint visible;
   vec2 scanindex;
@@ -42,8 +41,7 @@ void main()
   if(inside_tile && !out_of_range)
   {
     vs_out.valid = true;
-    vs_out.point = v_global.xyz;
-    vs_out.remission = in_remission;
+    vs_out.point = vec4(v_global.xyz, in_remission);
     vs_out.label = in_label;
     vs_out.visible = in_visible;
     vs_out.scanindex = vec2(scan, gl_VertexID);

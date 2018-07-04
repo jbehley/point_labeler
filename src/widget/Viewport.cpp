@@ -3,6 +3,7 @@
 #include "data/draw_utils.h"
 #include "data/misc.h"
 
+#include <glow/GlCapabilities.h>
 #include <glow/ScopedBinder.h>
 #include <glow/glutil.h>
 #include <algorithm>
@@ -42,7 +43,6 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   bufPoses_.resize(maxScans_);
   bufPoints_.resize(max_size);
-  bufRemissions_.resize(max_size);
   bufVisible_.resize(max_size);
   bufLabels_.resize(max_size);
   bufScanIndexes_.resize(max_size);
@@ -61,7 +61,6 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   tfUpdateVisibility_.attach({"out_visible"}, bufUpdatedVisiblity_);
 
   tfFillTilePoints_.attach({"out_point"}, bufPoints_);
-  tfFillTilePoints_.attach({"out_remission"}, bufRemissions_);
   tfFillTilePoints_.attach({"out_label"}, bufLabels_);
   tfFillTilePoints_.attach({"out_visible"}, bufVisible_);
   tfFillTilePoints_.attach({"out_scanindex"}, bufScanIndexes_);
@@ -133,10 +132,9 @@ void Viewport::initPrograms() {
 }
 
 void Viewport::initVertexBuffers() {
-  vao_points_.setVertexAttribute(0, bufPoints_, 3, AttributeType::FLOAT, false, sizeof(Point3f), nullptr);
-  vao_points_.setVertexAttribute(1, bufRemissions_, 1, AttributeType::FLOAT, false, sizeof(float), nullptr);
-  vao_points_.setVertexAttribute(2, bufLabels_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
-  vao_points_.setVertexAttribute(3, bufVisible_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
+  vao_points_.setVertexAttribute(0, bufPoints_, 4, AttributeType::FLOAT, false, sizeof(glow::vec4), nullptr);
+  vao_points_.setVertexAttribute(1, bufLabels_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
+  vao_points_.setVertexAttribute(2, bufVisible_, 1, AttributeType::UNSIGNED_INT, false, sizeof(uint32_t), nullptr);
 
   vao_temp_points_.setVertexAttribute(0, bufTempPoints_, 3, AttributeType::FLOAT, false, sizeof(Point3f), nullptr);
   vao_temp_points_.setVertexAttribute(1, bufTempRemissions_, 1, AttributeType::FLOAT, false, sizeof(float), nullptr);
@@ -160,9 +158,9 @@ void Viewport::setMaximumScans(uint32_t numScans) {
 
   bufPoses_.resize(maxScans_);
   bufPoints_.resize(max_size);
-  bufRemissions_.resize(max_size);
   bufVisible_.resize(max_size);
   bufLabels_.resize(max_size);
+  bufScanIndexes_.resize(max_size);
 }
 
 void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<LabelsPtr>& l) {
@@ -208,10 +206,8 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
   {
     ScopedBinder<GlVertexArray> vaoBinder(vao_temp_points_);
-    glow::_CheckGlError(__FILE__, __LINE__);
     ScopedBinder<GlProgram> programBinder(prgFillTilePoints_);
-    glow::_CheckGlError(__FILE__, __LINE__);
-    ScopedBinder<GlTransformFeedback> feedbackBinder(tfFillTilePoints_);
+    //    ScopedBinder<GlTransformFeedback> feedbackBinder();
 
     glow::_CheckGlError(__FILE__, __LINE__);
 
@@ -221,9 +217,8 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     prgFillTilePoints_.setUniform(GlUniform<float>("tileSize", tileSize_));
     prgFillTilePoints_.setUniform(GlUniform<float>("tileBoundary", tileBoundary_));
 
-    glow::_CheckGlError(__FILE__, __LINE__);
-
     glEnable(GL_RASTERIZER_DISCARD);
+    tfFillTilePoints_.bind();
     tfFillTilePoints_.begin(TransformFeedbackMode::POINTS);
 
     for (uint32_t t = 0; t < points_.size(); ++t) {
@@ -242,7 +237,10 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
       // copy data from CPU -> GPU.
       bufTempPoints_.assign(points_[t]->points);
-      if (points_[t]->hasRemissions()) bufTempRemissions_.assign(points_[t]->remissions);
+      if (points_[t]->hasRemissions())
+        bufTempRemissions_.assign(points_[t]->remissions);
+      else
+        bufTempRemissions_.assign(std::vector<float>(points_[t]->size(), 1.0f));
       bufTempLabels_.assign(*(labels_[t]));
       bufTempVisible_.assign(visible);
 
@@ -253,45 +251,46 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     }
 
     uint32_t numCopiedPoints = tfFillTilePoints_.end();
+    tfFillTilePoints_.release();
+
+    glDisable(GL_RASTERIZER_DISCARD);
 
     bufPoints_.resize(numCopiedPoints);
-    bufRemissions_.resize(numCopiedPoints);
     bufLabels_.resize(numCopiedPoints);
     bufVisible_.resize(numCopiedPoints);
     bufScanIndexes_.resize(numCopiedPoints);
-
-    glDisable(GL_RASTERIZER_DISCARD);
 
     // get per scan information from  scan indexes.
     scanInfos_.clear();
 
     glow::_CheckGlError(__FILE__, __LINE__);
 
-//    std::vector<glow::vec2> scanIndexes;
-//    glow::GlBuffer<glow::vec2> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
-//    bufReadBuffer.resize(maxPointsPerScan_);
-//
-//    ScanInfo current;
-//    int32_t currentScanIndex{-1};
-//
-//    uint32_t count = 0;
-//    while (count * maxPointsPerScan_ < bufScanIndexes_.size()) {
-//      uint32_t read_size = std::min<uint32_t>(maxPointsPerScan_, bufScanIndexes_.size() - count * maxPointsPerScan_);
-//      bufScanIndexes_.copyTo(count * maxPointsPerScan_, read_size, bufReadBuffer, 0);
-//      bufReadBuffer.get(scanIndexes, 0, read_size);
-//
-//      for (uint32_t i = 0; i < read_size; ++i) {
-//        if (currentScanIndex != int32_t(scanIndexes[i].x)) {
-//          if (currentScanIndex > -1) scanInfos_.push_back(current);
-//          current.start = count * maxPointsPerScan_ + i;
-//          current.size = 0;
-//          currentScanIndex = uint32_t(scanIndexes[i].x);
-//        }
-//        current.size += 1;
-//      }
-//
-//      ++count;
-//    }
+    std::vector<glow::vec2> scanIndexes;
+    glow::GlBuffer<glow::vec2> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+    bufReadBuffer.resize(maxPointsPerScan_);
+
+    ScanInfo current;
+    int32_t currentScanIndex{-1};
+
+    uint32_t count = 0;
+    while (count * maxPointsPerScan_ < bufScanIndexes_.size()) {
+      uint32_t read_size = std::min<uint32_t>(maxPointsPerScan_, bufScanIndexes_.size() - count * maxPointsPerScan_);
+      bufScanIndexes_.copyTo(count * maxPointsPerScan_, read_size, bufReadBuffer, 0);
+      bufReadBuffer.get(scanIndexes, 0, read_size);
+
+      for (uint32_t i = 0; i < read_size; ++i) {
+//        std::cout << scanIndexes[i] << std::endl;
+        if (currentScanIndex != int32_t(scanIndexes[i].x)) {
+          if (currentScanIndex > -1) scanInfos_.push_back(current);
+          current.start = count * maxPointsPerScan_ + i;
+          current.size = 0;
+          currentScanIndex = uint32_t(scanIndexes[i].x);
+        }
+        current.size += 1;
+      }
+
+      ++count;
+    }
 
     std::cout << "copied " << scanInfos_.size() << " scans with " << numCopiedPoints << " points" << std::endl;
   }
@@ -541,8 +540,8 @@ void Viewport::paintGL() {
 
     prgDrawPoints_.setUniform(GlUniform<bool>("useRemission", drawingOption_["remission"]));
     prgDrawPoints_.setUniform(GlUniform<bool>("useColor", drawingOption_["color"]));
-    prgDrawPoints_.setUniform(GlUniform<float>("maxRange", maxRange_));
-    prgDrawPoints_.setUniform(GlUniform<float>("minRange", minRange_));
+    //    prgDrawPoints_.setUniform(GlUniform<float>("maxRange", maxRange_));
+    //    prgDrawPoints_.setUniform(GlUniform<float>("minRange", minRange_));
     prgDrawPoints_.setUniform(GlUniform<bool>("removeGround", removeGround_));
     prgDrawPoints_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
     prgDrawPoints_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
@@ -558,19 +557,19 @@ void Viewport::paintGL() {
     glActiveTexture(GL_TEXTURE1);
     texMinimumHeightMap_.bind();
 
-    for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
-      if (showSingleScan && (it->first != points_[singleScanIdx_].get())) continue;
-      prgDrawPoints_.setUniform(GlUniform<Eigen::Matrix4f>("pose", it->first->pose));
-
-      mvp_ = projection_ * view_ * conversion_ * it->first->pose;
-      prgDrawPoints_.setUniform(mvp_);
-
-      glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
-    }
+    //    for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
+    //      if (showSingleScan && (it->first != points_[singleScanIdx_].get())) continue;
+    //      prgDrawPoints_.setUniform(GlUniform<Eigen::Matrix4f>("pose", it->first->pose));
+    //
+    //      mvp_ = projection_ * view_ * conversion_ * it->first->pose;
+    //      prgDrawPoints_.setUniform(mvp_);
+    //
+    //      glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
+    //    }
 
     mvp_ = projection_ * view_ * conversion_;
     prgDrawPoints_.setUniform(mvp_);
-    prgDrawPoints_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
+    //    prgDrawPoints_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
 
     glDrawArrays(GL_POINTS, 0, bufPoints_.size());
 

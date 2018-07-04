@@ -1,9 +1,8 @@
 #version 330 core
 
-layout (location = 0) in vec3  in_vertex;
-layout (location = 1) in float in_remission;
-layout (location = 2) in uint  in_label;
-layout (location = 3) in uint  in_visible;
+layout (location = 0) in vec4  in_vertex;
+layout (location = 1) in uint  in_label;
+layout (location = 2) in uint  in_visible;
 
 uniform mat4 mvp;
 uniform mat4 pose;
@@ -49,18 +48,20 @@ bool insideTriangle(vec2 p, vec2 v1, vec2 v2, vec2 v3) {
 
 void main()
 {
-  float range = length(in_vertex);
-  vec4 point = mvp * vec4(in_vertex, 1.0);
+  float range = length(in_vertex.xyz);
+  float in_remission = in_vertex.w;
+  
+  vec4 point = mvp * vec4(in_vertex.xyz, 1.0);
   point = vec4(point.x/point.w, point.y/point.w, point.z/point.w, 1.0);
-  gl_Position = mvp * vec4(in_vertex, 1.0);
+  gl_Position = mvp * vec4(in_vertex.xyz, 1.0);
   
   out_label = in_label;
     
   vec3 pos =  vec3(0.5f * (point.x + 1.0) * width, 0.5f * (point.y + 1.0) * height, 0.5f * (point.z + 1.0)); 
   pos.y = height - pos.y;
   
-  vec4 v_global = pose * vec4(in_vertex, 1.0);
-  vec2 v = (pose * vec4(in_vertex, 1.0)).xy - tilePos;
+  vec4 v_global = pose * vec4(in_vertex.xyz, 1.0);
+  vec2 v = v_global.xy - tilePos;
   
   bool visible = (in_visible > uint(0)) && (!removeGround || v_global.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
   visible = visible && (showAllPoints || (abs(v.x) < 0.5 * tileSize && abs(v.y) < 0.5 * tileSize));
