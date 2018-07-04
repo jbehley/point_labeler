@@ -195,17 +195,9 @@ class Viewport : public QGLWidget {
   glow::GlUniform<Eigen::Matrix4f> mvp_{"mvp", Eigen::Matrix4f::Identity()};
   glow::GlUniform<Eigen::Matrix4f> mvp_inv_t_{"mvp_inv_t", Eigen::Matrix4f::Identity()};
 
-  Eigen::Matrix4f model_{Eigen::Matrix4f::Identity()};
   Eigen::Matrix4f view_{Eigen::Matrix4f::Identity()};
   Eigen::Matrix4f projection_{Eigen::Matrix4f::Identity()};
   Eigen::Matrix4f conversion_{glow::RoSe2GL::matrix};
-
-  struct BufferInfo {
-    uint32_t index;
-    uint32_t size;
-  };
-
-  std::map<Laserscan*, BufferInfo> bufferContent_;
 
   std::map<std::string, bool> drawingOption_;
 

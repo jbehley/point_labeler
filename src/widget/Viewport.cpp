@@ -351,19 +351,37 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 void Viewport::updateLabels() {
   glow::_CheckGlError(__FILE__, __LINE__);
 
-  // FIXME: update.
-  //  glow::GlBuffer<uint32_t> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
-  //  bufReadBuffer.resize(maxPointsPerScan_);
-  //
-  //  for (uint32_t i = 0; i < points_.size(); ++i) {
-  //    if (bufferContent_.find(points_[i].get()) == bufferContent_.end()) continue;
-  //
-  //    const BufferInfo& info = bufferContent_[points_[i].get()];
-  //    // replace label information with labels from GPU.
-  //    // copy first to other buffer and read from that.
-  //    bufLabels_.copyTo(info.index * maxPointsPerScan_, info.size, bufReadBuffer, 0);
-  //    bufReadBuffer.get(*labels_[i], 0, info.size);
-  //  }
+  if (labels_.size() == 0) return;
+
+  glow::GlBuffer<uint32_t> bufReadLabels{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  glow::GlBuffer<vec2> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  bufReadLabels.resize(maxPointsPerScan_);
+  bufReadIndexes.resize(bufReadLabels.size());
+
+  std::vector<uint32_t> labels(bufReadLabels.size());
+  std::vector<vec2> indexes(bufReadIndexes.size());
+
+  uint32_t count = 0;
+  uint32_t max_size = bufReadLabels.size();
+  uint32_t buffer_size = bufLabels_.size();
+
+  while (count * max_size < bufLabels_.size()) {
+    uint32_t size = std::min<uint32_t>(max_size, buffer_size - count * max_size);
+
+    bufLabels_.copyTo(count * max_size, size, bufReadLabels, 0);
+    bufScanIndexes_.copyTo(count * max_size, size, bufReadIndexes, 0);
+
+    bufReadLabels.get(labels, 0, size);
+    bufReadIndexes.get(indexes, 0, size);
+
+    for (uint32_t i = 0; i < size; ++i) {
+      uint32_t scanidx = indexes[i].x;
+      uint32_t idx = indexes[i].y;
+      (*labels_[scanidx])[idx] = labels[i];
+    }
+
+    count++;
+  }
 
   glow::_CheckGlError(__FILE__, __LINE__);
 }
@@ -468,7 +486,7 @@ void Viewport::setLabelVisibility(uint32_t label, bool visible) {
     glDrawArrays(GL_POINTS, count * max_size, size);
     tfUpdateVisibility_.end();
 
-    bufUpdatedVisiblity_.copyTo(0, size, bufVisible_, count * maxPointsPerScan_);
+    bufUpdatedVisiblity_.copyTo(0, size, bufVisible_, count * max_size);
     ++count;
   }
 
@@ -501,7 +519,6 @@ void Viewport::paintGL() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPointSize(pointSize_);
 
-  model_ = Eigen::Matrix4f::Identity();
   view_ = mCamera.matrix();
 
   mvp_ = projection_ * view_ * conversion_;
@@ -526,8 +543,6 @@ void Viewport::paintGL() {
 
     prgDrawPoints_.setUniform(GlUniform<bool>("useRemission", drawingOption_["remission"]));
     prgDrawPoints_.setUniform(GlUniform<bool>("useColor", drawingOption_["color"]));
-    //    prgDrawPoints_.setUniform(GlUniform<float>("maxRange", maxRange_));
-    //    prgDrawPoints_.setUniform(GlUniform<float>("minRange", minRange_));
     prgDrawPoints_.setUniform(GlUniform<bool>("removeGround", removeGround_));
     prgDrawPoints_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
     prgDrawPoints_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
@@ -543,19 +558,9 @@ void Viewport::paintGL() {
     glActiveTexture(GL_TEXTURE1);
     texMinimumHeightMap_.bind();
 
-    //    for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
-    //      if (showSingleScan && (it->first != points_[singleScanIdx_].get())) continue;
-    //      prgDrawPoints_.setUniform(GlUniform<Eigen::Matrix4f>("pose", it->first->pose));
-    //
-    //      mvp_ = projection_ * view_ * conversion_ * it->first->pose;
-    //      prgDrawPoints_.setUniform(mvp_);
-    //
-    //      glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
-    //    }
-
     mvp_ = projection_ * view_ * conversion_;
     prgDrawPoints_.setUniform(mvp_);
-    //    prgDrawPoints_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
+
     if (showSingleScan)
       glDrawArrays(GL_POINTS, scanInfos_[singleScanIdx_].start, scanInfos_[singleScanIdx_].size);
     else
@@ -778,8 +783,6 @@ void Viewport::setTileInfo(float x, float y, float tileSize) {
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label) {
   if (points_.size() == 0 || labels_.size() == 0) return;
 
-  return;
-
   //  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::flush;
   //  Stopwatch::tic();
 
@@ -795,14 +798,14 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<float>("radius", radius));
   prgUpdateLabels_.setUniform(GlUniform<uint32_t>("new_label", new_label));
   prgUpdateLabels_.setUniform(GlUniform<bool>("overwrite", mFlags & FLAG_OVERWRITE));
-  prgUpdateLabels_.setUniform(GlUniform<float>("maxRange", maxRange_));
-  prgUpdateLabels_.setUniform(GlUniform<float>("minRange", minRange_));
   prgUpdateLabels_.setUniform(GlUniform<bool>("removeGround", removeGround_));
   prgUpdateLabels_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
   prgUpdateLabels_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
   prgUpdateLabels_.setUniform(GlUniform<float>("tileSize", tileSize_));
   prgUpdateLabels_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("heightMap", 1));
+  mvp_ = projection_ * mCamera.matrix() * conversion_;
+  prgUpdateLabels_.setUniform(mvp_);
 
   if (mMode == Viewport::PAINT) prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 0));
   if (mMode == Viewport::POLYGON) {
@@ -818,23 +821,27 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 
   glEnable(GL_RASTERIZER_DISCARD);
 
-  uint32_t numIters = 0;
-  for (auto it = bufferContent_.begin(); it != bufferContent_.end(); ++it) {
-    if (showSingleScan && (it->first != points_[singleScanIdx_].get())) continue;
-    mvp_ = projection_ * mCamera.matrix() * conversion_ * it->first->pose;
+  uint32_t count = 0;
+  uint32_t max_size = bufUpdatedLabels_.size();
+  uint32_t buffer_start = 0;
+  uint32_t buffer_size = bufLabels_.size();
 
-    prgUpdateLabels_.setUniform(mvp_);
-    prgUpdateLabels_.setUniform(GlUniform<Eigen::Matrix4f>("pose", it->first->pose));
-
-    tfUpdateLabels_.begin(TransformFeedbackMode::POINTS);
-    glDrawArrays(GL_POINTS, it->second.index * maxPointsPerScan_, it->second.size);
-    tfUpdateLabels_.end();
-
-    bufUpdatedLabels_.copyTo(bufLabels_, it->second.index * maxPointsPerScan_);
-    numIters += 1;
+  if (showSingleScan) {
+    buffer_start = scanInfos_[singleScanIdx_].start;
+    buffer_size = scanInfos_[singleScanIdx_].size;
   }
 
-  //  std::cout << numIters << " iters took " << std::flush;
+  while (count * max_size < buffer_size) {
+    uint32_t size = std::min<uint32_t>(max_size, buffer_size - count * max_size);
+
+    tfUpdateLabels_.begin(TransformFeedbackMode::POINTS);
+    glDrawArrays(GL_POINTS, buffer_start + count * max_size, size);
+    tfUpdateLabels_.end();
+
+    bufUpdatedLabels_.copyTo(0, size, bufLabels_, buffer_start + count * max_size);
+
+    count++;
+  }
 
   glDisable(GL_RASTERIZER_DISCARD);
 

@@ -5,15 +5,14 @@ layout (location = 1) in uint  in_label;
 layout (location = 2) in uint  in_visible;
 
 uniform mat4 mvp;
-uniform mat4 pose;
+
 uniform int width;
 uniform int height;
 uniform vec2 window_pos;
 uniform float radius;
 uniform uint new_label;
 uniform bool overwrite;
-uniform float minRange;
-uniform float maxRange;
+
 
 uniform int labelingMode;
 uniform sampler2DRect triangles;
@@ -60,13 +59,13 @@ void main()
   vec3 pos =  vec3(0.5f * (point.x + 1.0) * width, 0.5f * (point.y + 1.0) * height, 0.5f * (point.z + 1.0)); 
   pos.y = height - pos.y;
   
-  vec4 v_global = pose * vec4(in_vertex.xyz, 1.0);
+  vec4 v_global = vec4(in_vertex.xyz, 1.0);
   vec2 v = v_global.xy - tilePos;
   
   bool visible = (in_visible > uint(0)) && (!removeGround || v_global.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
   visible = visible && (showAllPoints || (abs(v.x) < 0.5 * tileSize && abs(v.y) < 0.5 * tileSize));
 
-  if(visible && !(range < minRange || range > maxRange))
+  if(visible)
   {
     if(pos.x >= 0 && pos.x < width  && pos.y >= 0 && pos.y < height && pos.z >= 0.0f && pos.z <= 1.0f)
     {
