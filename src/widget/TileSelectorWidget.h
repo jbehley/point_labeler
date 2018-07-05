@@ -30,6 +30,7 @@ class TileSelectorWidget : public QWidget {
   void mouseReleaseEvent(QMouseEvent* event);
 
   void paintEvent(QPaintEvent* event);
+  void resizeEvent(QResizeEvent* event);
 
   struct TileProxy {
     TileProxy(uint32_t x, uint32_t y, uint32_t size) : x(x), y(y), size(size) {}

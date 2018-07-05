@@ -54,7 +54,8 @@ COMPILE_SHADERS(${VIZ_SHADER_SRC}
   src/shaders/passthrough.frag
   
   src/shaders/draw_pose.geom
-  
+  src/shaders/fill_tile_points.geom
+  src/shaders/fill_tile_points.vert
   src/shaders/draw_points.vert
   src/shaders/draw_polygon.vert
   src/shaders/update_visibility.vert

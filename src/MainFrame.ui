@@ -164,18 +164,21 @@
    <addaction name="separator"/>
    <addaction name="actionPaintMode"/>
    <addaction name="actionPolygonMode"/>
+   <addaction name="separator"/>
+   <addaction name="actionOverwrite"/>
+   <addaction name="actionFilter"/>
   </widget>
   <widget class="QDockWidget" name="dockWidget">
    <property name="minimumSize">
     <size>
      <width>250</width>
-     <height>287</height>
+     <height>300</height>
     </size>
    </property>
    <property name="maximumSize">
     <size>
-     <width>250</width>
-     <height>287</height>
+     <width>1000</width>
+     <height>1000</height>
     </size>
    </property>
    <property name="features">
@@ -208,16 +211,22 @@
        </property>
        <item>
         <widget class="TileSelectorWidget" name="wgtTileSelector" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="minimumSize">
           <size>
-           <width>180</width>
-           <height>180</height>
+           <width>150</width>
+           <height>150</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>180</width>
-           <height>180</height>
+           <width>800</width>
+           <height>800</height>
           </size>
          </property>
         </widget>
@@ -274,9 +283,9 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>-153</y>
+          <y>-88</y>
           <width>219</width>
-          <height>418</height>
+          <height>351</height>
          </rect>
         </property>
         <attribute name="label">
@@ -342,90 +351,6 @@
           </widget>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_4">
-           <property name="leftMargin">
-            <number>5</number>
-           </property>
-           <property name="topMargin">
-            <number>5</number>
-           </property>
-           <property name="rightMargin">
-            <number>5</number>
-           </property>
-           <property name="bottomMargin">
-            <number>5</number>
-           </property>
-           <item>
-            <spacer name="horizontalSpacer">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QPushButton" name="btnOverwrite">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>80</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Overwrite</string>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-             <property name="flat">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="chkFilterLabels">
-           <property name="text">
-            <string>filter labels</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="chkRemoveGround">
-           <property name="text">
-            <string>remove ground</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QDoubleSpinBox" name="spinGroundThreshold">
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-           <property name="minimum">
-            <double>-10.000000000000000</double>
-           </property>
-           <property name="value">
-            <double>-1.600000000000000</double>
-           </property>
-          </widget>
-         </item>
-         <item>
           <layout class="QHBoxLayout" name="horizontalLayout_2">
            <property name="leftMargin">
             <number>5</number>
@@ -442,7 +367,7 @@
            <item>
             <widget class="QToolButton" name="btnBrushMode">
              <property name="text">
-              <string>Brush</string>
+              <string>b</string>
              </property>
              <property name="checkable">
               <bool>true</bool>
@@ -452,7 +377,64 @@
            <item>
             <widget class="QToolButton" name="btnPolygonMode">
              <property name="text">
-              <string>Polygon</string>
+              <string>p</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>10</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QToolButton" name="btnOverwrite">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>o</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QToolButton" name="btnFilter">
+             <property name="text">
+              <string>f</string>
              </property>
              <property name="checkable">
               <bool>true</bool>
@@ -490,7 +472,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>5</string>
+                 <string>10</string>
                 </property>
                 <property name="checkable">
                  <bool>true</bool>
@@ -509,7 +491,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>10</string>
+                 <string>25</string>
                 </property>
                 <property name="checkable">
                  <bool>true</bool>
@@ -528,7 +510,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>20</string>
+                 <string>50</string>
                 </property>
                 <property name="checkable">
                  <bool>true</bool>
@@ -546,7 +528,7 @@
                <number>75</number>
               </property>
               <property name="value">
-               <number>5</number>
+               <number>10</number>
               </property>
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
@@ -572,6 +554,55 @@
            </property>
           </spacer>
          </item>
+         <item>
+          <layout class="QFormLayout" name="formLayout">
+           <property name="leftMargin">
+            <number>5</number>
+           </property>
+           <property name="topMargin">
+            <number>5</number>
+           </property>
+           <property name="rightMargin">
+            <number>5</number>
+           </property>
+           <property name="bottomMargin">
+            <number>5</number>
+           </property>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>threshold</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QDoubleSpinBox" name="spinGroundThreshold">
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+             <property name="minimum">
+              <double>-2.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>5.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.100000000000000</double>
+             </property>
+             <property name="value">
+              <double>0.300000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0" colspan="2">
+            <widget class="QCheckBox" name="chkRemoveGround">
+             <property name="text">
+              <string>remove ground</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
         </layout>
        </widget>
        <widget class="QWidget" name="page_3">
@@ -580,7 +611,7 @@
           <x>0</x>
           <y>0</y>
           <width>232</width>
-          <height>265</height>
+          <height>246</height>
          </rect>
         </property>
         <attribute name="label">
@@ -701,6 +732,31 @@
   <action name="actionTiled">
    <property name="text">
     <string>Tiles</string>
+   </property>
+  </action>
+  <action name="actionOverwrite">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Overwrite</string>
+   </property>
+   <property name="toolTip">
+    <string>Overwrite Labels</string>
+   </property>
+  </action>
+  <action name="actionFilter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Filter</string>
+   </property>
+   <property name="toolTip">
+    <string>Filter Labels</string>
    </property>
   </action>
  </widget>

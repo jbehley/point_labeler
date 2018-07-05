@@ -1,23 +1,21 @@
 #version 330 core
 
-layout (location = 0) in vec3  in_vertex;
-layout (location = 1) in float in_remission;
-layout (location = 2) in uint  in_label;
-layout (location = 3) in uint  in_visible;
+layout (location = 0) in vec4  in_vertex;
+layout (location = 1) in uint  in_label;
+layout (location = 2) in uint  in_visible;
 
 uniform sampler2DRect label_colors;
-uniform sampler2D heightMap;
+uniform sampler2D     heightMap;
 
 #include "shaders/color.glsl"
 
 // materials.
 uniform mat4 mvp;
-uniform mat4 pose;
+
 uniform bool useRemission;
 uniform bool useColor;
 
-uniform float minRange;
-uniform float maxRange;
+
 
 uniform bool removeGround;
 uniform float groundThreshold;
@@ -31,20 +29,21 @@ out vec4 color;
 void main()
 {
   vec4 in_color = texture(label_colors, vec2(in_label, 0));
+  float in_remission = in_vertex.w;
   
-  float range = length(in_vertex);
-  gl_Position = mvp * vec4(in_vertex, 1.0);
-  
-  vec4 v_global = pose * vec4(in_vertex, 1.0);
-  vec2 v = (pose * vec4(in_vertex, 1.0)).xy - tilePos;
+  float range = length(in_vertex.xyz);
+  gl_Position = mvp * vec4(in_vertex.xyz, 1.0);
+
+  vec2 v = in_vertex.xy - tilePos;
   
     
-  bool visible = (in_visible > uint(0)) && (!removeGround || v_global.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
+  bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
   
 
   visible = visible && (showAllPoints || (abs(v.x) < 0.5 * tileSize && abs(v.y) < 0.5 * tileSize));
   
-  if(!visible || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);
+  // if(!visible || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);
+  if(!visible) gl_Position = vec4(-10, -10, -10, 1);
   
   
   if(useRemission)
