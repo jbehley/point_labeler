@@ -11,6 +11,16 @@
 	<category>unlabeled</category>
   </label>
 
+	<label>
+    <id>1</id>
+    <name>outlier</name>
+    <description>all points which are outliers, i.e., caused by reflection, etc..</description>
+    <color>255 0 0</color>
+	<root>void</root>
+	<macro></macro>
+	<category>outlier</category>
+  </label>
+
   <label>
     <id>250</id>
     <name>car mount</name>
@@ -135,12 +145,12 @@
 
 	<label>
 		<id>30</id>
-		<name>Person</name>
+		<name>person</name>
 		<description>Persons moving by their own legs, sitting, or any unusual pose, but not meant to drive a vehicle.</description>
 		<color>255 30 30</color>
 		<root>human</root>
 		<macro></macro>
-		<category>Person</category>
+		<category>person</category>
 	</label>
 	<label>
 		<id>31</id>
@@ -347,6 +357,35 @@
     <category>traffic sign</category>
   </label>
 <!-- missing: nature, object, barrier, animal -->
+
+  <label>
+    <id>90</id>
+    <name>bench</name>
+    <description>A place to sit on</description>
+    <color>255 125 0</color>
+    <root>object</root>
+    <macro>object</macro>
+    <category>bench</category>
+  </label>
+  <label>
+    <id>91</id>
+    <name>trash can</name>
+    <description>Recycling facility for waste collection.</description>
+    <color>125 255 0</color>
+    <root>object</root>
+    <macro>object</macro>
+    <category>trash can</category>
+  </label>
+
+  <label>
+    <id>99</id>
+    <name>other object</name>
+    <description>other objects on the street, where we now have not a specific label</description>
+    <color>50 255 255</color>
+    <root>object</root>
+    <macro>object</macro>
+    <category>other object</category>
+  </label>
 
   <label>
     <id>252</id>
