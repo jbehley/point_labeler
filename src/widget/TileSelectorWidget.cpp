@@ -10,7 +10,7 @@ void TileSelectorWidget::initialize(const std::vector<KittiReader::Tile>& tiles,
   numTilesX_ = numTilesX;
   numTilesY_ = numTilesY;
 
-  size_ = float(width() - 1) / std::max(numTilesX, numTilesY);
+  size_ = float(width() - 1) / std::max(numTilesX_, numTilesY_);
 
   cx_ = width() - 0.5f * (width() - numTilesY * size_);
   cy_ = height() - 0.5f * (height() - numTilesX * size_);
@@ -62,6 +62,23 @@ void TileSelectorWidget::mouseReleaseEvent(QMouseEvent* event) {
   if (i < 0 || i >= int32_t(numTilesY_) || j < 0 || j >= int32_t(numTilesX_)) return;
 
   select(i, j);
+}
+
+void TileSelectorWidget::resizeEvent(QResizeEvent* event) {
+  size_ = float(std::min(width(), height()) - 1) / std::max(numTilesX_, numTilesY_);
+
+  cx_ = width() - 0.5f * (width() - numTilesY_ * size_);
+  cy_ = height() - 0.5f * (height() - numTilesX_ * size_);
+
+  for (uint32_t i = 0; i < tiles_.size(); ++i) {
+    auto& tile = tiles_[i];
+
+    uint32_t x = cx_ - tile.j * size_ - size_;
+    uint32_t y = cy_ - tile.i * size_ - size_;
+    tile.x = x;
+    tile.y = y;
+    tile.size = size_;
+  }
 }
 
 void TileSelectorWidget::paintEvent(QPaintEvent* event) {

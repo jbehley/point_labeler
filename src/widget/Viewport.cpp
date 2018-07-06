@@ -168,40 +168,12 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
   glow::_CheckGlError(__FILE__, __LINE__);
 
-  // FIXME: improve usage of resources:
-  //   Use transform feedback to get points inside the tile.
-
-  // (1) fill single buffer with points and labels. (for each pointcloud)
-
-  // (2) Determine points inside tile (+ 1m boundary.) and output in transform feedback
-  //    - point coordinates, labels, and index of label in complete point cloud.
-
-  // (3) Use single draw call for drawing points, labels, etc. & update labels.
-
-  // determine which labels need to be updated.
-  //  std::vector<uint32_t> indexes;
-  //  index_difference(labels_, l, indexes);
-
-  //  glow::GlBuffer<uint32_t> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
-  //  bufReadBuffer.resize(maxPointsPerScan_);
-  //
-  //  for (auto index : indexes) {
-  //    if (bufferContent_.find(points_[index].get()) == bufferContent_.end()) continue;
-  //
-  //    const BufferInfo& info = bufferContent_[points_[index].get()];
-  //    // replace label information with labels from GPU.
-  //    // copy first to other buffer and read from that.
-  //    bufLabels_.copyTo(info.index * maxPointsPerScan_, info.size, bufReadBuffer, 0);
-  //    bufReadBuffer.get(*labels_[index], 0, info.size);
-  //  }
-
   updateLabels();
 
   points_ = p;
   labels_ = l;
   glow::_CheckGlError(__FILE__, __LINE__);
 
-  // TODO: on unload => fetch labels and update labels in file.
   //  Stopwatch::tic();
 
   {
@@ -261,6 +233,11 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
     // get per scan information from  scan indexes.
     scanInfos_.clear();
+    scanInfos_.resize(points_.size());
+    for (auto& info : scanInfos_) {
+      info.start = 0;
+      info.size = 0;
+    }
 
     glow::_CheckGlError(__FILE__, __LINE__);
 
@@ -278,9 +255,8 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
       bufReadBuffer.get(scanIndexes, 0, read_size);
 
       for (uint32_t i = 0; i < read_size; ++i) {
-        //        std::cout << scanIndexes[i] << std::endl;
         if (currentScanIndex != int32_t(scanIndexes[i].x)) {
-          if (currentScanIndex > -1) scanInfos_.push_back(current);
+          if (currentScanIndex > -1) scanInfos_[currentScanIndex] = current;
           current.start = count * maxPointsPerScan_ + i;
           current.size = 0;
           currentScanIndex = uint32_t(scanIndexes[i].x);
@@ -294,13 +270,11 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     std::cout << "copied " << scanInfos_.size() << " scans with " << numCopiedPoints << " points" << std::endl;
   }
 
-  //  float total_time = Stopwatch::toc();
-
   glow::_CheckGlError(__FILE__, __LINE__);
 
   // generate height map.
 
-  float groundResolution = 0.2f;
+  float groundResolution = 0.5f;
   uint32_t width = tileSize_ / groundResolution;
   uint32_t height = tileSize_ / groundResolution;
 
@@ -323,11 +297,11 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
 
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
   fbMinimumHeightMap_.bind();
   prgMinimumHeightMap_.bind();
   vao_points_.bind();
+
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   prgMinimumHeightMap_.setUniform(GlUniform<float>("minHeight", -3.0f));
   prgMinimumHeightMap_.setUniform(GlUniform<float>("maxHeight", 2.0f));

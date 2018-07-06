@@ -34,15 +34,25 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.actionPolygonMode, &QAction::triggered,
           [this]() { changeMode(Viewport::POLYGON, ui.actionPolygonMode->isChecked()); });
 
+  ui.btnOverwrite->setDefaultAction(ui.actionOverwrite);
+  ui.btnFilter->setDefaultAction(ui.actionFilter);
+
   connect(ui.mViewportXYZ, SIGNAL(labelingChanged()), this, SLOT(unsavedChanges()));
 
-  connect(ui.btnOverwrite, SIGNAL(toggled(bool)), ui.mViewportXYZ, SLOT(setOverwrite(bool)));
+//  connect(ui.btnOverwrite, &QToolButton::released, [this]() {
+//    ui.mViewportXYZ->setOverwrite(ui.btnOverwrite->isChecked());
+//    ui.actionOverwrite->setChecked(ui.btnOverwrite->isChecked());
+//  });
+  connect(ui.actionOverwrite, &QAction::triggered, [this]() {
+    ui.mViewportXYZ->setOverwrite(ui.actionOverwrite->isChecked());
+    ui.btnOverwrite->setChecked(ui.actionOverwrite->isChecked());
+  });
 
   connect(ui.spinPointSize, SIGNAL(valueChanged(int)), ui.mViewportXYZ, SLOT(setPointSize(int)));
 
-  connect(ui.btnRadius5, &QToolButton::released, [this]() { changeRadius(5); });
-  connect(ui.btnRadius10, &QToolButton::released, [this]() { changeRadius(10); });
-  connect(ui.btnRadius20, &QToolButton::released, [this]() { changeRadius(20); });
+  connect(ui.btnRadius5, &QToolButton::released, [this]() { changeRadius(10); });
+  connect(ui.btnRadius10, &QToolButton::released, [this]() { changeRadius(25); });
+  connect(ui.btnRadius20, &QToolButton::released, [this]() { changeRadius(50); });
 
   connect(ui.mRadiusSlider, SIGNAL(valueChanged(int)), this, SLOT(changeRadius(int)));
   connect(ui.sldTimeline, &QSlider::valueChanged, [this](int value) { setCurrentScanIdx(value); });
@@ -50,7 +60,8 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.btnBackward, &QToolButton::released, [this]() { backward(); });
 
-  connect(ui.chkFilterLabels, &QCheckBox::toggled, [this](bool value) { updateFiltering(value); });
+//  connect(ui.btnFilter, &QCheckBox::toggled, [this](bool value) { updateFiltering(value); });
+  connect(ui.actionFilter, &QAction::toggled, [this](bool value) { updateFiltering(value); });
 
   connect(ui.chkShowRemission, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("remission", value); });
@@ -80,6 +91,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   getLabelColors("labels.xml", label_colors);
 
   ui.mViewportXYZ->setLabelColors(label_colors);
+  ui.mViewportXYZ->setGroundThreshold(ui.spinGroundThreshold->value());
 
   generateLabelButtons();
 
@@ -176,13 +188,13 @@ void Mainframe::changeRadius(int value) {
   ui.btnRadius20->setChecked(false);
 
   switch (value) {
-    case 5:
+    case 10:
       ui.btnRadius5->setChecked(true);
       break;
-    case 10:
+    case 25:
       ui.btnRadius10->setChecked(true);
       break;
-    case 20:
+    case 50:
       ui.btnRadius20->setChecked(true);
       break;
   }
@@ -213,7 +225,7 @@ void Mainframe::changeMode(int mode, bool checked) {
 
   if (checked) {
     if (mode == Viewport::PAINT) {
-//      std::cout << "triggered paint mode." << std::endl;
+      //      std::cout << "triggered paint mode." << std::endl;
       ui.mViewportXYZ->setMode(Viewport::PAINT);
 
       ui.btnPolygonMode->setChecked(false);
@@ -226,7 +238,7 @@ void Mainframe::changeMode(int mode, bool checked) {
     }
 
     if (mode == Viewport::POLYGON) {
-//      std::cout << "triggered polygon mode." << std::endl;
+      //      std::cout << "triggered polygon mode." << std::endl;
       ui.mViewportXYZ->setMode(Viewport::POLYGON);
 
       ui.btnBrushMode->setChecked(false);
@@ -320,7 +332,7 @@ void Mainframe::labelBtnReleased(QWidget* w) {
 
   if (labelButton->isHighlighted()) {
     filteredLabels.push_back(label_id);
-    updateFiltering(ui.chkFilterLabels->isChecked());
+    updateFiltering(ui.btnFilter->isChecked());
   } else {
     std::vector<uint32_t> tempFilteredLabels;
 
@@ -328,7 +340,7 @@ void Mainframe::labelBtnReleased(QWidget* w) {
       if (filteredLabels[i] != label_id) tempFilteredLabels.push_back(filteredLabels[i]);
 
     filteredLabels = tempFilteredLabels;
-    updateFiltering(ui.chkFilterLabels->isChecked());
+    updateFiltering(ui.btnFilter->isChecked());
   }
 
   ui.txtSelectedLabel->setText(QString::fromStdString(label_names[label_id]));
@@ -480,6 +492,19 @@ void Mainframe::initializeIcons() {
     icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "polygon.png")));
     ui.actionPolygonMode->setIcon(icon);
     ui.btnPolygonMode->setIcon(icon);
+  }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "filter.png")));
+    ui.actionFilter->setIcon(icon);
+  }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "overwrite_on.png")), QIcon::Normal, QIcon::On);
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "overwrite_off.png")), QIcon::Normal, QIcon::Off);
+    ui.actionOverwrite->setIcon(icon);
   }
 }
 
