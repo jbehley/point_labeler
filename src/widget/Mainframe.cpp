@@ -39,10 +39,10 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.mViewportXYZ, SIGNAL(labelingChanged()), this, SLOT(unsavedChanges()));
 
-//  connect(ui.btnOverwrite, &QToolButton::released, [this]() {
-//    ui.mViewportXYZ->setOverwrite(ui.btnOverwrite->isChecked());
-//    ui.actionOverwrite->setChecked(ui.btnOverwrite->isChecked());
-//  });
+  //  connect(ui.btnOverwrite, &QToolButton::released, [this]() {
+  //    ui.mViewportXYZ->setOverwrite(ui.btnOverwrite->isChecked());
+  //    ui.actionOverwrite->setChecked(ui.btnOverwrite->isChecked());
+  //  });
   connect(ui.actionOverwrite, &QAction::triggered, [this]() {
     ui.mViewportXYZ->setOverwrite(ui.actionOverwrite->isChecked());
     ui.btnOverwrite->setChecked(ui.actionOverwrite->isChecked());
@@ -60,7 +60,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.btnBackward, &QToolButton::released, [this]() { backward(); });
 
-//  connect(ui.btnFilter, &QCheckBox::toggled, [this](bool value) { updateFiltering(value); });
+  //  connect(ui.btnFilter, &QCheckBox::toggled, [this](bool value) { updateFiltering(value); });
   connect(ui.actionFilter, &QAction::toggled, [this](bool value) { updateFiltering(value); });
 
   connect(ui.chkShowRemission, &QCheckBox::toggled,
@@ -79,6 +79,8 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.wgtTileSelector, &TileSelectorWidget::tileSelected, [this](int32_t i, int32_t j) { setTileIndex(i, j); });
   connect(ui.chkShowAllPoints, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("show all points", value); });
+
+  connect(ui.actionCenterView, &QAction::triggered, [this]() { ui.mViewportXYZ->centerOnCurrentTile(); });
 
   connect(this, &Mainframe::readerFinshed, this, &Mainframe::updateScans);
   connect(this, &Mainframe::readerStarted, this, &Mainframe::activateSpinner);
@@ -350,6 +352,7 @@ void Mainframe::unsavedChanges() { mChangesSinceLastSave = true; }
 
 void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   if (readerFuture_.valid()) readerFuture_.wait();
+
   readerFuture_ = std::async(std::launch::async, &Mainframe::readAsync, this, i, j);
 }
 

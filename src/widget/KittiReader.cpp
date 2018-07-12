@@ -78,6 +78,7 @@ void KittiReader::initialize(const QString& directory) {
 
   //  std::cout << "numTiles = " << numTiles_ << std::endl;
 
+  tiles_.clear();
   tiles_.resize(numTiles_.x() * numTiles_.y());
 
   Eigen::Vector2f idxRadius(maxDistance_ / tileSize_, maxDistance_ / tileSize_);
@@ -117,6 +118,18 @@ void KittiReader::initialize(const QString& directory) {
         if (std::min(q[0], q[1]) < e[0] || (q - e).norm() < maxDistance_) {
           tile.indexes.push_back(i);
         }
+      }
+    }
+  }
+
+  // sanity check:
+
+  for (auto& t : tiles_) {
+    std::sort(t.indexes.begin(), t.indexes.end());
+    std::cout << "Tile has " << t.indexes.size() << " tiles associated." << std::endl;
+    for (uint32_t i = 1; i < t.indexes.size(); ++i) {
+      if (t.indexes[i - 1] == t.indexes[i]) {
+        std::cout << "found duplicate!" << std::endl;
       }
     }
   }
