@@ -32,13 +32,13 @@ void KittiReader::initialize(const QString& directory) {
   if (!labels_dir.exists()) base_dir.mkdir("labels");
 
   for (uint32_t i = 0; i < velodyne_filenames_.size(); ++i) {
-    std::ifstream in(velodyne_filenames_[i].c_str());
-    in.seekg(0, std::ios::end);
-    uint32_t num_points = in.tellg() / (4 * sizeof(float));
-    in.close();
-
     QString filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".label";
     if (!labels_dir.exists(filename)) {
+      std::ifstream in(velodyne_filenames_[i].c_str());
+      in.seekg(0, std::ios::end);
+      uint32_t num_points = in.tellg() / (4 * sizeof(float));
+      in.close();
+
       std::ofstream out(labels_dir.filePath(filename).toStdString().c_str());
 
       std::vector<uint32_t> labels(num_points, 0);
@@ -100,13 +100,14 @@ void KittiReader::initialize(const QString& directory) {
     Eigen::Vector2f idx((t.x() + offset_.x()) / tileSize_, (t.y() + offset_.y()) / tileSize_);
 
     //    tiles_[tileIdxToOffset(uint32_t(idx.x()), uint32_t(idx.y()))].indexes.push_back(i);
-    uint32_t u_min = std::max(int32_t(idx.x() - idxRadius.x()), 0);
-    uint32_t u_max = std::min(int32_t(std::ceil(idx.x() + idxRadius.x())), numTiles_.x());
-    uint32_t v_min = std::max(int32_t(idx.y() - idxRadius.y()), 0);
-    uint32_t v_max = std::min(int32_t(std::ceil(idx.y() + idxRadius.y())), numTiles_.y());
+    //    uint32_t u_min = std::max(int32_t(idx.x() - idxRadius.x()), 0);
+    //    uint32_t u_max = std::min(int32_t(std::ceil(idx.x() + idxRadius.x())), numTiles_.x());
+    //    uint32_t v_min = std::max(int32_t(idx.y() - idxRadius.y()), 0);
+    //    uint32_t v_max = std::min(int32_t(std::ceil(idx.y() + idxRadius.y())), numTiles_.y());
 
-    for (uint32_t u = u_min; u < u_max; ++u) {
-      for (uint32_t v = v_min; v < v_max; ++v) {
+    // FIXME: workaround check all tiles.
+    for (uint32_t u = 0; u < uint32_t(numTiles_.x()); ++u) {
+      for (uint32_t v = 0; v < uint32_t(numTiles_.y()); ++v) {
         auto& tile = tiles_[tileIdxToOffset(u, v)];
         Eigen::Vector2f q = t - Eigen::Vector2f(tile.x, tile.y);
         q[0] = std::abs(q[0]);
@@ -204,13 +205,9 @@ const KittiReader::Tile& KittiReader::getTile(const Eigen::Vector3f& position) c
   Eigen::Vector2f idx((position.x() + offset_.x()) / tileSize_, (position.y() + offset_.y()) / tileSize_);
   return tiles_[tileIdxToOffset(idx.x(), idx.y())];
 }
-const KittiReader::Tile& KittiReader::getTile(uint32_t i, uint32_t j) const {
-  return tiles_[tileIdxToOffset(i, j)];
-}
+const KittiReader::Tile& KittiReader::getTile(uint32_t i, uint32_t j) const { return tiles_[tileIdxToOffset(i, j)]; }
 
-void KittiReader::setTileSize(float size) {
-  tileSize_ = size;
-}
+void KittiReader::setTileSize(float size) { tileSize_ = size; }
 
 void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels) {
   for (uint32_t i = 0; i < indexes.size(); ++i) {
