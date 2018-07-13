@@ -143,6 +143,11 @@ void Viewport::initPrograms() {
   prgFillTilePoints_.attach(tfFillTilePoints_);
   prgFillTilePoints_.link();
 
+  prgDrawFrustum_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/empty.vert"));
+  prgDrawFrustum_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/draw_frustum.geom"));
+  prgDrawFrustum_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
+  prgDrawFrustum_.link();
+
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
@@ -574,7 +579,19 @@ void Viewport::paintGL() {
     prgDrawPose_.setUniform(GlUniform<Eigen::Matrix4f>("pose", bufPoses_[singleScanIdx_]));
     prgDrawPose_.setUniform(GlUniform<float>("size", 0.5f));
 
+    glDrawArrays(GL_POINTS, 0, 1);
+
     prgDrawPose_.release();
+
+    prgDrawFrustum_.bind();
+    prgDrawFrustum_.setUniform(mvp_);
+    prgDrawFrustum_.setUniform(GlUniform<Eigen::Matrix4f>("pose", bufPoses_[singleScanIdx_]));
+    prgDrawFrustum_.setUniform(GlUniform<int32_t>("width", 1241));
+    prgDrawFrustum_.setUniform(GlUniform<int32_t>("height", 376));
+
+    glDrawArrays(GL_POINTS, 0, 1);
+
+    prgDrawFrustum_.release();
   }
 
   glDisable(GL_DEPTH_TEST);

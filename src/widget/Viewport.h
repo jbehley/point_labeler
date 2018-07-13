@@ -187,6 +187,7 @@ class Viewport : public QGLWidget {
   glow::GlProgram prgUpdateVisibility_;
   glow::GlProgram prgPolygonPoints_;
   glow::GlProgram prgFillTilePoints_;
+  glow::GlProgram prgDrawFrustum_;
 
   glow::GlFramebuffer fbMinimumHeightMap_;
   glow::GlTexture texMinimumHeightMap_;

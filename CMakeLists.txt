@@ -68,6 +68,7 @@ COMPILE_SHADERS(${VIZ_SHADER_SRC}
   src/shaders/update_labels.vert
   src/shaders/gen_heightmap.vert
   src/shaders/gen_heightmap.frag
+  src/shaders/draw_frustum.geom
 )
 
 add_executable(labeler 

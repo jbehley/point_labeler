@@ -17,7 +17,7 @@ void main()
 {
     color = vec4(0.5, 0.8, 0.7, 1);
     
-    float ratio = height/width;
+    float ratio = float(height)/width;
     
     gl_Position = mvp * pose * vec4(0.3, -0.5, ratio * 0.5, 1);
     EmitVertex();
@@ -32,32 +32,28 @@ void main()
     EndPrimitive();
     
     
-    gl_Position = mvp * pose * vec4(0.3, -0.5, -ratio * 0.5, 1);
+    gl_Position = mvp * pose * vec4(0.3, -0.5, ratio * 0.5, 1);
     EmitVertex();
-    
-    EmitVertex();
-    EndPrimitive();
-    
-    
-    gl_Position = mvp * pose * vec4(0.3, -0.5, -ratio * 0.5, 1);
-    EmitVertex();
-    gl_Position = mvp * pose * vec4(0.3, 0.5, -ratio * 0.5, 1);
+    gl_Position = mvp * pose * vec4(0.0, 0, 0, 1);
     EmitVertex();
     EndPrimitive();
     
     
-    
-    gl_Position = mvp * pose * vec4(0, 0, 0, 1);
+    gl_Position = mvp * pose * vec4(0.3, 0.5, ratio * 0.5, 1);
     EmitVertex();
-    gl_Position = mvp * pose *  vec4(0, size, 0, 1);
-    EmitVertex();
-    EndPrimitive();
-    
-    
-    gl_Position = mvp * pose * vec4(0, 0, 0, 1);
-    EmitVertex();
-    gl_Position = mvp * pose * vec4(0, 0, size, 1);
+    gl_Position = mvp * pose * vec4(0.0, 0, 0, 1);
     EmitVertex();
     EndPrimitive();
 
+    gl_Position = mvp * pose * vec4(0.3, 0.5, -ratio * 0.5, 1);
+    EmitVertex();
+    gl_Position = mvp * pose * vec4(0.0, 0, 0, 1);
+    EmitVertex();
+    EndPrimitive();
+    
+    gl_Position = mvp * pose * vec4(0.3, -0.5, -ratio * 0.5, 1);
+    EmitVertex();
+    gl_Position = mvp * pose * vec4(0.0, 0, 0, 1);
+    EmitVertex();
+    EndPrimitive();
 }
