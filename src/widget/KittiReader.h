@@ -35,10 +35,10 @@ class KittiReader {
   //                std::vector<LabelsPtr>& labels);
 
   void retrieve(const Eigen::Vector3f& position, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
-                std::vector<LabelsPtr>& labels, std::vector<ColorsPtr>& colors);
+                std::vector<LabelsPtr>& labels, std::vector<std::string>& images);
 
   void retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
-                std::vector<LabelsPtr>& labels, std::vector<ColorsPtr>& colors);
+                std::vector<LabelsPtr>& labels, std::vector<std::string>& images);
 
   void update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels);
 
@@ -60,6 +60,7 @@ class KittiReader {
   std::vector<Eigen::Matrix4f> poses_;
   std::vector<std::string> velodyne_filenames_;
   std::vector<std::string> label_filenames_;
+  std::vector<std::string> image_filenames_;
 
   // cache reads from before.
   std::map<uint32_t, PointcloudPtr> pointsCache_;

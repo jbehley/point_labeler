@@ -50,6 +50,17 @@ void KittiReader::initialize(const QString& directory) {
     label_filenames_.push_back(labels_dir.filePath(filename).toStdString());
   }
 
+  std::string missing_img = QDir::currentPath().toStdString() + "/../assets/missing.png";
+  QDir image_dir(base_dir.filePath("image_2"));
+  for (uint32_t i = 0; i < velodyne_filenames_.size(); ++i) {
+    QString filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".png";
+    if (image_dir.exists(filename)) {
+      image_filenames_.push_back(image_dir.filePath(filename).toStdString());
+    } else {
+      image_filenames_.push_back(missing_img);
+    }
+  }
+
   // assumes that (0,0,0) is always the start.
   Eigen::Vector2f min = Eigen::Vector2f::Zero();
   Eigen::Vector2f max = Eigen::Vector2f::Zero();
@@ -136,18 +147,19 @@ void KittiReader::initialize(const QString& directory) {
 
 void KittiReader::retrieve(const Eigen::Vector3f& position, std::vector<uint32_t>& indexes,
                            std::vector<PointcloudPtr>& points, std::vector<LabelsPtr>& labels,
-                           std::vector<ColorsPtr>& colors) {
+                           std::vector<std::string>& images) {
   Eigen::Vector2f idx((position.x() + offset_.x()) / tileSize_, (position.y() + offset_.y()) / tileSize_);
 
   std::cout << "retrieve: idx = " << idx << std::endl;
-  retrieve(idx.x(), idx.y(), indexes, points, labels, colors);
+  retrieve(idx.x(), idx.y(), indexes, points, labels, images);
 }
 
 void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
-                           std::vector<LabelsPtr>& labels, std::vector<ColorsPtr>& colors) {
+                           std::vector<LabelsPtr>& labels, std::vector<std::string>& images) {
   indexes.clear();
   points.clear();
   labels.clear();
+  images.clear();
 
   std::vector<int32_t> indexesBefore;
   for (auto it = pointsCache_.begin(); it != pointsCache_.end(); ++it) indexesBefore.push_back(it->first);
@@ -182,6 +194,8 @@ void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexe
       points.push_back(pointsCache_[t]);
       labels.push_back(labelCache_[t]);
     }
+
+    images.push_back(image_filenames_[t]);
   }
 
   std::cout << scansRead << " point clouds read." << std::endl;

@@ -39,10 +39,10 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.mViewportXYZ, SIGNAL(labelingChanged()), this, SLOT(unsavedChanges()));
 
-//  connect(ui.btnOverwrite, &QToolButton::released, [this]() {
-//    ui.mViewportXYZ->setOverwrite(ui.btnOverwrite->isChecked());
-//    ui.actionOverwrite->setChecked(ui.btnOverwrite->isChecked());
-//  });
+  //  connect(ui.btnOverwrite, &QToolButton::released, [this]() {
+  //    ui.mViewportXYZ->setOverwrite(ui.btnOverwrite->isChecked());
+  //    ui.actionOverwrite->setChecked(ui.btnOverwrite->isChecked());
+  //  });
   connect(ui.actionOverwrite, &QAction::triggered, [this]() {
     ui.mViewportXYZ->setOverwrite(ui.actionOverwrite->isChecked());
     ui.btnOverwrite->setChecked(ui.actionOverwrite->isChecked());
@@ -60,7 +60,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.btnBackward, &QToolButton::released, [this]() { backward(); });
 
-//  connect(ui.btnFilter, &QCheckBox::toggled, [this](bool value) { updateFiltering(value); });
+  //  connect(ui.btnFilter, &QCheckBox::toggled, [this](bool value) { updateFiltering(value); });
   connect(ui.actionFilter, &QAction::toggled, [this](bool value) { updateFiltering(value); });
 
   connect(ui.chkShowRemission, &QCheckBox::toggled,
@@ -98,6 +98,10 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   readConfig();
 
   initializeIcons();
+
+  wImgWidget_ = new ImageViewer(nullptr, Qt::Window);
+  wImgWidget_->resize(1241, 376);
+  wImgWidget_->show();
 }
 
 Mainframe::~Mainframe() {}
@@ -120,6 +124,8 @@ void Mainframe::closeEvent(QCloseEvent* event) {
   reader_.update(indexes_, labels_);
 
   event->accept();
+
+  wImgWidget_->close();
 }
 
 void Mainframe::open() {
@@ -353,7 +359,10 @@ void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   readerFuture_ = std::async(std::launch::async, &Mainframe::readAsync, this, i, j);
 }
 
-void Mainframe::setCurrentScanIdx(int32_t idx) { ui.mViewportXYZ->setScanIndex(idx); }
+void Mainframe::setCurrentScanIdx(int32_t idx) {
+  ui.mViewportXYZ->setScanIndex(idx);
+  if (images_.size() > uint32_t(idx)) wImgWidget_->setImage(images_[idx]);
+}
 
 void Mainframe::readAsync(uint32_t i, uint32_t j) {
   // TODO progress indicator.
@@ -362,17 +371,17 @@ void Mainframe::readAsync(uint32_t i, uint32_t j) {
   std::vector<uint32_t> indexes;
   std::vector<PointcloudPtr> points;
   std::vector<LabelsPtr> labels;
-  std::vector<ColorsPtr> colors;
+  std::vector<std::string> images;
 
   std::vector<uint32_t> oldIndexes = indexes_;
   std::vector<LabelsPtr> oldLabels = labels_;
 
-  reader_.retrieve(i, j, indexes, points, labels, colors);
+  reader_.retrieve(i, j, indexes, points, labels, images);
 
   indexes_ = indexes;
   points_ = points;
   labels_ = labels;
-  colors_ = colors;
+  images_ = images;
 
   // find difference.
   std::vector<uint32_t> diff_indexes;

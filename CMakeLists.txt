@@ -85,6 +85,7 @@ add_executable(labeler
   src/widget/KittiReader.cpp
   src/widget/TileSelectorWidget.cpp
   src/widget/waitingspinnerwidget.cpp
+  src/widget/ImageViewer.cpp
 )
 
 if(NOT GTEST_FOUND)

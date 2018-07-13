@@ -52,6 +52,13 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   bufTempLabels_.reserve(maxPointsPerScan_);
   bufTempVisible_.reserve(maxPointsPerScan_);
 
+  uint32_t tempMem = bufTempPoints_.memorySize();
+  tempMem += bufTempRemissions_.memorySize();
+  tempMem += bufTempLabels_.memorySize();
+  tempMem += bufTempVisible_.memorySize();
+
+  std::cout << "temp mem size: " << float(tempMem) / (1000 * 1000) << " MB" << std::endl;
+
   bufPolygonPoints_.reserve(100);
 
   bufUpdatedLabels_.resize(maxPointsPerScan_);
@@ -161,6 +168,14 @@ void Viewport::setMaximumScans(uint32_t numScans) {
   bufVisible_.resize(max_size);
   bufLabels_.resize(max_size);
   bufScanIndexes_.resize(max_size);
+
+  uint32_t memTile = 0;  // = bufPoses_.memorySize();
+  memTile += bufPoints_.memorySize();
+  memTile += bufVisible_.memorySize();
+  memTile += bufLabels_.memorySize();
+  memTile += bufScanIndexes_.memorySize();
+
+  std::cout << "mem size: " << float(memTile) / (1000 * 1000) << " MB" << std::endl;
 }
 
 void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<LabelsPtr>& l) {

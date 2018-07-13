@@ -5,6 +5,7 @@
 #include <QtCore/QSignalMapper>
 #include <QtWidgets/QMainWindow>
 #include <future>
+#include "ImageViewer.h"
 #include "KittiReader.h"
 #include "LabelButton.h"
 #include "common.h"
@@ -58,7 +59,7 @@ class Mainframe : public QMainWindow {
   std::vector<uint32_t> indexes_;
   std::vector<PointcloudPtr> points_;
   std::vector<LabelsPtr> labels_;
-  std::vector<ColorsPtr> colors_;
+  std::vector<std::string> images_;
 
   std::vector<uint32_t> filteredLabels;
   std::string filename;
@@ -84,6 +85,8 @@ class Mainframe : public QMainWindow {
   KittiReader reader_;
   std::future<void> readerFuture_;
   WaitingSpinnerWidget* spinner{nullptr};
+
+  ImageViewer* wImgWidget_;
 };
 
 #endif /* MAINFRAME_H_ */
