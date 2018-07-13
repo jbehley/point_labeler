@@ -1,6 +1,7 @@
 #version 330 core
 
 layout (location = 0) in vec4 in_vertex;
+layout (location = 1) in uint in_label;
 
 // uniform mat4 pose;
 
@@ -22,6 +23,8 @@ void main()
   
   gl_Position = vec4(2.0 * v/tileSize, (in_vertex.z-minHeight) / (maxHeight-minHeight), 1);
   
-  //if(!visible) gl_Position = vec4(-10, -10, -10, 1);
+  
+  // ignore outliers.
+  if(in_label == 1) gl_Position = vec(-10, -10, -10, 1);
   height = in_vertex.z;
 }
