@@ -157,7 +157,7 @@ void Mainframe::open() {
     readerFuture_ = std::async(std::launch::async, &Mainframe::readAsync, this, tile.i, tile.j);
     ui.wgtTileSelector->initialize(reader_.getTiles(), reader_.numTiles().x(), reader_.numTiles().y());
 
-    //    ui.mViewportXYZ->setTileInfo(tile.x, tile.y, tile.size);
+    ui.wgtTileSelector->setTrajectory(reader_.getTileTrajectory());
     ui.wgtTileSelector->setSelected(tile.i, tile.j);
 
     lastDirectory = base_dir.absolutePath();

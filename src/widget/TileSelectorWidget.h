@@ -1,10 +1,10 @@
 #ifndef SRC_WIDGET_TILESELECTORWIDGET_H_
 #define SRC_WIDGET_TILESELECTORWIDGET_H_
 
+#include <QtCore/QPoint>
 #include <QtGui/QMouseEvent>
 #include <QtGui/QPainter>
 #include <QtWidgets/QWidget>
-#include <QtCore/QPoint>
 
 #include "KittiReader.h"
 
@@ -23,7 +23,7 @@ class TileSelectorWidget : public QWidget {
   /** \brief set selected tile without emitting signal. **/
   void setSelected(uint32_t i, uint32_t j);
 
-  void setTrajectory(const std::vector<QPoint>& trajectory);
+  void setTrajectory(const std::vector<Eigen::Vector2f>& trajectory);
 
  signals:
   void tileSelected(int32_t i, int32_t j);
@@ -50,7 +50,7 @@ class TileSelectorWidget : public QWidget {
   uint32_t cx_{0}, cy_{0};
   uint32_t size_{0};
   uint32_t numTilesX_{0}, numTilesY_{0};
-  std::vector<QPoint> trajectory_;
+  std::vector<Eigen::Vector2f> trajectory_;
 };
 
 #endif /* SRC_WIDGET_TILESELECTORWIDGET_H_ */

@@ -106,10 +106,14 @@ void KittiReader::initialize(const QString& directory) {
     }
   }
 
+  trajectory_.clear();
+
   Eigen::Vector2f e(0.5 * tileSize_, 0.5 * tileSize_);
   for (uint32_t i = 0; i < poses_.size(); ++i) {
     Eigen::Vector2f t = poses_[i].col(3).head(2);
     Eigen::Vector2f idx((t.x() + offset_.x()) / tileSize_, (t.y() + offset_.y()) / tileSize_);
+
+    trajectory_.push_back(Eigen::Vector2f((t.x() + offset_.x()) / tileSize_, (t.y() + offset_.y()) / tileSize_));
 
     //    tiles_[tileIdxToOffset(uint32_t(idx.x()), uint32_t(idx.y()))].indexes.push_back(i);
     //    uint32_t u_min = std::max(int32_t(idx.x() - idxRadius.x()), 0);

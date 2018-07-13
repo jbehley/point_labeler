@@ -83,12 +83,14 @@ void TileSelectorWidget::resizeEvent(QResizeEvent* event) {
 
 void TileSelectorWidget::paintEvent(QPaintEvent* event) {
   QPainter painter(this);
+  painter.setRenderHint(QPainter::Antialiasing, true);
   painter.fillRect(0, 0, width(), height(), QBrush(Qt::white));
 
   painter.setPen(Qt::red);
+
   for (int32_t i = 0; i < int32_t(trajectory_.size()) - 1; ++i) {
-    QPoint p1 = trajectory_[i];
-    QPoint p2 = trajectory_[i + 1];
+    QPoint p1(cx_ - trajectory_[i].y() * size_, cy_ - trajectory_[i].x() * size_);
+    QPoint p2(cx_ - trajectory_[i + 1].y() * size_, cy_ - trajectory_[i + 1].x() * size_);
     painter.drawLine(p1.x(), p1.y(), p2.x(), p2.y());
   }
 
@@ -109,4 +111,4 @@ void TileSelectorWidget::paintEvent(QPaintEvent* event) {
   painter.end();
 }
 
-void TileSelectorWidget::setTrajectory(const std::vector<QPoint>& trajectory) { trajectory_ = trajectory; }
+void TileSelectorWidget::setTrajectory(const std::vector<Eigen::Vector2f>& trajectory) { trajectory_ = trajectory; }

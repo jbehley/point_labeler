@@ -51,6 +51,8 @@ class KittiReader {
 
   const Eigen::Vector2i& numTiles() const { return numTiles_; }
 
+  const std::vector<Eigen::Vector2f>& getTileTrajectory() const { return trajectory_; }
+
  protected:
   void readPoints(const std::string& filename, Laserscan& scan);
   void readLabels(const std::string& filename, std::vector<uint32_t>& labels);
@@ -74,6 +76,8 @@ class KittiReader {
   std::vector<Tile> tiles_;
   Eigen::Vector2f offset_;
   Eigen::Vector2i numTiles_;
+
+  std::vector<Eigen::Vector2f> trajectory_;
 };
 
 #endif /* SRC_WIDGET_KITTIREADER_H_ */
