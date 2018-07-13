@@ -122,7 +122,7 @@
      <x>0</x>
      <y>0</y>
      <width>916</width>
-     <height>27</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -161,6 +161,7 @@
    </attribute>
    <addaction name="actionOpen"/>
    <addaction name="actionSave"/>
+   <addaction name="actionReload"/>
    <addaction name="separator"/>
    <addaction name="actionPaintMode"/>
    <addaction name="actionPolygonMode"/>
@@ -288,7 +289,7 @@
           <x>0</x>
           <y>0</y>
           <width>219</width>
-          <height>403</height>
+          <height>397</height>
          </rect>
         </property>
         <attribute name="label">
@@ -654,8 +655,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>232</width>
-          <height>281</height>
+          <width>110</width>
+          <height>80</height>
          </rect>
         </property>
         <attribute name="label">
@@ -775,6 +776,11 @@
   <action name="actionShowImage">
    <property name="text">
     <string>showImage</string>
+   </property>
+  </action>
+  <action name="actionReload">
+   <property name="text">
+    <string>Reload</string>
    </property>
   </action>
  </widget>

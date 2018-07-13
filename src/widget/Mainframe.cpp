@@ -83,9 +83,13 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.actionCenterView, &QAction::triggered, [this]() { ui.mViewportXYZ->centerOnCurrentTile(); });
   connect(ui.actionShowImage, &QAction::triggered, [this]() { wImgWidget_->show(); });
 
+  connect(ui.actionReload, &QAction::triggered, [this]() {
+    updateScans();
+    mChangesSinceLastSave = false;
+  });
+
   connect(this, &Mainframe::readerFinshed, this, &Mainframe::updateScans);
   connect(this, &Mainframe::readerStarted, this, &Mainframe::activateSpinner);
-
 
   /** load labels and colors **/
   std::map<uint32_t, std::string> label_names;
@@ -110,21 +114,18 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 Mainframe::~Mainframe() {}
 
 void Mainframe::closeEvent(QCloseEvent* event) {
-  //  if (mChangesSinceLastSave) {
-  //    int ret = QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
-  //                                                                    "Do you want to save your changes?"),
-  //                                   QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
-  //                                   QMessageBox::Save);
-  //    if (ret == QMessageBox::Save)
-  //      save();
-  //    else if (ret == QMessageBox::Cancel) {
-  //      event->ignore();
-  //      return;
-  //    }
-  //  }
-  statusBar()->showMessage("Writing labels...");
-  ui.mViewportXYZ->updateLabels();
-  reader_.update(indexes_, labels_);
+  if (mChangesSinceLastSave) {
+    int32_t ret =
+        QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+                                                              "Do you want to save your changes?"),
+                             QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+    if (ret == QMessageBox::Save) {
+      save();
+    } else if (ret == QMessageBox::Cancel) {
+      event->ignore();
+      return;
+    }
+  }
 
   event->accept();
 
@@ -132,17 +133,6 @@ void Mainframe::closeEvent(QCloseEvent* event) {
 }
 
 void Mainframe::open() {
-  //  if (mChangesSinceLastSave) {
-  //    int ret = QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
-  //                                                                    "Do you want to save your changes?"),
-  //                                   QMessageBox::Save | QMessageBox::Cancel | QMessageBox::Discard,
-  //                                   QMessageBox::Save);
-  //    if (ret == QMessageBox::Save)
-  //      save();
-  //    else if (ret == QMessageBox::Cancel)
-  //      return;
-  //  }
-
   QString retValue =
       QFileDialog::getExistingDirectory(this, "Select scan directory", lastDirectory, QFileDialog::ShowDirsOnly);
 
@@ -360,6 +350,13 @@ void Mainframe::unsavedChanges() { mChangesSinceLastSave = true; }
 void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   if (readerFuture_.valid()) readerFuture_.wait();
 
+  if (mChangesSinceLastSave) {
+    int32_t ret = QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+                                                                        "Do you want to save your changes?"),
+                                       QMessageBox::Save | QMessageBox::Discard, QMessageBox::Save);
+    if (ret == QMessageBox::Save) save();
+  }
+
   readerFuture_ = std::async(std::launch::async, &Mainframe::readAsync, this, i, j);
 }
 
@@ -427,10 +424,8 @@ void Mainframe::updateScans() {
   }
 
   statusBar()->clearMessage();
-  glow::_CheckGlError(__FILE__, __LINE__);
-  ui.mViewportXYZ->setPoints(points_, labels_);
-  glow::_CheckGlError(__FILE__, __LINE__);
 
+  ui.mViewportXYZ->setPoints(points_, labels_);
   ui.sldTimeline->setMaximum(indexes_.size());
   ui.sldTimeline->setValue(0);
   ui.wgtTileSelector->setEnabled(true);

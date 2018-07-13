@@ -99,7 +99,15 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
-Viewport::~Viewport() {}
+Viewport::~Viewport() {
+  // workaround for strange behaviour with my Nvidia 860m. Even though the buffers fit into memory, they mess up
+  // something up. However, I noticed that it does not cause havoc if the buffers are empty or small.
+
+  bufPoints_.assign(std::vector<vec4>());
+  bufLabels_.assign(std::vector<uint32_t>());
+  bufScanIndexes_.assign(std::vector<vec2>());
+  bufVisible_.assign(std::vector<uint32_t>());
+}
 
 void Viewport::initPrograms() {
   prgDrawPoints_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/draw_points.vert"));
@@ -183,11 +191,8 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
   glow::_CheckGlError(__FILE__, __LINE__);
 
-  updateLabels();
-
   points_ = p;
   labels_ = l;
-  glow::_CheckGlError(__FILE__, __LINE__);
 
   //  Stopwatch::tic();
 
