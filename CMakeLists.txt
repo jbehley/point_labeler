@@ -34,7 +34,12 @@ set(CMAKE_CXX_FLAGS "-UDEBUG_GL -UDEBUG -DNDEBUG -g2 ${CMAKE_CXX_FLAGS}")
 
 # configure_file(assets/labels.xml ${CMAKE_SOURCE_DIR}/bin/labels.xml COPYONLY)
 ADD_CUSTOM_TARGET(link_labels ALL COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/assets/labels.xml ${CMAKE_SOURCE_DIR}/bin/labels.xml)
-configure_file(${CMAKE_SOURCE_DIR}/assets/settings.cfg ${CMAKE_SOURCE_DIR}/bin/settings.cfg COPYONLY)
+
+# ensure that custom configuration file is not overwritten.
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/bin/settings.cfg")
+  message("-- Copyied default settings into bin. See 'settings.cfg' to change labeler settings.")
+  configure_file(${CMAKE_SOURCE_DIR}/assets/settings.cfg ${CMAKE_SOURCE_DIR}/bin/settings.cfg COPYONLY)
+endif()
 
 # since now everything resides in "bin", we have to copy some stuff.
   
