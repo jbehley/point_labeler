@@ -84,6 +84,14 @@ void TileSelectorWidget::resizeEvent(QResizeEvent* event) {
 void TileSelectorWidget::paintEvent(QPaintEvent* event) {
   QPainter painter(this);
   painter.fillRect(0, 0, width(), height(), QBrush(Qt::white));
+
+  painter.setPen(Qt::red);
+  for (int32_t i = 0; i < int32_t(trajectory_.size()) - 1; ++i) {
+    QPoint p1 = trajectory_[i];
+    QPoint p2 = trajectory_[i + 1];
+    painter.drawLine(p1.x(), p1.y(), p2.x(), p2.y());
+  }
+
   painter.setPen(Qt::black);
 
   for (uint32_t i = 0; i < tiles_.size(); ++i) {
@@ -97,5 +105,8 @@ void TileSelectorWidget::paintEvent(QPaintEvent* event) {
     painter.setPen(QPen(QColor(251, 187, 0), 2));
     painter.drawRect(tile.x, tile.y, tile.size, tile.size);
   }
+
   painter.end();
 }
+
+void TileSelectorWidget::setTrajectory(const std::vector<QPoint>& trajectory) { trajectory_ = trajectory; }

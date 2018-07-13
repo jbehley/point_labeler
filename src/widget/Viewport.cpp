@@ -524,6 +524,8 @@ void Viewport::paintGL() {
     glDrawArrays(GL_POINTS, 0, 1);
   }
 
+  bool showSingleScan = drawingOption_["single scan"];
+
   if (points_.size() > 0) {
     glPointSize(pointSize_);
 
@@ -538,8 +540,6 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<float>("tileSize", tileSize_));
     prgDrawPoints_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
     prgDrawPoints_.setUniform(GlUniform<int32_t>("heightMap", 1));
-
-    bool showSingleScan = drawingOption_["single scan"];
 
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.bind();
@@ -559,6 +559,17 @@ void Viewport::paintGL() {
     texLabelColors_.release();
     glActiveTexture(GL_TEXTURE1);
     texMinimumHeightMap_.release();
+  }
+
+  if (showSingleScan) {
+    ScopedBinder<GlVertexArray> vao_binder(vao_no_points_);
+    prgDrawPose_.bind();
+
+    prgDrawPose_.setUniform(mvp_);
+    prgDrawPose_.setUniform(GlUniform<Eigen::Matrix4f>("pose", bufPoses_[singleScanIdx_]));
+    prgDrawPose_.setUniform(GlUniform<float>("size", 0.5f));
+
+    prgDrawPose_.release();
   }
 
   glDisable(GL_DEPTH_TEST);

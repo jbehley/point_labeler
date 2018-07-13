@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1035</width>
-    <height>867</height>
+    <width>916</width>
+    <height>627</height>
    </rect>
   </property>
   <property name="focusPolicy">
@@ -23,7 +23,7 @@
       <item>
        <widget class="Viewport" name="mViewportXYZ" native="true">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -121,8 +121,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1035</width>
-     <height>26</height>
+     <width>916</width>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -288,7 +288,7 @@
           <x>0</x>
           <y>0</y>
           <width>219</width>
-          <height>397</height>
+          <height>403</height>
          </rect>
         </property>
         <attribute name="label">
@@ -654,8 +654,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>110</width>
-          <height>80</height>
+          <width>232</width>
+          <height>281</height>
          </rect>
         </property>
         <attribute name="label">
