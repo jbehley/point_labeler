@@ -122,7 +122,7 @@
      <x>0</x>
      <y>0</y>
      <width>1035</width>
-     <height>27</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -169,6 +169,7 @@
    <addaction name="actionFilter"/>
    <addaction name="separator"/>
    <addaction name="actionCenterView"/>
+   <addaction name="actionShowImage"/>
   </widget>
   <widget class="QDockWidget" name="dockWidget">
    <property name="minimumSize">
@@ -287,7 +288,7 @@
           <x>0</x>
           <y>0</y>
           <width>219</width>
-          <height>403</height>
+          <height>397</height>
          </rect>
         </property>
         <attribute name="label">
@@ -653,8 +654,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>232</width>
-          <height>317</height>
+          <width>110</width>
+          <height>80</height>
          </rect>
         </property>
         <attribute name="label">
@@ -769,6 +770,11 @@
   <action name="actionCenterView">
    <property name="text">
     <string>CenterView</string>
+   </property>
+  </action>
+  <action name="actionShowImage">
+   <property name="text">
+    <string>showImage</string>
    </property>
   </action>
  </widget>

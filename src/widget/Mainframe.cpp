@@ -81,9 +81,11 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("show all points", value); });
 
   connect(ui.actionCenterView, &QAction::triggered, [this]() { ui.mViewportXYZ->centerOnCurrentTile(); });
+  connect(ui.actionShowImage, &QAction::triggered, [this]() { wImgWidget_->show(); });
 
   connect(this, &Mainframe::readerFinshed, this, &Mainframe::updateScans);
   connect(this, &Mainframe::readerStarted, this, &Mainframe::activateSpinner);
+
 
   /** load labels and colors **/
   std::map<uint32_t, std::string> label_names;
@@ -103,7 +105,6 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   wImgWidget_ = new ImageViewer(nullptr, Qt::Window);
   wImgWidget_->resize(1241, 376);
-  wImgWidget_->show();
 }
 
 Mainframe::~Mainframe() {}
