@@ -25,6 +25,6 @@ void main()
   
   
   // ignore outliers.
-  if(in_label == 1) gl_Position = vec(-10, -10, -10, 1);
+  if(in_label == uint(1)) gl_Position = vec4(-10, -10, -10, 1);
   height = in_vertex.z;
 }
