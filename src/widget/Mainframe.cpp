@@ -80,6 +80,8 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.chkShowAllPoints, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("show all points", value); });
 
+  connect(ui.actionCenterView, &QAction::triggered, [this]() { ui.mViewportXYZ->centerOnCurrentTile(); });
+
   connect(this, &Mainframe::readerFinshed, this, &Mainframe::updateScans);
   connect(this, &Mainframe::readerStarted, this, &Mainframe::activateSpinner);
 
@@ -356,6 +358,7 @@ void Mainframe::unsavedChanges() { mChangesSinceLastSave = true; }
 
 void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   if (readerFuture_.valid()) readerFuture_.wait();
+
   readerFuture_ = std::async(std::launch::async, &Mainframe::readAsync, this, i, j);
 }
 

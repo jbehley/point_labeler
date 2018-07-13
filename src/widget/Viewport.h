@@ -67,6 +67,8 @@ class Viewport : public QGLWidget {
 
   void setTileInfo(float x, float y, float tileSize);
 
+  void centerOnCurrentTile();
+
  signals:
   void labelingChanged();
 

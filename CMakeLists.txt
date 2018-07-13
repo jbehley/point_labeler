@@ -32,8 +32,9 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_FLAGS "-std=c++11 -O3  -Wall ${CMAKE_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS "-UDEBUG_GL -UDEBUG -DNDEBUG -g2 ${CMAKE_CXX_FLAGS}")
 
-configure_file(assets/labels.xml ${CMAKE_SOURCE_DIR}/bin/labels.xml COPYONLY)
-configure_file(assets/settings.cfg ${CMAKE_SOURCE_DIR}/bin/settings.cfg COPYONLY)
+# configure_file(assets/labels.xml ${CMAKE_SOURCE_DIR}/bin/labels.xml COPYONLY)
+ADD_CUSTOM_TARGET(link_labels ALL COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/assets/labels.xml ${CMAKE_SOURCE_DIR}/bin/labels.xml)
+configure_file(${CMAKE_SOURCE_DIR}/assets/settings.cfg ${CMAKE_SOURCE_DIR}/bin/settings.cfg COPYONLY)
 
 # since now everything resides in "bin", we have to copy some stuff.
   
