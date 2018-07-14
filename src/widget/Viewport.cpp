@@ -572,26 +572,27 @@ void Viewport::paintGL() {
   }
 
   if (showSingleScan) {
+    ScopedBinder<GlProgram> program_binder(prgDrawPose_);
     ScopedBinder<GlVertexArray> vao_binder(vao_no_points_);
-    prgDrawPose_.bind();
+    mvp_ = projection_ * view_ * conversion_;
 
     prgDrawPose_.setUniform(mvp_);
-    prgDrawPose_.setUniform(GlUniform<Eigen::Matrix4f>("pose", bufPoses_[singleScanIdx_]));
+    prgDrawPose_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[singleScanIdx_]->pose));
     prgDrawPose_.setUniform(GlUniform<float>("size", 0.5f));
 
     glDrawArrays(GL_POINTS, 0, 1);
+  }
 
-    prgDrawPose_.release();
+  if (drawingOption_["show camera"]) {
+    ScopedBinder<GlProgram> program_binder(prgDrawFrustum_);
+    ScopedBinder<GlVertexArray> vao_binder(vao_no_points_);
 
-    prgDrawFrustum_.bind();
     prgDrawFrustum_.setUniform(mvp_);
-    prgDrawFrustum_.setUniform(GlUniform<Eigen::Matrix4f>("pose", bufPoses_[singleScanIdx_]));
+    prgDrawFrustum_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[singleScanIdx_]->pose));
     prgDrawFrustum_.setUniform(GlUniform<int32_t>("width", 1241));
     prgDrawFrustum_.setUniform(GlUniform<int32_t>("height", 376));
 
     glDrawArrays(GL_POINTS, 0, 1);
-
-    prgDrawFrustum_.release();
   }
 
   glDisable(GL_DEPTH_TEST);

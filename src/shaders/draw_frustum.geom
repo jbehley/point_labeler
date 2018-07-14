@@ -1,7 +1,7 @@
 #version 330 core
 
 layout(points) in;
-layout(line_strip, max_vertices = 6) out;
+layout(line_strip, max_vertices = 13) out;
 
 uniform mat4 mvp;
 uniform mat4 pose;

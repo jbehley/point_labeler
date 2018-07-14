@@ -81,7 +81,11 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("show all points", value); });
 
   connect(ui.actionCenterView, &QAction::triggered, [this]() { ui.mViewportXYZ->centerOnCurrentTile(); });
-  connect(ui.actionShowImage, &QAction::triggered, [this]() { wImgWidget_->show(); });
+  connect(ui.actionShowImage, &QAction::triggered, [this]() {
+    wImgWidget_->show();
+    wImgWidget_->setImage(images_[ui.sldTimeline->value()]);
+    ui.mViewportXYZ->setDrawingOption("show camera", true);
+  });
 
   connect(ui.actionReload, &QAction::triggered, [this]() {
     updateScans();
@@ -361,6 +365,7 @@ void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
 }
 
 void Mainframe::setCurrentScanIdx(int32_t idx) {
+  ui.mViewportXYZ->setDrawingOption("show camera", wImgWidget_->isVisible());
   ui.mViewportXYZ->setScanIndex(idx);
   if (images_.size() > uint32_t(idx)) wImgWidget_->setImage(images_[idx]);
 }
