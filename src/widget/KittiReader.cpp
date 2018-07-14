@@ -130,6 +130,7 @@ void KittiReader::initialize(const QString& directory) {
         q[1] = std::abs(q[1]);
 
         // check for exact overlap (see Behley et al., ICRA, 2015)
+        if (std::max(q[0], q[1]) > e[0] + maxDistance_) continue;  // definitely outside.
         if (std::min(q[0], q[1]) < e[0] || (q - e).norm() < maxDistance_) {
           tile.indexes.push_back(i);
         }
