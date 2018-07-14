@@ -639,7 +639,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
 
   mChangeCamera = false;
 
-  if (event->modifiers() == Qt::ControlModifier || (mMode == NONE)) {
+  if (event->modifiers() == Qt::ControlModifier) {
     if (mCamera.mousePressed(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
                              resolveKeyboardModifier(event->modifiers()))) {
       timer_.start(1. / 30.);
