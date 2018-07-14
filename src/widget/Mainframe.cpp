@@ -429,6 +429,7 @@ void Mainframe::updateScans() {
   ui.sldTimeline->setMaximum(indexes_.size());
   ui.sldTimeline->setValue(0);
   ui.wgtTileSelector->setEnabled(true);
+  mChangesSinceLastSave = false;
 }
 
 void Mainframe::forward() {
