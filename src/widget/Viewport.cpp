@@ -297,6 +297,10 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
   glow::_CheckGlError(__FILE__, __LINE__);
 
+  updateGL();
+}
+
+void Viewport::updateHeightmap() {
   // generate height map.
 
   float groundResolution = 0.5f;
@@ -343,8 +347,6 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   glDepthFunc(GL_LEQUAL);
 
   glow::_CheckGlError(__FILE__, __LINE__);
-
-  updateGL();
 }
 
 void Viewport::updateLabels() {
@@ -451,6 +453,9 @@ void Viewport::setFilteredLabels(const std::vector<uint32_t>& labels) {
 
 void Viewport::setGroundRemoval(bool value) {
   removeGround_ = value;
+
+  if (removeGround_) updateHeightmap();
+
   updateGL();
 }
 

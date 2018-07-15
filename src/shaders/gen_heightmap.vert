@@ -23,8 +23,6 @@ void main()
   
   gl_Position = vec4(2.0 * v/tileSize, (in_vertex.z-minHeight) / (maxHeight-minHeight), 1);
   
-  
-  // ignore outliers.
-  if(in_label == uint(1)) gl_Position = vec4(-10, -10, -10, 1);
+  if(in_label == uint(1)) gl_Position = vec4(-10, -10, -10, 1);  // ignore outliers.
   height = in_vertex.z;
 }

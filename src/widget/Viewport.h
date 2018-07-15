@@ -110,6 +110,8 @@ class Viewport : public QGLWidget {
   void initPrograms();
   void initVertexBuffers();
 
+  void updateHeightmap();
+
   void initializeGL();
   void resizeGL(int width, int height);
   void paintGL();
