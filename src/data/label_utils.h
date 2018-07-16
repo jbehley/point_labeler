@@ -25,6 +25,16 @@
 
 #include <glow/GlColor.h>
 
+struct Label {
+ public:
+  std::string name;     // name of object class.
+  glow::GlColor color;  // color of moving/static objects.
+  uint32_t id;          // id for static objects.
+  uint32_t id_moving;   // id if the object is moving.
+  std::string rootCategory;
+  bool potentiallyMoving{false};
+};
+
 /** \brief retrieve label names from given xml file.
  *  \brief param[in]    filename of the description file
  *  \brief param[out]   map of label ids to names.
@@ -36,5 +46,7 @@ void getLabelNames(const std::string& filename, std::map<uint32_t, std::string>&
  *  \brief param[out]   map of labels to colors.
  */
 void getLabelColors(const std::string& filename, std::map<uint32_t, glow::GlColor>& label_colors);
+
+void getLabels(const std::string& filename, std::vector<Label>& labels);
 
 #endif /* LABEL_UTILS_H_ */

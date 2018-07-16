@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>916</width>
-    <height>627</height>
+    <height>944</height>
    </rect>
   </property>
   <property name="focusPolicy">
@@ -122,7 +122,7 @@
      <x>0</x>
      <y>0</y>
      <width>916</width>
-     <height>26</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -258,7 +258,7 @@
    <property name="minimumSize">
     <size>
      <width>250</width>
-     <height>186</height>
+     <height>221</height>
     </size>
    </property>
    <property name="floating">
@@ -287,9 +287,9 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>0</y>
+          <y>-111</y>
           <width>219</width>
-          <height>397</height>
+          <height>445</height>
          </rect>
         </property>
         <attribute name="label">
@@ -394,6 +394,48 @@
             <string/>
            </property>
           </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_4">
+           <property name="leftMargin">
+            <number>5</number>
+           </property>
+           <property name="topMargin">
+            <number>5</number>
+           </property>
+           <property name="rightMargin">
+            <number>5</number>
+           </property>
+           <property name="bottomMargin">
+            <number>5</number>
+           </property>
+           <item>
+            <widget class="QRadioButton" name="rdoStatic">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>static</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QRadioButton" name="rdoMoving">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>moving</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -655,8 +697,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>110</width>
-          <height>80</height>
+          <width>232</width>
+          <height>199</height>
          </rect>
         </property>
         <attribute name="label">
@@ -691,6 +733,11 @@
           </spacer>
          </item>
         </layout>
+       </widget>
+       <widget class="QWidget" name="page_2">
+        <attribute name="label">
+         <string>Page</string>
+        </attribute>
        </widget>
       </widget>
      </item>
