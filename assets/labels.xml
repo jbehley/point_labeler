@@ -20,28 +20,6 @@
 	<macro></macro>
 	<category>outlier</category>
   </label>
-
-  <label>
-    <id>250</id>
-    <name>car mount</name>
-    <description>Mount used to hold the camera  while  capturing.</description>
-    <color>0 0 0</color>
-		<root>void</root>
-		<macro></macro>
-		<category>car mount</category>
-  </label>
-
-  <label>
-    <id>251</id>
-    <name>ego vehicle</name>
-    <description>Ego-vehicle, e.g.  car hood, dashboard, driving mirror.</description>
-    <color>0 0 0</color>
-		<root>void</root>
-		<macro></macro>
-		<category>ego vehicle</category>
-  </label>
-
-
 	
   <label>
 		<id>10</id>
@@ -51,6 +29,7 @@
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>car</category>
+		<moving>252</moving>
 	</label>
   <label>
 		<id>11</id>
@@ -60,33 +39,6 @@
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>bicycle</category>
-	</label>
-  <label>
-		<id>12</id>
-		<name>boat</name>
-		<description>Vehicle suitable for riding/sailing on water.</description>
-		<color>100 120 200</color>
-		<root>object</root>
-		<macro>vehicle</macro>
-		<category>boat</category>
-	</label>
-  <label>
-		<id>13</id>
-		<name>bus</name>
-		<description>Includes buses that are intended for 9+ persons for public or long-distance transport.</description>
-		<color>100 80 250</color>
-		<root>object</root>
-		<macro>vehicle</macro>
-		<category>bus</category>
-	</label>
-  <label>
-		<id>14</id>
-		<name>caravan</name>
-		<description>Vehicle that (appear  to) contain living quarters. This also includes trailers that are used for living and has priority ofver the trailer  class.</description>
-		<color>0 0 255</color>
-		<root>object</root>
-		<macro>vehicle</macro>
-		<category>caravan</category>
 	</label>
   <label>
 		<id>15</id>
@@ -105,16 +57,18 @@
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>on rails</category>
+		<moving>256</moving>
 	</label>
-  <label>
-	<id>17</id>
-		<name>trailer</name>
-		<description>Trailers that can be attached to any vehicle, but excludes trailers attached to trucks.  The latter belong to class truck.</description>
-		<color>0 0 255</color>
-		<root>object</root>
-		<macro>vehicle</macro>
-		<category>trailer</category>
-	</label>
+	<label>
+    <id>13</id>
+    <name>bus</name>
+    <description>Includes buses that are intended for 9+ persons for public or long-distance transport.</description>
+    <color>100 80 250</color>
+    <root>object</root>
+    <macro>vehicle</macro>
+    <category>bus</category>
+    <moving>257</moving>
+  </label>
 	<label>
 		<id>18</id>
 		<name>truck</name>
@@ -123,24 +77,17 @@
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>truck</category>
+		<moving>258</moving>
 	</label>
-	<!--  label>
-		<id>19</id>
-		<name>wheeled-slow</name>
-		<description>Covers all slow moving wheeled  objects  like wheelchairs, mobility-scooters, scooters, prams or rickshaw. All of  which  can  potentially have riders (other rider) sitting on them, similar to cycles are driven by cyclists.</description>
-		<color>0 0 255</color>
-		<root>object</root>
-		<macro>vehicle</macro>
-		<category>wheeled-slow</category>
-	</label-->
 	<label>
 		<id>20</id>
 		<name>other-vehicle</name>
-		<description>Fallback category for vehicles not explicitly defined otherwise in meta category level vehicle.</description>
+		<description>Cravans, Trailers and fallback category for vehicles not explicitly defined otherwise in meta category level vehicle.</description>
 		<color>0 0 255</color>
 		<root>object</root>
 		<macro>vehicle</macro>
 		<category>other-vehicle</category>
+		<moving>259</moving>
 	</label>
 
 	<label>
@@ -151,6 +98,7 @@
 		<root>human</root>
 		<macro></macro>
 		<category>person</category>
+		<moving>254</moving>
 	</label>
 	<label>
 		<id>31</id>
@@ -160,6 +108,7 @@
 		<root>human</root>
 		<macro>rider</macro>
 		<category>bicyclist</category>
+		<moving>253</moving>
 	</label>
 	<label>
 		<id>32</id>
@@ -169,17 +118,8 @@
 		<root>human</root>
 		<macro>rider</macro>
 		<category>motorcyclist</category>
+		<moving>255</moving>
 	</label>
-	<!--  label>
-		<id>33</id>
-		<name>other rider</name>
-		<description></description>
-		<color>255 0 0</color>
-		<root>human</root>
-		<macro>rider</macro>
-		<category>other rider</category>
-	</label-->
-
 	<label>
 		<id>40</id>
 		<name>road</name>
@@ -189,33 +129,7 @@
 		<macro>flat</macro>
 		<category>road</category>
 	</label>
-	<label>
-		<id>41</id>
-		<name>bike lane</name>
-		<description></description>
-		<color>200 0 200</color>
-		<root>construction</root>
-		<macro>flat</macro>
-		<category>bike lane</category>
-	</label>
-	<!--  label>
-		<id>42</id>
-		<name>crosswalk plain</name>
-		<description></description>
-		<color>150 150 150</color>
-		<root>construction</root>
-		<macro>flat</macro>
-		<category>crosswalk plain</category>
-	</label-->
-	<!-- label>
-		<id>43</id>
-		<name>curb cut</name>
-		<description></description>
-		<color>150 150 150</color>
-		<root>construction</root>
-		<macro>flat</macro>
-		<category>curb cut</category>
-	</label -->
+	
  	<label>
 		<id>44</id>
 		<name>parking</name>
@@ -234,15 +148,7 @@
 		<macro>flat</macro>
 		<category>pedestrian area</category>
 	</label-->
- 	<label>
-		<id>46</id>
-		<name>rail track</name>
-		<description></description>
-		<color>100 0 100</color>
-		<root>construction</root>
-		<macro>flat</macro>
-		<category>rail track</category>
-	</label>
+ 	
  	<!--  label>
 		<id>47</id>
 		<name>service lane</name>
@@ -255,7 +161,7 @@
  	<label>
 		<id>48</id>
 		<name>sidewalk</name>
-		<description></description>
+		<description>Areas used mainly by pedestrians, bicycles, but not meant for driving.</description>
 		<color>75 0 75</color>
 		<root>construction</root>
 		<macro>flat</macro>
@@ -265,40 +171,41 @@
  	<label>
 		<id>50</id>
 		<name>building</name>
-		<description></description>
+		<description>Building walls, doors, etc.</description>
 		<color>255 150 0</color>
 		<root>construction</root>
 		<macro>structure</macro>
 		<category>building</category>
 	</label>
- 	<!--label>
-		<id>51</id>
-		<name>bridge</name>
-		<description></description>
-		<color>255 150 0</color>
-		<root>construction</root>
-		<macro>structure</macro>
-		<category>bridge</category>
-	</label-->
- 	<!-- label>
-		<id>52</id>
-		<name>tunnel</name>
-		<description></description>
-		<color>255 150 0</color>
-		<root>construction</root>
-		<macro>structure</macro>
-		<category>tunnel</category>
-	</label-->
-
+	<label>
+    <id>51</id>
+    <name>fence</name>
+    <description>fences, small walls, crash barriers, etc.</description>
+    <color>255 150 0</color>
+    <root>construction</root>
+    <macro>structure</macro>
+    <category>other structure</category>
+  </label>
+  
   <label>
-    <id>60</id>
+    <id>52</id>
+    <name>other structure</name>
+    <description></description>
+    <color>255 150 0</color>
+    <root>construction</root>
+    <macro>structure</macro>
+    <category>other structure</category>
+  </label>
+
+  <!--label>
+    <id>61</id>
     <name>crosswalk zebra</name>
     <description>Crosswalk indicated by a zebra pattern</description>
     <color>0 100 80</color>
     <root>marking</root>
     <macro></macro>
     <category>crosswalk zebra</category>
-  </label>
+  </label-->
   <label>
     <id>60</id>
     <name>lane marking</name>
@@ -350,15 +257,14 @@
   <label>
     <id>81</id>
     <name>traffic sign</name>
-    <description>traffic signs.</description>
+    <description>traffic signs without pole.</description>
     <color>255 0 0</color>
     <root>object</root>
     <macro>traffic-sign</macro>
     <category>traffic sign</category>
   </label>
-<!-- missing: nature, object, barrier, animal -->
 
-  <label>
+  <!--label>
     <id>90</id>
     <name>bench</name>
     <description>A place to sit on</description>
@@ -366,8 +272,8 @@
     <root>object</root>
     <macro>object</macro>
     <category>bench</category>
-  </label>
-  <label>
+  </label-->
+  <!--label>
     <id>91</id>
     <name>trash can</name>
     <description>Recycling facility for waste collection.</description>
@@ -375,7 +281,7 @@
     <root>object</root>
     <macro>object</macro>
     <category>trash can</category>
-  </label>
+  </label-->
 
   <label>
     <id>99</id>
@@ -385,36 +291,6 @@
     <root>object</root>
     <macro>object</macro>
     <category>other object</category>
-  </label>
-
-  <label>
-    <id>252</id>
-    <name>moving car</name>
-    <description>a moving car</description>
-    <color>255 255 125</color>
-    <root>object</root>
-    <macro></macro>
-    <category>moving</category>
-  </label>
-  
-  <label>
-    <id>253</id>
-    <name>moving bicyclist</name>
-    <description>a moving bicyclist.</description>
-    <color>125 255 255</color>
-    <root>object</root>
-    <macro></macro>
-    <category>moving</category>
-  </label>
-
-  <label>
-    <id>254</id>
-    <name>moving person</name>
-    <description>a moving person.</description>
-    <color>255 0 0</color>
-    <root>object</root>
-    <macro></macro>
-    <category>moving</category>
   </label>
 
 </config>
