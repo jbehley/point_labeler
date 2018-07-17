@@ -33,6 +33,16 @@
 
 #include "data/geometry.h"
 
+/** \brief Canvas for visualizing point clouds.
+ *
+ *  All operations working with the points, labels, etc. exploit OpenGL to run as fast as possible.
+ *  Here, we exploit transform feedbacks to fill/update buffers and framebuffers to fill textures.
+ *
+ *  After setting the points with setPoints, all operations are performed in GPU memory. Thus, we
+ *  have to transfer the labels after labeling a tile back to the host memory.
+ *
+ *  \author behley
+ **/
 class Viewport : public QGLWidget {
   Q_OBJECT
  public:
@@ -47,6 +57,7 @@ class Viewport : public QGLWidget {
 
   void setMaximumScans(uint32_t numScans);
 
+  /** \brief set points and initialize buffers with data inside the tile. **/
   void setPoints(const std::vector<PointcloudPtr>& points, std::vector<LabelsPtr>& labels);
 
   /** \brief update all labels with GPU labels. **/

@@ -15,7 +15,6 @@
 #include "waitingspinnerwidget.h"
 #include "data/label_utils.h"
 
-// TODO: undo.
 
 /** \brief main widget showing the point cloud and tools to label a point cloud/multiple point clouds. **/
 class Mainframe : public QMainWindow {
@@ -80,8 +79,6 @@ class Mainframe : public QMainWindow {
   std::vector<Label> labelDefinitions_;
   std::vector<LabelButton*> labelButtons;
   std::map<LabelButton*, int32_t> labelButtonIdx_;
-//  std::map<int32_t, uint32_t> idxLabelMap;
-//  std::map<uint32_t, int32_t> labelIdxMap;
   std::map<uint32_t, std::string> label_names;
   int32_t selectedLabelButtonIdx_{-1};
 

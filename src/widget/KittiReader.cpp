@@ -142,7 +142,7 @@ void KittiReader::initialize(const QString& directory) {
 
   for (auto& t : tiles_) {
     std::sort(t.indexes.begin(), t.indexes.end());
-    std::cout << "Tile has " << t.indexes.size() << " tiles associated." << std::endl;
+//    std::cout << "Tile has " << t.indexes.size() << " tiles associated." << std::endl;
     for (uint32_t i = 1; i < t.indexes.size(); ++i) {
       if (t.indexes[i - 1] == t.indexes[i]) {
         std::cout << "found duplicate!" << std::endl;
@@ -168,7 +168,6 @@ void KittiReader::retrieve(const Eigen::Vector3f& position, std::vector<uint32_t
                            std::vector<std::string>& images) {
   Eigen::Vector2f idx((position.x() + offset_.x()) / tileSize_, (position.y() + offset_.y()) / tileSize_);
 
-  std::cout << "retrieve: idx = " << idx << std::endl;
   retrieve(idx.x(), idx.y(), indexes, points, labels, images);
 }
 

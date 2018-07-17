@@ -9,9 +9,16 @@
 #include "common.h"
 #include "data/kitti_utils.h"
 
-/** \brief
+/** \brief tile-based KITTI reader.
  *
+ *  Given a size of a tile, the reader reads all scans that potentially overlap with the tile.
+ *  If a scan overlaps with the tile is determined by a circle to square overlap test.
  *
+ *  Thus, it might happen that the circle of radius max_distance overlaps with the square defined by the tile,
+ *  but there are actually no points inside the tile. However, we cannot check this at this point in time,
+ *  since we would have to open all point clouds and this would take forever.
+ *
+ *  \see settings.cfg
  *
  *  \author behley
  */
@@ -19,27 +26,30 @@
 class KittiReader {
  public:
   struct Tile {
-    int32_t i, j;
-    std::vector<uint32_t> indexes;
-    float x, y, size;
+    int32_t i, j; // tile coordinates
+    std::vector<uint32_t> indexes; // scan indexes
+    float x, y, size; // actual world coordinates.
   };
 
+  /** \brief get poses and filenames of velodyne, labels, etc.
+   *  If the labels directory does not exist, the directory is created.
+   **/
   void initialize(const QString& directory);
 
+  /** \brief number of scans. **/
   uint32_t count() const { return velodyne_filenames_.size(); }
 
   void setMaximumDistance(float distance) { maxDistance_ = distance; }
 
-  /** \brief get points and labels for given index. **/
-  //  void retrieve(uint32_t index, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
-  //                std::vector<LabelsPtr>& labels);
-
+  /** \brief get points, labels, and images for given world coordinates. **/
   void retrieve(const Eigen::Vector3f& position, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
                 std::vector<LabelsPtr>& labels, std::vector<std::string>& images);
 
+  /** \brief get points, labels, and images for given indexes. **/
   void retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
                 std::vector<LabelsPtr>& labels, std::vector<std::string>& images);
 
+  /** \brief update labels for given scan indexes. **/
   void update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels);
 
   void setTileSize(float size);
