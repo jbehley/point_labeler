@@ -61,7 +61,7 @@ void TileSelectorWidget::mouseReleaseEvent(QMouseEvent* event) {
   int32_t j = (cx_ - event->x()) / size_;
   int32_t i = (cy_ - event->y()) / size_;
 
-  if (i < 0 || i >= int32_t(numTilesY_) || j < 0 || j >= int32_t(numTilesX_)) return;
+  if (i < 0 || i >= int32_t(numTilesX_) || j < 0 || j >= int32_t(numTilesY_)) return;
 
   select(i, j);
 }

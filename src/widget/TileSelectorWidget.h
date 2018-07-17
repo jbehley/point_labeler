@@ -8,6 +8,14 @@
 
 #include "KittiReader.h"
 
+
+/** \brief simple widget showing tiles corresponding to parts of the point cloud.
+ *
+ *  Note that the coordinate system is the normal robotic coordinate system.
+ *  x axis is pointing upwards, y axis is pointing left.
+ *
+ *  \author behley
+ */
 class TileSelectorWidget : public QWidget {
   Q_OBJECT
  public:
@@ -15,14 +23,16 @@ class TileSelectorWidget : public QWidget {
 
   virtual ~TileSelectorWidget() {}
 
+  /** \brief initialize tile view with given tiles. **/
   void initialize(const std::vector<KittiReader::Tile>& tiles, uint32_t numTilesX, uint32_t numTilesY);
 
-  /** \brief select tile at (i,j) **/
+  /** \brief select tile at (i,j) and emit signal. **/
   void select(uint32_t i, uint32_t j);
 
   /** \brief set selected tile without emitting signal. **/
   void setSelected(uint32_t i, uint32_t j);
 
+  /** \brief set trajectory in tile coordinates. **/
   void setTrajectory(const std::vector<Eigen::Vector2f>& trajectory);
 
  signals:
