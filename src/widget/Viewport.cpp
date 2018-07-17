@@ -25,7 +25,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       mCurrentLabel(0),
       mRadius(5),
       buttonPressed(false),
-      texLabelColors_(256, 1, TextureFormat::RGB),
+      texLabelColors_(1024, 1, TextureFormat::RGB),
       fbMinimumHeightMap_(100, 100),
       texMinimumHeightMap_(100, 100, TextureFormat::R_FLOAT),
       texTriangles_(3 * 100, 1, TextureFormat::RGB) {
@@ -394,8 +394,11 @@ void Viewport::setLabel(uint32_t label) { mCurrentLabel = label; }
 void Viewport::setLabelColors(const std::map<uint32_t, glow::GlColor>& colors) {
   mLabelColors = colors;
 
-  std::vector<uint8_t> label_colors(3 * 256);
+  std::vector<uint8_t> label_colors(3 * 1024, 0);
   for (auto it = mLabelColors.begin(); it != mLabelColors.end(); ++it) {
+    if (it->first > 1023) {
+      throw std::runtime_error("currently only labels up to 1024 are supported.");
+    }
     label_colors[3 * it->first] = it->second.R * 255;
     label_colors[3 * it->first + 1] = it->second.G * 255;
     label_colors[3 * it->first + 2] = it->second.B * 255;

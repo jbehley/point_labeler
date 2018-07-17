@@ -30,8 +30,7 @@
 #include <glow/util/RoSeCamera.h>
 
 #include "common.h"
-#include "data/ProjectedPoint.h"
-#include "data/ViewFrustum.h"
+
 #include "data/geometry.h"
 
 class Viewport : public QGLWidget {
