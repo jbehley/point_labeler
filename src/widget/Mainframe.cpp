@@ -201,17 +201,18 @@ void Mainframe::open() {
 }
 
 void Mainframe::save() {
-  QMessageBox info(QMessageBox::Information, "Please wait.", "Please wait while writing labels to disk.",
-                   QMessageBox::NoButton, this);
-  info.setStandardButtons(0);
-  info.exec();
+  //  QMessageBox info(QMessageBox::Information, "Please wait.", "Please wait while writing labels to disk.",
+  //                   QMessageBox::NoButton, this);
+  //  info.setStandardButtons(0);
+  //  info.exec();
+
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
   reader_.update(indexes_, labels_);
 
   mChangesSinceLastSave = false;
   statusBar()->clearMessage();
-  info.close();
+  //  info.close();
 }
 
 void Mainframe::changeRadius(int value) {

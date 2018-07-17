@@ -302,6 +302,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
 void Viewport::updateHeightmap() {
   // generate height map.
+  if (points_.size() == 0) return;
 
   float groundResolution = 0.5f;
   uint32_t width = tileSize_ / groundResolution;
@@ -333,9 +334,10 @@ void Viewport::updateHeightmap() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   prgMinimumHeightMap_.setUniform(GlUniform<float>("minHeight", -3.0f));
-  prgMinimumHeightMap_.setUniform(GlUniform<float>("maxHeight", 2.0f));
+  prgMinimumHeightMap_.setUniform(GlUniform<float>("maxHeight", 20.0f));
   prgMinimumHeightMap_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
   prgMinimumHeightMap_.setUniform(GlUniform<float>("tileSize", tileSize_));
+  prgMinimumHeightMap_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[0]->pose));
 
   glDrawArrays(GL_POINTS, 0, bufPoints_.size());
 
