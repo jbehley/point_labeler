@@ -10,11 +10,10 @@
 #include "LabelButton.h"
 #include "common.h"
 #include "data/geometry.h"
+#include "data/label_utils.h"
 #include "data/transform.h"
 #include "ui_MainFrame.h"
 #include "waitingspinnerwidget.h"
-#include "data/label_utils.h"
-
 
 /** \brief main widget showing the point cloud and tools to label a point cloud/multiple point clouds. **/
 class Mainframe : public QMainWindow {
@@ -94,6 +93,7 @@ class Mainframe : public QMainWindow {
   WaitingSpinnerWidget* spinner{nullptr};
 
   ImageViewer* wImgWidget_;
+  QTimer mSaveTimer_;
 };
 
 #endif /* MAINFRAME_H_ */

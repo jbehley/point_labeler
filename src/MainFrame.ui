@@ -130,23 +130,38 @@
      <string>&amp;File</string>
     </property>
     <addaction name="actionOpen"/>
-    <addaction name="action_Save"/>
+    <addaction name="actionSave"/>
+    <addaction name="actionReload"/>
+    <addaction name="separator"/>
+    <addaction name="action_Quit"/>
    </widget>
    <widget class="QMenu" name="menu_Settings">
     <property name="title">
      <string>&amp;Settings</string>
     </property>
-    <addaction name="action_Labels"/>
+    <addaction name="actionAutomaticallySave"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionTiled"/>
+    <addaction name="actionPaintMode"/>
+    <addaction name="actionPolygonMode"/>
+    <addaction name="separator"/>
+    <addaction name="actionOverwrite"/>
+    <addaction name="actionFilter"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionCenterView"/>
+    <addaction name="actionShowImage"/>
    </widget>
    <addaction name="menu_File"/>
-   <addaction name="menu_Settings"/>
    <addaction name="menuTools"/>
+   <addaction name="menuView"/>
+   <addaction name="menu_Settings"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
@@ -273,7 +288,7 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>-258</y>
+          <y>0</y>
           <width>219</width>
           <height>486</height>
          </rect>
@@ -828,29 +843,9 @@
     <string>Polygon</string>
    </property>
   </action>
-  <action name="actionNewCylinder">
-   <property name="text">
-    <string>NewCylinder</string>
-   </property>
-  </action>
   <action name="actionSave">
    <property name="text">
     <string>&amp;Save...</string>
-   </property>
-  </action>
-  <action name="action_Save">
-   <property name="text">
-    <string>&amp;Save</string>
-   </property>
-  </action>
-  <action name="action_Labels">
-   <property name="text">
-    <string>&amp;Labels...</string>
-   </property>
-  </action>
-  <action name="actionTiled">
-   <property name="text">
-    <string>Tiles</string>
    </property>
   </action>
   <action name="actionOverwrite">
@@ -880,17 +875,27 @@
   </action>
   <action name="actionCenterView">
    <property name="text">
-    <string>CenterView</string>
+    <string>Center view</string>
    </property>
   </action>
   <action name="actionShowImage">
    <property name="text">
-    <string>showImage</string>
+    <string>Show image</string>
    </property>
   </action>
   <action name="actionReload">
    <property name="text">
     <string>Reload</string>
+   </property>
+  </action>
+  <action name="actionAutomaticallySave">
+   <property name="text">
+    <string>Automatically save</string>
+   </property>
+  </action>
+  <action name="action_Quit">
+   <property name="text">
+    <string>&amp;Quit</string>
    </property>
   </action>
  </widget>

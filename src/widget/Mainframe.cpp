@@ -110,6 +110,15 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.rdoMoving, &QRadioButton::released, [this]() { updateMovingStatus(true); });
   connect(ui.rdoStatic, &QRadioButton::released, [this]() { updateMovingStatus(false); });
 
+  connect(ui.actionAutomaticallySave, &QAction::toggled, [this](bool toggled) {
+    if (!toggled)
+      mSaveTimer_.stop();
+    else
+      mSaveTimer_.start(180000);
+  });
+  // todo: does not work?
+  //  connect(mSaveTimer_, SIGNAL(timeout()), this, SLOT(save()));
+
   /** load labels and colors **/
   std::map<uint32_t, glow::GlColor> label_colors;
 
@@ -128,7 +137,6 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   wImgWidget_ = new ImageViewer(nullptr, Qt::Window);
   wImgWidget_->resize(1241, 376);
   ui.mViewportXYZ->update();
-  std::cout << ui.mViewportXYZ->width() << ", " << ui.mViewportXYZ->height() << std::endl;
 }
 
 Mainframe::~Mainframe() {}
@@ -193,12 +201,17 @@ void Mainframe::open() {
 }
 
 void Mainframe::save() {
+  QMessageBox info(QMessageBox::Information, "Please wait.", "Please wait while writing labels to disk.",
+                   QMessageBox::NoButton, this);
+  info.setStandardButtons(0);
+  info.exec();
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
   reader_.update(indexes_, labels_);
 
   mChangesSinceLastSave = false;
   statusBar()->clearMessage();
+  info.close();
 }
 
 void Mainframe::changeRadius(int value) {
@@ -579,7 +592,7 @@ void Mainframe::updateMovingStatus(bool isMoving) {
 
 void Mainframe::updateLabelButtons() {
   for (auto w : labelButtons) {
-//    ui.labelsGroupBox->removeWidget(w);
+    //    ui.labelsGroupBox->removeWidget(w);
     w->setVisible(false);  // ensures that the button is removed.
   }
 
