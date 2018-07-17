@@ -917,6 +917,10 @@ glow::GlCamera::MouseButton Viewport::resolveMouseButton(Qt::MouseButtons button
 
 void Viewport::centerOnCurrentTile() {
   // have to convert from robotic coordinate system to the opengl system.
-  mCamera.lookAt(-tilePos_.y + 10, mCamera.getPosition()[1], -tilePos_.x + 10, -tilePos_.y, 0, -tilePos_.x);
+  if (points_.size() == 0) return;
+
+  Eigen::Vector4f t = points_[0]->pose.col(3);
+
+  mCamera.lookAt(-tilePos_.y + 20, t.z() + 25, -tilePos_.x + 20, -tilePos_.y, t.z(), -tilePos_.x);
   updateGL();
 }
