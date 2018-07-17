@@ -92,11 +92,27 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     mChangesSinceLastSave = false;
   });
 
+  connect(ui.btnButtonLayoutA, &QToolButton::released, [this]() {
+    ui.btnButtonLayoutA->setChecked(true);
+    ui.btnButtonLayoutB->setChecked(false);
+    updateLabelButtons();
+  });
+
+  connect(ui.btnButtonLayoutB, &QToolButton::released, [this]() {
+    ui.btnButtonLayoutB->setChecked(true);
+    ui.btnButtonLayoutA->setChecked(false);
+    updateLabelButtons();
+  });
+
+  connect(ui.cmbRootCategory, &QComboBox::currentTextChanged, [this]() { updateLabelButtons(); });
+
   connect(this, &Mainframe::readerFinshed, this, &Mainframe::updateScans);
   connect(this, &Mainframe::readerStarted, this, &Mainframe::activateSpinner);
 
+  connect(ui.rdoMoving, &QRadioButton::released, [this]() { updateMovingStatus(true); });
+  connect(ui.rdoStatic, &QRadioButton::released, [this]() { updateMovingStatus(false); });
+
   /** load labels and colors **/
-  std::map<uint32_t, std::string> label_names;
   std::map<uint32_t, glow::GlColor> label_colors;
 
   getLabelNames("labels.xml", label_names);
@@ -113,6 +129,8 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   wImgWidget_ = new ImageViewer(nullptr, Qt::Window);
   wImgWidget_->resize(1241, 376);
+  ui.mViewportXYZ->update();
+  std::cout << ui.mViewportXYZ->width() << ", " << ui.mViewportXYZ->height() << std::endl;
 }
 
 Mainframe::~Mainframe() {}
@@ -260,34 +278,26 @@ void Mainframe::generateLabelButtons() {
 
   std::map<uint32_t, GlColor> label_colors;
 
-  getLabelNames("labels.xml", label_names);
-  getLabelColors("labels.xml", label_colors);
+  getLabels("labels.xml", labelDefinitions_);
 
   labelButtonMapper = new QSignalMapper(this);
 
   uint32_t index = 0;
+  for (uint32_t i = 0; i < labelDefinitions_.size(); ++i) {
+    //    const int32_t id = labelDefinitions_[i].id;
+    const std::string name = labelDefinitions_[i].name;
+    const GlColor color = labelDefinitions_[i].color;
 
-  QGridLayout* layout = dynamic_cast<QGridLayout*>(ui.labelsGroupBox->layout());
-  if (layout == 0) throw "Layout of classesGroupBox is not a QGridLayout!";
-  ui.labelsGroupBox->setLayout(layout);
-
-  std::map<uint32_t, std::string>::const_iterator namesIter = label_names.begin();
-  std::map<uint32_t, GlColor>::const_iterator colorsIter = label_colors.begin();
-
-  for (; namesIter != label_names.end(); ++namesIter, ++colorsIter, ++index) {
-    const int id = namesIter->first;
-    const std::string& name = namesIter->second;
-    const GlColor& color = colorsIter->second;
-
-    LabelButton* newButton = new LabelButton(ui.labelsGroupBox, QColor(color.R * 255, color.G * 255, color.B * 255));
+    LabelButton* newButton =
+        new LabelButton(this, QString::fromStdString(name), QColor(color.R * 255, color.G * 255, color.B * 255));
     newButton->setAutoFillBackground(true);
     labelButtons.push_back(newButton);
-    labelIds[newButton] = id;
-    layout->addWidget(newButton, std::floor((double)index / BtnsPerRow),
-                      index - std::floor((double)index / BtnsPerRow) * BtnsPerRow);
+    labelButtonIdx_[newButton] = i;
+    ui.labelsGroupBox->addWidget(newButton, std::floor((double)index / BtnsPerRow),
+                                 index - std::floor((double)index / BtnsPerRow) * BtnsPerRow);
 
-    newButton->setCheckable(true);
-    newButton->setFixedSize(30, 30);
+    catButtons_["all"].push_back(newButton);
+    catButtons_[labelDefinitions_[i].rootCategory].push_back(newButton);
 
     newButton->setStatusTip(QString::fromStdString(name));
     newButton->setToolTip(QString::fromStdString(name));
@@ -295,14 +305,12 @@ void Mainframe::generateLabelButtons() {
     /* connect the button with mapper which dispatches a signal with the index of the clicked button */
     labelButtonMapper->setMapping(newButton, newButton);
     connect(newButton, SIGNAL(released()), labelButtonMapper, SLOT(map()));
+    ++index;
+  }
 
-    QColor col(255.0f * color.R, 255.0f * color.G, 255.0f * color.B, 255);
-    QPixmap pix(10, 10);
-    pix.fill(col);
-    QIcon icon(pix);
-
-    idxLabelMap[index] = id;
-    labelIdxMap[id] = index;
+  for (auto it = catButtons_.begin(); it != catButtons_.end(); ++it) {
+    if (it->first == "all") continue;
+    ui.cmbRootCategory->addItem(QString::fromStdString(it->first));
   }
   /** register only once the signal mapped to labelBtnReleased! **/
   connect(labelButtonMapper, SIGNAL(mapped(QWidget*)), this, SLOT(labelBtnReleased(QWidget*)));
@@ -323,19 +331,30 @@ void Mainframe::updateFiltering(bool value) {
 void Mainframe::labelBtnReleased(QWidget* w) {
   //  std::cout << "labelBtnReleased called." << std::endl;
   LabelButton* labelButton = dynamic_cast<LabelButton*>(w);
-  if (labelButton == 0) return;
-  if (labelIds.find(labelButton) == labelIds.end()) return;
+  if (labelButton == nullptr) return;
 
-  for (unsigned int i = 0; i < labelButtons.size(); ++i) labelButtons[i]->setChecked(false);
+  for (uint32_t i = 0; i < labelButtons.size(); ++i) labelButtons[i]->setChecked(false);
 
   labelButton->setChecked(true);
-  uint32_t label_id = labelIds[labelButton];
+  selectedLabelButtonIdx_ = labelButtonIdx_[labelButton];
+
+  uint32_t label_id = labelDefinitions_[selectedLabelButtonIdx_].id;
+  bool potentiallyMoving = labelDefinitions_[selectedLabelButtonIdx_].potentiallyMoving;
+
+  ui.rdoMoving->setEnabled(potentiallyMoving);
+  ui.rdoStatic->setEnabled(potentiallyMoving);
+
+  if (potentiallyMoving && ui.rdoMoving->isChecked()) {
+    label_id = labelDefinitions_[selectedLabelButtonIdx_].id_moving;
+  }
 
   ui.mViewportXYZ->setLabel(label_id);
 
   if (labelButton->isHighlighted()) {
-    filteredLabels.push_back(label_id);
-    updateFiltering(ui.btnFilter->isChecked());
+    if (!contains(filteredLabels, label_id)) {
+      filteredLabels.push_back(label_id);
+      updateFiltering(ui.btnFilter->isChecked());
+    }
   } else {
     std::vector<uint32_t> tempFilteredLabels;
 
@@ -345,6 +364,19 @@ void Mainframe::labelBtnReleased(QWidget* w) {
     filteredLabels = tempFilteredLabels;
     updateFiltering(ui.btnFilter->isChecked());
   }
+
+  uint32_t maxRecently = 10;
+  std::vector<LabelButton*> newButtons;
+  newButtons.push_back(labelButton);
+  for (auto btn : catButtons_["recently"]) {
+    if (btn == labelButton) continue;
+    newButtons.push_back(btn);
+  }
+  if (newButtons.size() > maxRecently) newButtons.resize(maxRecently);
+  std::sort(newButtons.begin(), newButtons.end(), [this](LabelButton* a, LabelButton* b) {
+    return labelDefinitions_[labelButtonIdx_[a]].id < labelDefinitions_[labelButtonIdx_[b]].id;
+  });
+  catButtons_["recently"] = newButtons;
 
   ui.txtSelectedLabel->setText(QString::fromStdString(label_names[label_id]));
 }
@@ -528,5 +560,42 @@ void Mainframe::keyPressEvent(QKeyEvent* event) {
 
   } else if (event->key() == Qt::Key_A || event->key() == Qt::Key_Left) {
     if (ui.btnBackward->isEnabled()) backward();
+  }
+}
+
+void Mainframe::updateMovingStatus(bool isMoving) {
+  if (selectedLabelButtonIdx_ < 0) return;
+  if (!labelDefinitions_[selectedLabelButtonIdx_].potentiallyMoving) return;
+
+  ui.rdoStatic->setChecked(!isMoving);
+  ui.rdoMoving->setChecked(isMoving);
+
+  // a little bit hacky, but here we also ensure that the highlighting is correct.
+  for (uint32_t i = 0; i < labelDefinitions_.size(); ++i) {
+    if (!labelDefinitions_[i].potentiallyMoving) continue;
+    uint32_t id = (isMoving) ? labelDefinitions_[i].id_moving : labelDefinitions_[i].id;
+
+    labelButtons[i]->setHighlighted(contains(filteredLabels, id));
+  }
+}
+
+void Mainframe::updateLabelButtons() {
+  for (auto w : labelButtons) {
+//    ui.labelsGroupBox->removeWidget(w);
+    w->setVisible(false);  // ensures that the button is removed.
+  }
+
+  uint32_t btnsPerRow = 5;
+  if (ui.btnButtonLayoutB->isChecked()) btnsPerRow = 2;
+
+  std::vector<LabelButton*>* btns = &(catButtons_["all"]);
+  std::string category = ui.cmbRootCategory->currentText().toStdString();
+  btns = &(catButtons_)[category];
+
+  for (uint32_t index = 0; index < btns->size(); ++index) {
+    auto btn = (*btns)[index];
+    btn->setVisible(true);
+    ui.labelsGroupBox->addWidget(btn, std::floor((double)index / btnsPerRow),
+                                 index - std::floor((double)index / btnsPerRow) * btnsPerRow);
   }
 }

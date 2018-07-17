@@ -1,30 +1,33 @@
 #ifndef LABELBUTTON_H_
 #define LABELBUTTON_H_
 
-#include <glow/GlColor.h>
-
 #include <QtWidgets/QToolButton>
 
-/** \brief a label button which can also be toggled. **/
-class LabelButton: public QToolButton
-{
+/** \brief a label button which can also be toggled.
+ *
+ *  \author behley
+ **/
+class LabelButton : public QToolButton {
   Q_OBJECT
-  public:
-    LabelButton(QWidget* parent, const QColor& color);
-    ~LabelButton();
+ public:
+  LabelButton(QWidget* parent, const QString& name, const QColor& color);
+  ~LabelButton();
 
-    bool isHighlighted() const;
-    bool wasHighlighted() const;
+  bool isHighlighted() const;
+  bool wasHighlighted() const;
 
-  signals:
-    void highlighted(bool value);
+  void setHighlighted(bool value);
 
-  protected:
-    virtual void mouseReleaseEvent(QMouseEvent * e);
-    virtual void paintEvent(QPaintEvent* e);
+ signals:
+  void highlighted(bool value);
 
-    QColor color;
-    bool mHighlighted, recentlyHighlighted;
+ protected:
+  virtual void mouseReleaseEvent(QMouseEvent* e);
+  virtual void paintEvent(QPaintEvent* e);
+
+  QString name_;
+  QColor color_;
+  bool mHighlighted, recentlyHighlighted;
 };
 
 #endif /* LABELBUTTON_H_ */

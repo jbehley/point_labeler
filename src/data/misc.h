@@ -57,8 +57,20 @@ struct Triangle {
   glow::vec2 i, j, k;
 };
 
+/** \brief test if point p inside triangle defined by v1, v2, v3 (counter-clockwise order) **/
 bool insideTriangle(const glow::vec2& p, const glow::vec2& v1, const glow::vec2& v2, const glow::vec2& v3);
 
+/** \brief perform triangulation of 2d points using ear cuttin algorithm **/
 bool triangulate(const std::vector<glow::vec2>& points, std::vector<Triangle>& triangles);
+
+/** \brief check if value is inside vector **/
+template <typename T, typename A>
+bool contains(const std::vector<T, A>& vector, const T& value) {
+  for (const auto& v : vector) {
+    if (v == value) return true;
+  }
+
+  return false;
+}
 
 #endif /* MISC_H_ */

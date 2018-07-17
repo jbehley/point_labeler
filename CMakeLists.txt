@@ -81,7 +81,6 @@ add_executable(labeler
   src/rv/Stopwatch.cpp
   src/data/Math.cpp
   src/data/misc.cpp
-  src/data/ViewFrustum.cpp
   src/labeler.cpp
   src/widget/LabelButton.h
   src/widget/Mainframe.h

@@ -56,6 +56,8 @@ void TileSelectorWidget::setSelected(uint32_t i, uint32_t j) {
 void TileSelectorWidget::mouseMoveEvent(QMouseEvent* event) {}
 
 void TileSelectorWidget::mouseReleaseEvent(QMouseEvent* event) {
+  if (size_ == 0) return;
+
   int32_t j = (cx_ - event->x()) / size_;
   int32_t i = (cy_ - event->y()) / size_;
 

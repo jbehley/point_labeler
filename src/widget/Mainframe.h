@@ -13,6 +13,7 @@
 #include "data/transform.h"
 #include "ui_MainFrame.h"
 #include "waitingspinnerwidget.h"
+#include "data/label_utils.h"
 
 // TODO: undo.
 
@@ -56,6 +57,10 @@ class Mainframe : public QMainWindow {
 
   void initializeIcons();
 
+  void updateMovingStatus(bool isMoving);
+
+  void updateLabelButtons();
+
   std::vector<uint32_t> indexes_;
   std::vector<PointcloudPtr> points_;
   std::vector<LabelsPtr> labels_;
@@ -72,11 +77,16 @@ class Mainframe : public QMainWindow {
  private:
   Ui::MainWindow ui;
   QSignalMapper* labelButtonMapper;
+  std::vector<Label> labelDefinitions_;
   std::vector<LabelButton*> labelButtons;
-  std::map<LabelButton*, uint32_t> labelIds;
-  std::map<int32_t, uint32_t> idxLabelMap;
-  std::map<uint32_t, int32_t> labelIdxMap;
+  std::map<LabelButton*, int32_t> labelButtonIdx_;
+//  std::map<int32_t, uint32_t> idxLabelMap;
+//  std::map<uint32_t, int32_t> labelIdxMap;
   std::map<uint32_t, std::string> label_names;
+  int32_t selectedLabelButtonIdx_{-1};
+
+  std::map<std::string, std::vector<LabelButton*>> catButtons_;
+
   bool mChangesSinceLastSave;
   QString lastDirectory;
 

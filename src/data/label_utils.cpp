@@ -26,6 +26,10 @@ void getLabelNames(const std::string& filename, std::map<uint32_t, std::string>&
     uint32_t id = n.firstChildElement("id").text().toInt();
 
     label_names[id] = name;
+
+    if (!n.firstChildElement("moving").isNull()) {
+      label_names[n.firstChildElement("moving").text().toInt()] = name + " (moving)";
+    }
   }
 }
 
@@ -93,11 +97,12 @@ void getLabels(const std::string& filename, std::vector<Label>& labels) {
 
     label.color = glow::GlColor::FromRGB(R, G, B);
 
-    labels.push_back(label);
-
     if (!n.firstChildElement("moving").isNull()) {
       label.potentiallyMoving = true;
       label.id_moving = n.firstChildElement("moving").text().toInt();
     }
+
+    label.rootCategory = n.firstChildElement("root").text().toStdString();
+    labels.push_back(label);
   }
 }
