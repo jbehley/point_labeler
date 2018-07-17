@@ -120,6 +120,7 @@
 		<category>motorcyclist</category>
 		<moving>255</moving>
 	</label>
+
 	<label>
 		<id>40</id>
 		<name>road</name>
@@ -167,6 +168,15 @@
 		<macro>flat</macro>
 		<category>sidewalk</category>
 	</label>
+	<label>
+		<id>49</id>
+		<name>other-ground</name>
+		<description>Other areas that are not used by pedestrians or meant for driving.</description>
+		<color>175 0 75</color>
+		<root>ground</root>
+		<macro>flat</macro>
+		<category>other-ground</category>
+	</label>
 	
  	<label>
 		<id>50</id>
@@ -189,12 +199,12 @@
   
   <label>
     <id>52</id>
-    <name>other structure</name>
+    <name>other-structure</name>
     <description></description>
     <color>255 150 0</color>
     <root>structure</root>
     <macro>structure</macro>
-    <category>other structure</category>
+    <category>other-structure</category>
   </label>
 
   <!--label>
@@ -285,12 +295,12 @@
 
   <label>
     <id>99</id>
-    <name>other object</name>
-    <description>other objects on the street, where we now have not a specific label</description>
+    <name>other-object</name>
+    <description>other small/convex objects on the street, where we now have not a specific label.</description>
     <color>50 255 255</color>
     <root>object</root>
     <macro>object</macro>
-    <category>other object</category>
+    <category>other-object</category>
   </label>
 
 </config>
