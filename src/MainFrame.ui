@@ -237,20 +237,6 @@
        </item>
       </layout>
      </item>
-     <item>
-      <widget class="QCheckBox" name="chkShowSingleScan">
-       <property name="text">
-        <string>show single scan</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="chkShowAllPoints">
-       <property name="text">
-        <string>show all points</string>
-       </property>
-      </widget>
-     </item>
     </layout>
    </widget>
   </widget>
@@ -287,7 +273,7 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>0</y>
+          <y>-258</y>
           <width>219</width>
           <height>486</height>
          </rect>
@@ -773,13 +759,20 @@
           <x>0</x>
           <y>0</y>
           <width>232</width>
-          <height>194</height>
+          <height>228</height>
          </rect>
         </property>
         <attribute name="label">
          <string>Visuals</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_7">
+         <item>
+          <widget class="QCheckBox" name="chkShowSingleScan">
+           <property name="text">
+            <string>show single scan</string>
+           </property>
+          </widget>
+         </item>
          <item>
           <widget class="QCheckBox" name="chkShowColor">
            <property name="text">

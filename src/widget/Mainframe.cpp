@@ -77,8 +77,6 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("single scan", value); });
 
   connect(ui.wgtTileSelector, &TileSelectorWidget::tileSelected, [this](int32_t i, int32_t j) { setTileIndex(i, j); });
-  connect(ui.chkShowAllPoints, &QCheckBox::toggled,
-          [this](bool value) { ui.mViewportXYZ->setDrawingOption("show all points", value); });
 
   connect(ui.actionCenterView, &QAction::triggered, [this]() { ui.mViewportXYZ->centerOnCurrentTile(); });
   connect(ui.actionShowImage, &QAction::triggered, [this]() {

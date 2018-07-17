@@ -25,7 +25,7 @@ uniform sampler2D heightMap;
 
 uniform vec2 tilePos;
 uniform float tileSize;
-uniform bool showAllPoints;
+
 
 out uint out_label;
 
@@ -63,7 +63,6 @@ void main()
   vec2 v = v_global.xy - tilePos;
   
   bool visible = (in_visible > uint(0)) && (!removeGround || v_global.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
-  visible = visible && (showAllPoints || (abs(v.x) < 0.5 * tileSize && abs(v.y) < 0.5 * tileSize));
 
   if(visible)
   {

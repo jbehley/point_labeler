@@ -18,7 +18,7 @@ void main()
   float range = length(in_vertex.xyz);
   
 
-  vec2 v = vec4(in_vertex.xyz, 1.0).xy - tilePos;
+  vec2 v = in_vertex.xy - tilePos;
   // bool visible =  (abs(v.x) < 0.5 * tileSize && abs(v.y) < 0.5 * tileSize);
   
   gl_Position = vec4(2.0 * v/tileSize, (in_vertex.z-minHeight) / (maxHeight-minHeight), 1);
