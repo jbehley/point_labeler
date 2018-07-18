@@ -6,6 +6,7 @@
 #include <glow/GlCapabilities.h>
 #include <glow/ScopedBinder.h>
 #include <glow/glutil.h>
+#include <QtWidgets/QMessageBox>
 #include <algorithm>
 #include <chrono>
 #include <fstream>
@@ -293,6 +294,11 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     }
 
     std::cout << "copied " << scanInfos_.size() << " scans with " << numCopiedPoints << " points" << std::endl;
+    if (numCopiedPoints == bufPoints_.capacity()) {
+      QMessageBox::warning(this, "Increase number of scans.",
+                           "Its possible that not all scans could be loaded. Please increase the 'max scans' in "
+                           "the settings.cfg, but ensure that enough GPU memory is available.");
+    }
   }
 
   glow::_CheckGlError(__FILE__, __LINE__);
