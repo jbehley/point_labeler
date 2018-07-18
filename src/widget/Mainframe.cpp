@@ -80,9 +80,11 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.actionCenterView, &QAction::triggered, [this]() { ui.mViewportXYZ->centerOnCurrentTile(); });
   connect(ui.actionShowImage, &QAction::triggered, [this]() {
-    wImgWidget_->show();
-    wImgWidget_->setImage(images_[ui.sldTimeline->value()]);
-    ui.mViewportXYZ->setDrawingOption("show camera", true);
+    if (images_.size() > 0) {
+      wImgWidget_->show();
+      wImgWidget_->setImage(images_[ui.sldTimeline->value()]);
+      ui.mViewportXYZ->setDrawingOption("show camera", true);
+    }
   });
 
   connect(ui.actionReload, &QAction::triggered, [this]() {
@@ -134,7 +136,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   initializeIcons();
 
-  wImgWidget_ = new ImageViewer(nullptr, Qt::Window);
+  wImgWidget_ = new ImageViewer(nullptr, Qt::Window | Qt::WindowStaysOnTopHint);
   wImgWidget_->resize(1241, 376);
   ui.mViewportXYZ->update();
 }
@@ -201,14 +203,16 @@ void Mainframe::open() {
 }
 
 void Mainframe::save() {
-  QDialog info(this);
-  info.setGeometry(x() + width() / 2 - 75, y() + height() / 2 - 50, 150, 100);
+  QDialog info(this, Qt::Dialog | Qt::FramelessWindowHint);
+  int32_t w = 300, h = 150;
+  info.setGeometry(x() + width() / 2 - 0.5 * w, y() + height() / 2 - 0.5 * h, w, h);
   info.setWindowTitle("Please wait.");
-  info.setModal(true);
+  //  info.setModal(true);
   info.setLayout(new QHBoxLayout);
   info.layout()->addWidget(new QLabel("Please wait while writing labels to disk."));
 
   info.show();
+  info.update();
 
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
