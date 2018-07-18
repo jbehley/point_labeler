@@ -116,8 +116,8 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     else
       mSaveTimer_.start(180000);
   });
-  // todo: does not work?
-  //  connect(mSaveTimer_, SIGNAL(timeout()), this, SLOT(save()));
+
+  connect(&mSaveTimer_, SIGNAL(timeout()), this, SLOT(save()));
 
   /** load labels and colors **/
   std::map<uint32_t, glow::GlColor> label_colors;
@@ -201,10 +201,14 @@ void Mainframe::open() {
 }
 
 void Mainframe::save() {
-  //  QMessageBox info(QMessageBox::Information, "Please wait.", "Please wait while writing labels to disk.",
-  //                   QMessageBox::NoButton, this);
-  //  info.setStandardButtons(0);
-  //  info.exec();
+  QDialog info(this);
+  info.setGeometry(x() + width() / 2 - 75, y() + height() / 2 - 50, 150, 100);
+  info.setWindowTitle("Please wait.");
+  info.setModal(true);
+  info.setLayout(new QHBoxLayout);
+  info.layout()->addWidget(new QLabel("Please wait while writing labels to disk."));
+
+  info.show();
 
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
@@ -212,7 +216,7 @@ void Mainframe::save() {
 
   mChangesSinceLastSave = false;
   statusBar()->clearMessage();
-  //  info.close();
+  info.close();
 }
 
 void Mainframe::changeRadius(int value) {
@@ -573,6 +577,13 @@ void Mainframe::keyPressEvent(QKeyEvent* event) {
   } else if (event->key() == Qt::Key_A || event->key() == Qt::Key_Left) {
     if (ui.btnBackward->isEnabled()) backward();
   }
+
+  if (event->key() == Qt::Key_O) ui.actionOverwrite->trigger();
+  if (event->key() == Qt::Key_F) ui.actionFilter->trigger();
+  if (event->key() == Qt::Key_Plus) ui.spinPointSize->setValue(std::min<int32_t>(ui.spinPointSize->value() + 1, 10));
+  if (event->key() == Qt::Key_Minus) ui.spinPointSize->setValue(std::max<int32_t>(ui.spinPointSize->value() - 1, 1));
+  if (event->key() == Qt::Key_1) changeMode(Viewport::PAINT, true);
+  if (event->key() == Qt::Key_2) changeMode(Viewport::POLYGON, true);
 }
 
 void Mainframe::updateMovingStatus(bool isMoving) {

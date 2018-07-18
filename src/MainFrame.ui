@@ -122,7 +122,7 @@
      <x>0</x>
      <y>0</y>
      <width>1048</width>
-     <height>26</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -290,7 +290,7 @@
           <x>0</x>
           <y>0</y>
           <width>219</width>
-          <height>486</height>
+          <height>494</height>
          </rect>
         </property>
         <attribute name="label">
@@ -774,7 +774,7 @@
           <x>0</x>
           <y>0</y>
           <width>232</width>
-          <height>228</height>
+          <height>223</height>
          </rect>
         </property>
         <attribute name="label">
@@ -889,6 +889,9 @@
    </property>
   </action>
   <action name="actionAutomaticallySave">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Automatically save</string>
    </property>

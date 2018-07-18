@@ -26,6 +26,8 @@ void TileSelectorWidget::initialize(const std::vector<KittiReader::Tile>& tiles,
     }
   }
 
+  selectedTile_ = -1;
+
   update();
 }
 
