@@ -10,6 +10,9 @@
 
 void KittiReader::initialize(const QString& directory) {
   velodyne_filenames_.clear();
+  label_filenames_.clear();
+  image_filenames_.clear();
+  poses_.clear();
 
   QDir base_dir(directory);
   QDir velodyne_dir(base_dir.filePath("velodyne"));
@@ -142,7 +145,7 @@ void KittiReader::initialize(const QString& directory) {
 
   for (auto& t : tiles_) {
     std::sort(t.indexes.begin(), t.indexes.end());
-//    std::cout << "Tile has " << t.indexes.size() << " tiles associated." << std::endl;
+    //    std::cout << "Tile has " << t.indexes.size() << " tiles associated." << std::endl;
     for (uint32_t i = 1; i < t.indexes.size(); ++i) {
       if (t.indexes[i - 1] == t.indexes[i]) {
         std::cout << "found duplicate!" << std::endl;
