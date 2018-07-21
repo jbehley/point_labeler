@@ -483,7 +483,7 @@ void Mainframe::updateScans() {
   statusBar()->clearMessage();
 
   ui.mViewportXYZ->setPoints(points_, labels_);
-  ui.sldTimeline->setMaximum(indexes_.size());
+  ui.sldTimeline->setMaximum(indexes_.size() - 1);
   ui.sldTimeline->setValue(0);
   ui.wgtTileSelector->setEnabled(true);
   mChangesSinceLastSave = false;
