@@ -570,7 +570,9 @@ void Viewport::paintGL() {
     float planeThreshold = planeThreshold_;
     prgDrawPoints_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
     prgDrawPoints_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
-    if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(0, 3);
+    if (planeDimension_ == 0) planeThreshold += tilePos_.x;
+    if (planeDimension_ == 1) planeThreshold += tilePos_.y;
+    if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
     prgDrawPoints_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
     prgDrawPoints_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
 
@@ -854,7 +856,9 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   float planeThreshold = planeThreshold_;
   prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
-  if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(0, 3);
+  if (planeDimension_ == 0) planeThreshold += tilePos_.x;
+  if (planeDimension_ == 1) planeThreshold += tilePos_.y;
+  if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
   prgUpdateLabels_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
   prgUpdateLabels_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
 

@@ -288,7 +288,7 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>-300</y>
+          <y>0</y>
           <width>219</width>
           <height>602</height>
          </rect>
@@ -766,10 +766,10 @@
            <item row="1" column="1">
             <widget class="QSlider" name="sldPlaneThreshold">
              <property name="minimum">
-              <number>-1000</number>
+              <number>-10000</number>
              </property>
              <property name="maximum">
-              <number>1000</number>
+              <number>10000</number>
              </property>
              <property name="singleStep">
               <number>10</number>
@@ -784,7 +784,7 @@
               <enum>QSlider::TicksBelow</enum>
              </property>
              <property name="tickInterval">
-              <number>100</number>
+              <number>2500</number>
              </property>
             </widget>
            </item>
