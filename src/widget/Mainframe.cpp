@@ -572,6 +572,55 @@ void Mainframe::initializeIcons() {
     icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "overwrite_off.png")), QIcon::Normal, QIcon::Off);
     ui.actionOverwrite->setIcon(icon);
   }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "open.png")));
+
+    ui.actionOpen->setIcon(icon);
+  }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "save.png")));
+
+    ui.actionSave->setIcon(icon);
+  }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "reload.png")));
+
+    ui.actionReload->setIcon(icon);
+  }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "centerview.png")));
+
+    ui.actionCenterView->setIcon(icon);
+  }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "image.png")));
+
+    ui.actionShowImage->setIcon(icon);
+  }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "layoutA.png")));
+
+    ui.btnButtonLayoutA->setIcon(icon);
+  }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "layoutB.png")));
+
+    ui.btnButtonLayoutB->setIcon(icon);
+  }
 }
 
 void Mainframe::keyPressEvent(QKeyEvent* event) {
