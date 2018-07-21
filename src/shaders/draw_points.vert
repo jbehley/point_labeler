@@ -20,6 +20,11 @@ uniform bool useColor;
 uniform bool removeGround;
 uniform float groundThreshold;
 
+uniform bool planeRemoval;
+uniform int planeDimension;
+uniform float planeThreshold;
+uniform float planeDirection;
+
 uniform vec2 tilePos;
 uniform float tileSize;
 
@@ -37,6 +42,9 @@ void main()
   
     
   bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
+  
+  if(planeRemoval) visible = visible && (planeDirection * (in_vertex[planeDimension] - planeThreshold)  < 0);
+  
   
   // if(!visible || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);
   if(!visible) gl_Position = vec4(-10, -10, -10, 1);

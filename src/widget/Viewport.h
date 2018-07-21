@@ -79,6 +79,9 @@ class Viewport : public QGLWidget {
 
   void centerOnCurrentTile();
 
+  void setPlaneRemoval(bool value);
+  void setPlaneRemovalParams(float threshold, int32_t dim, float direction);
+
  signals:
   void labelingChanged();
 
@@ -239,6 +242,11 @@ class Viewport : public QGLWidget {
   };
 
   std::vector<ScanInfo> scanInfos_;
+
+  bool planeRemoval_{false};
+  float planeThreshold_{0.0f};
+  int32_t planeDimension_{0};
+  float planeDirection_{1.0f};
 };
 
 #endif /* POINTVIEW_H_ */

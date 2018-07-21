@@ -26,6 +26,11 @@ uniform sampler2D heightMap;
 uniform vec2 tilePos;
 uniform float tileSize;
 
+uniform bool planeRemoval;
+uniform int planeDimension;
+uniform float planeThreshold;
+uniform float planeDirection;
+
 
 out uint out_label;
 
@@ -63,6 +68,9 @@ void main()
   vec2 v = v_global.xy - tilePos;
   
   bool visible = (in_visible > uint(0)) && (!removeGround || v_global.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
+
+  if(planeRemoval) visible = visible && (planeDirection * (in_vertex[planeDimension] - planeThreshold)  < 0);
+  
 
   if(visible)
   {

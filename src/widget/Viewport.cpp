@@ -567,6 +567,13 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
     prgDrawPoints_.setUniform(GlUniform<int32_t>("heightMap", 1));
 
+    float planeThreshold = planeThreshold_;
+    prgDrawPoints_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
+    prgDrawPoints_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
+    if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(0, 3);
+    prgDrawPoints_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
+    prgDrawPoints_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
+
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.bind();
 
@@ -843,6 +850,14 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<float>("tileSize", tileSize_));
   prgUpdateLabels_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("heightMap", 1));
+
+  float planeThreshold = planeThreshold_;
+  prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
+  prgUpdateLabels_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
+  if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(0, 3);
+  prgUpdateLabels_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
+  prgUpdateLabels_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
+
   mvp_ = projection_ * mCamera.matrix() * conversion_;
   prgUpdateLabels_.setUniform(mvp_);
 
@@ -928,5 +943,16 @@ void Viewport::centerOnCurrentTile() {
   Eigen::Vector4f t = points_[0]->pose.col(3);
 
   mCamera.lookAt(-tilePos_.y + 20, t.z() + 25, -tilePos_.x + 20, -tilePos_.y, t.z(), -tilePos_.x);
+  updateGL();
+}
+
+void Viewport::setPlaneRemoval(bool value) {
+  planeRemoval_ = value;
+  updateGL();
+}
+void Viewport::setPlaneRemovalParams(float threshold, int32_t dim, float direction) {
+  planeThreshold_ = threshold;
+  planeDimension_ = dim;
+  planeDirection_ = direction;
   updateGL();
 }
