@@ -256,7 +256,7 @@ void Mainframe::open() {
 }
 
 void Mainframe::save() {
-  QDialog info(this);
+  QDialog info(this, Qt::Dialog | Qt::FramelessWindowHint);
   int32_t w = 300, h = 150;
   info.setGeometry(x() + width() / 2 - 0.5 * w, y() + height() / 2 - 0.5 * h, w, h);
   info.setWindowTitle("Please wait.");

@@ -182,7 +182,7 @@
 		<id>50</id>
 		<name>building</name>
 		<description>Building walls, doors, etc.</description>
-		<color>255 150 0</color>
+		<color>255 200 0</color>
 		<root>structure</root>
 		<macro>structure</macro>
 		<category>building</category>
@@ -191,7 +191,7 @@
     <id>51</id>
     <name>fence</name>
     <description>fences, small walls, crash barriers, etc.</description>
-    <color>255 150 0</color>
+    <color>255 120 50</color>
     <root>structure</root>
     <macro>structure</macro>
     <category>other structure</category>
