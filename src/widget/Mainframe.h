@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <QtCore/QSignalMapper>
 #include <QtWidgets/QMainWindow>
+#include <QtWidgets/QProgressBar>
 #include <future>
 #include "ImageViewer.h"
 #include "KittiReader.h"
@@ -94,6 +95,9 @@ class Mainframe : public QMainWindow {
 
   ImageViewer* wImgWidget_;
   QTimer mSaveTimer_;
+  QLabel lblNumPoints_;
+  QLabel lblOverwrite_;
+  QProgressBar progressLabeled_;
 };
 
 #endif /* MAINFRAME_H_ */

@@ -312,6 +312,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
   glow::_CheckGlError(__FILE__, __LINE__);
 
+  updateLabels();
   updateGL();
 }
 
@@ -392,6 +393,8 @@ void Viewport::updateLabels() {
   uint32_t max_size = bufReadLabels.size();
   uint32_t buffer_size = bufLabels_.size();
 
+  labeledCount_ = 0;
+
   while (count * max_size < bufLabels_.size()) {
     uint32_t size = std::min<uint32_t>(max_size, buffer_size - count * max_size);
 
@@ -405,6 +408,7 @@ void Viewport::updateLabels() {
       uint32_t scanidx = indexes[i].x;
       uint32_t idx = indexes[i].y;
       (*labels_[scanidx])[idx] = labels[i];
+      labeledCount_ += (labels[i] != 0);
     }
 
     count++;

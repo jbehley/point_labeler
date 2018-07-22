@@ -46,6 +46,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.actionOverwrite, &QAction::triggered, [this]() {
     ui.mViewportXYZ->setOverwrite(ui.actionOverwrite->isChecked());
     ui.btnOverwrite->setChecked(ui.actionOverwrite->isChecked());
+    lblOverwrite_.setEnabled(ui.actionOverwrite->isChecked());
   });
 
   connect(ui.spinPointSize, SIGNAL(valueChanged(int)), ui.mViewportXYZ, SLOT(setPointSize(int)));
@@ -177,6 +178,20 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   wImgWidget_ = new ImageViewer(nullptr, Qt::Window | Qt::WindowStaysOnTopHint);
   wImgWidget_->resize(1241, 376);
   ui.mViewportXYZ->update();
+
+  lblNumPoints_.setText("0 ");
+  lblNumPoints_.setAlignment(Qt::AlignRight);
+  lblNumPoints_.setMinimumWidth(100);
+  progressLabeled_.setMaximum(100);
+  progressLabeled_.setMinimum(0);
+  progressLabeled_.setTextVisible(true);
+  progressLabeled_.setMinimumWidth(75);
+  progressLabeled_.setMaximumWidth(75);
+  lblOverwrite_.setText(" OVERWRITE ");
+
+  ui.statusbar->addPermanentWidget(&lblOverwrite_);
+  ui.statusbar->addPermanentWidget(&lblNumPoints_);
+  ui.statusbar->addPermanentWidget(&progressLabeled_);
 }
 
 Mainframe::~Mainframe() {}
@@ -255,6 +270,8 @@ void Mainframe::save() {
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
   reader_.update(indexes_, labels_);
+
+  progressLabeled_.setValue(100.0f * ui.mViewportXYZ->labeledPointCount() / ui.mViewportXYZ->loadedPointCount());
 
   mChangesSinceLastSave = false;
   statusBar()->clearMessage();
@@ -525,6 +542,15 @@ void Mainframe::updateScans() {
   ui.sldTimeline->setValue(0);
   ui.wgtTileSelector->setEnabled(true);
   mChangesSinceLastSave = false;
+  QString number = QString::number(ui.mViewportXYZ->loadedPointCount());
+  QString dotted_number;
+  while (number.size() > 3) {
+    dotted_number = QString(".") + number.right(3) + dotted_number;
+    number.chop(3);
+  }
+  dotted_number = number + dotted_number;
+  lblNumPoints_.setText(dotted_number);
+  progressLabeled_.setValue(100.0f * ui.mViewportXYZ->labeledPointCount() / ui.mViewportXYZ->loadedPointCount());
 }
 
 void Mainframe::forward() {
