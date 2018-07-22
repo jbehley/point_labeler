@@ -186,6 +186,8 @@ class Viewport : public QGLWidget {
   glow::GlTransformFeedback tfUpdateVisibility_;
   glow::GlBuffer<uint32_t> bufUpdatedVisiblity_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
+  glow::GlBuffer<glow::vec2> bufHeightMapPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+
   glow::GlTransformFeedback tfFillTilePoints_;
 
   glow::GlTextureRectangle texLabelColors_;
@@ -195,6 +197,7 @@ class Viewport : public QGLWidget {
   glow::GlVertexArray vao_polygon_points_;
   glow::GlVertexArray vao_triangles_;
   glow::GlVertexArray vao_temp_points_;
+  glow::GlVertexArray vao_heightmap_points_;
 
   glow::GlProgram prgDrawPose_;
   glow::GlProgram prgDrawPoints_;
@@ -203,6 +206,7 @@ class Viewport : public QGLWidget {
   glow::GlProgram prgPolygonPoints_;
   glow::GlProgram prgFillTilePoints_;
   glow::GlProgram prgDrawFrustum_;
+  glow::GlProgram prgDrawHeightmap_;
 
   glow::GlFramebuffer fbMinimumHeightMap_;
   glow::GlTexture texMinimumHeightMap_;
@@ -223,6 +227,7 @@ class Viewport : public QGLWidget {
 
   bool removeGround_{false};
   float groundThreshold_{-1.6f};
+  float groundResolution_{0.5f};
 
   std::vector<glow::vec2> polygonPoints_;
   glow::GlBuffer<glow::vec2> bufPolygonPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};

@@ -35,10 +35,11 @@ void main()
   
   bool inside_tile = (abs(v.x) < 0.5 * (tileSize + tileBoundary) && abs(v.y) < 0.5 * (tileSize + tileBoundary));
   bool out_of_range = range < minRange || range > maxRange;
+  bool is_car_point = (in_vertex.x < 3.0 && in_vertex.x > -2.0 && abs(in_vertex.y) < 2.0);
    
   vs_out.valid = false;
   
-  if(inside_tile && !out_of_range)
+  if(inside_tile && !out_of_range && !is_car_point)
   {
     vs_out.valid = true;
     vs_out.point = vec4(v_global.xyz, in_remission);

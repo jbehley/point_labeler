@@ -80,6 +80,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   drawingOption_["color"] = false;
   drawingOption_["single scan"] = false;
   drawingOption_["show all points"] = false;
+  drawingOption_["draw heightmap"] = false;
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
@@ -149,6 +150,11 @@ void Viewport::initPrograms() {
   prgDrawFrustum_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgDrawFrustum_.link();
 
+  prgDrawHeightmap_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/draw_heightmap.vert"));
+  prgDrawHeightmap_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/draw_heightmap.geom"));
+  prgDrawHeightmap_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
+  prgDrawHeightmap_.link();
+
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
@@ -167,6 +173,9 @@ void Viewport::initVertexBuffers() {
   vao_polygon_points_.setVertexAttribute(0, bufPolygonPoints_, 2, AttributeType::FLOAT, false, sizeof(vec2), nullptr);
 
   vao_triangles_.setVertexAttribute(0, bufTriangles_, 2, AttributeType::FLOAT, false, sizeof(vec2), nullptr);
+
+  vao_heightmap_points_.setVertexAttribute(0, bufHeightMapPoints_, 2, AttributeType::FLOAT, false, sizeof(glow::vec2),
+                                           nullptr);
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
@@ -310,9 +319,18 @@ void Viewport::updateHeightmap() {
   // generate height map.
   if (points_.size() == 0) return;
 
-  float groundResolution = 0.5f;
-  uint32_t width = tileSize_ / groundResolution;
-  uint32_t height = tileSize_ / groundResolution;
+  uint32_t width = tileSize_ / groundResolution_;
+  uint32_t height = tileSize_ / groundResolution_;
+
+  std::vector<glow::vec2> indexes(width * height);
+  for (uint32_t x = 0; x < width; ++x) {
+    for (uint32_t y = 0; y < height; ++y) {
+      indexes[x + y * width] = vec2(float(x + 0.5f) / width, float(y + 0.5f) / height);
+    }
+  }
+
+  //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
+  bufHeightMapPoints_.assign(indexes);
 
   if (fbMinimumHeightMap_.width() != width || fbMinimumHeightMap_.height() != height) {
     fbMinimumHeightMap_.resize(width, height);
@@ -340,7 +358,7 @@ void Viewport::updateHeightmap() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   prgMinimumHeightMap_.setUniform(GlUniform<float>("minHeight", -3.0f));
-  prgMinimumHeightMap_.setUniform(GlUniform<float>("maxHeight", 20.0f));
+  prgMinimumHeightMap_.setUniform(GlUniform<float>("maxHeight", 5.0f));
   prgMinimumHeightMap_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
   prgMinimumHeightMap_.setUniform(GlUniform<float>("tileSize", tileSize_));
   prgMinimumHeightMap_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[0]->pose));
@@ -582,7 +600,6 @@ void Viewport::paintGL() {
     glActiveTexture(GL_TEXTURE1);
     texMinimumHeightMap_.bind();
 
-    mvp_ = projection_ * view_ * conversion_;
     prgDrawPoints_.setUniform(mvp_);
 
     if (showSingleScan)
@@ -599,7 +616,6 @@ void Viewport::paintGL() {
   if (showSingleScan) {
     ScopedBinder<GlProgram> program_binder(prgDrawPose_);
     ScopedBinder<GlVertexArray> vao_binder(vao_no_points_);
-    mvp_ = projection_ * view_ * conversion_;
 
     prgDrawPose_.setUniform(mvp_);
     prgDrawPose_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[singleScanIdx_]->pose));
@@ -618,6 +634,22 @@ void Viewport::paintGL() {
     prgDrawFrustum_.setUniform(GlUniform<int32_t>("height", 376));
 
     glDrawArrays(GL_POINTS, 0, 1);
+  }
+
+  if (drawingOption_["draw heightmap"]) {
+    ScopedBinder<GlProgram> program_binder(prgDrawHeightmap_);
+    ScopedBinder<GlVertexArray> vao_binder(vao_heightmap_points_);
+    glActiveTexture(GL_TEXTURE0);
+    texMinimumHeightMap_.bind();
+
+    prgDrawHeightmap_.setUniform(mvp_);
+    prgDrawHeightmap_.setUniform(GlUniform<float>("ground_resolution", groundResolution_));
+    prgDrawHeightmap_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+    prgDrawHeightmap_.setUniform(GlUniform<float>("tileSize", tileSize_));
+
+    glDrawArrays(GL_POINTS, 0, bufHeightMapPoints_.size());
+
+    texMinimumHeightMap_.release();
   }
 
   glDisable(GL_DEPTH_TEST);
