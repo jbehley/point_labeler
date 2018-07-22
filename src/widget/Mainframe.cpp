@@ -180,7 +180,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   ui.mViewportXYZ->update();
 
   lblNumPoints_.setText("0 ");
-  lblNumPoints_.setAlignment(Qt::AlignRight);
+  lblNumPoints_.setAlignment(Qt::AlignRight | Qt::AlignVCenter);
   lblNumPoints_.setMinimumWidth(100);
   progressLabeled_.setMaximum(100);
   progressLabeled_.setMinimum(0);
@@ -256,7 +256,7 @@ void Mainframe::open() {
 }
 
 void Mainframe::save() {
-  QDialog info(this, Qt::Dialog | Qt::FramelessWindowHint);
+  QDialog info(this);
   int32_t w = 300, h = 150;
   info.setGeometry(x() + width() / 2 - 0.5 * w, y() + height() / 2 - 0.5 * h, w, h);
   info.setWindowTitle("Please wait.");
@@ -265,7 +265,7 @@ void Mainframe::save() {
   info.layout()->addWidget(new QLabel("Please wait while writing labels to disk."));
 
   info.show();
-  info.update();
+
 
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
@@ -549,7 +549,7 @@ void Mainframe::updateScans() {
     number.chop(3);
   }
   dotted_number = number + dotted_number;
-  lblNumPoints_.setText(dotted_number);
+  lblNumPoints_.setText(dotted_number + " ");
   progressLabeled_.setValue(100.0f * ui.mViewportXYZ->labeledPointCount() / ui.mViewportXYZ->loadedPointCount());
 }
 

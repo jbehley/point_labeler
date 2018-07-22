@@ -290,7 +290,7 @@
           <x>0</x>
           <y>0</y>
           <width>219</width>
-          <height>602</height>
+          <height>596</height>
          </rect>
         </property>
         <attribute name="label">
@@ -914,6 +914,9 @@
           <widget class="QCheckBox" name="chkShowRemission">
            <property name="text">
             <string>remission</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
            </property>
           </widget>
          </item>

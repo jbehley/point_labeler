@@ -1,4 +1,6 @@
 import struct
+import sys
+import argparse
 
 
 def read_labels(filename):
@@ -26,12 +28,22 @@ def write_labels(filename, labels):
 
 
 if __name__ == "__main__":
-	labels1 = read_labels("/home/snej/data/kitti/dataset/sequences/00/labels_old/labels/000000.label")
-	# labels2 = read_labels("/home/snej/data/kitti/dataset/sequences/00/labels/000000.label")
-	print("{} labels in file".format(len(labels1)))
-	#print(labels1[0:100])
+  parser = argparse.ArgumentParser(description='Merge multiple label files.')
+  parser.add_argument('input', nargs=2, help='directories containing labels to merge.')
+  parser.add_argument('--out', nargs=1, help='output directory', default=None)
+  parser.add_argument("--keep", nargs=1, help="keep labels from given directory. Otherwise always newer labels are keept.", default=None)
+ 
+  args = parser.parse_args()
 
-	write_labels("test.label", labels1)
-	labels_test = read_labels("test.label")
+  print(args)
+  sys.exit(1)
 
-	labels_test == labels1
+  labels1 = read_labels(args)
+  labels2 = read_labels("/home/snej/data/kitti/dataset/sequences/00/labels/000000.label")
+  print("{} labels in file".format(len(labels1)))
+  #print(labels1[0:100])
+
+  write_labels("test.label", labels1)
+  labels_test = read_labels("test.label")
+
+  labels_test == labels1
