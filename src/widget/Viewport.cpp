@@ -856,7 +856,29 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
   event->accept();
 }
 
-void Viewport::keyPressEvent(QKeyEvent* event) { event->ignore(); }
+void Viewport::keyPressEvent(QKeyEvent* event) {
+  if (event->key() == Qt::Key_Escape) {
+    polygonPoints_.clear();  // start over again.#
+    bufPolygonPoints_.assign(polygonPoints_);
+    repaint();
+
+    return;
+  } else if (event->key() == Qt::Key_Delete) {
+    // delete last polygon point.
+
+    if (mMode == POLYGON && polygonPoints_.size() > 0) {
+      polygonPoints_.pop_back();
+
+      bufPolygonPoints_.assign(polygonPoints_);
+      repaint();
+    }
+
+    return;
+  }
+
+  // handle event by parent:
+  event->ignore();
+}
 
 void Viewport::setTileInfo(float x, float y, float tileSize) {
   std::cout << x << ", " << y << ", " << tileSize << std::endl;
