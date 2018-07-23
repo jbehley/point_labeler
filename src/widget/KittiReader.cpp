@@ -14,6 +14,10 @@ void KittiReader::initialize(const QString& directory) {
   image_filenames_.clear();
   poses_.clear();
 
+  pointsCache_.clear();
+  labelCache_.clear();
+  tiles_.clear();
+
   QDir base_dir(directory);
   QDir velodyne_dir(base_dir.filePath("velodyne"));
   QStringList entries = velodyne_dir.entryList(QDir::Files, QDir::Name);
