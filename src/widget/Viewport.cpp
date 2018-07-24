@@ -696,6 +696,34 @@ std::ostream& operator<<(std::ostream& os, const vec2& v) {
   return os;
 }
 
+void Viewport::wheelEvent(QWheelEvent* event) {
+   
+  mChangeCamera = false;
+
+  if (event->modifiers() == Qt::ControlModifier || mMode == PAINT || polygonPoints_.empty()) {
+      
+      QPoint numPixels = event->pixelDelta();
+      QPoint numDegrees = event->angleDelta() / 8.;
+      float delta;
+
+      if (!numPixels.isNull()) {
+          delta = numPixels.y();
+      } else if (!numDegrees.isNull()) {
+          delta = numDegrees.y() / 15.;
+      }
+
+      mCamera.wheelEvent(delta,  resolveKeyboardModifier(event->modifiers()));
+      mChangeCamera = true;
+      polygonPoints_.clear();  // start over again.#
+      bufPolygonPoints_.assign(polygonPoints_);
+      bufTriangles_.resize(0);
+      
+  }
+   this->updateGL();
+   return;
+  
+}
+
 void Viewport::mousePressEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
 
@@ -704,7 +732,11 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
   if (event->modifiers() == Qt::ControlModifier) {
     if (mCamera.mousePressed(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
                              resolveKeyboardModifier(event->modifiers()))) {
-      timer_.start(1. / 30.);
+      if (pressedkeys.empty()) {
+        timer_.start(1/60);
+      }
+      pressedkeys.insert(Qt::Key_F25); //abuse F25 for mouse events
+      
       mChangeCamera = true;
       polygonPoints_.clear();  // start over again.#
       bufPolygonPoints_.assign(polygonPoints_);
@@ -795,11 +827,14 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
 void Viewport::mouseReleaseEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
   if (mChangeCamera) {
-    timer_.stop();
+    pressedkeys.erase(Qt::Key_F25); //abuse F25 for mouse events
+    if (pressedkeys.empty()) {
+      timer_.stop();
+    }
     updateGL();
     if (mCamera.mouseReleased(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
                               resolveKeyboardModifier(event->modifiers()))) {
-      timer_.stop();
+      //timer_.stop();
       updateGL();  // get the last action.
 
       return;
@@ -857,28 +892,81 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void Viewport::keyPressEvent(QKeyEvent* event) {
-  if (event->key() == Qt::Key_Escape) {
-    polygonPoints_.clear();  // start over again.#
-    bufPolygonPoints_.assign(polygonPoints_);
-    repaint();
+	switch(event->key()){
+		case Qt::Key_Escape:
+			polygonPoints_.clear();  // start over again.#
+			bufPolygonPoints_.assign(polygonPoints_);
+			repaint();
 
-    return;
-  } else if (event->key() == Qt::Key_Delete) {
-    // delete last polygon point.
+    	return;
+		case Qt::Key_Delete:
+	    // delete last polygon point.
 
-    if (mMode == POLYGON && polygonPoints_.size() > 0) {
-      polygonPoints_.pop_back();
+	    if (mMode == POLYGON && polygonPoints_.size() > 0) {
+	      polygonPoints_.pop_back();
 
-      bufPolygonPoints_.assign(polygonPoints_);
-      repaint();
-    }
+	      bufPolygonPoints_.assign(polygonPoints_);
+	      repaint();
+	    }
 
-    return;
-  }
+	    return;
+		//camera control
+		case Qt::Key_W:
+		case Qt::Key_A:
+		case Qt::Key_S:
+		case Qt::Key_D:
 
+			if(event->isAutoRepeat())		
+				return;
+			if (mMode == POLYGON && polygonPoints_.size() > 0){ //ugly hack!
+				event->ignore(); 		
+				return;
+			}
+
+			if (pressedkeys.empty()) {
+				timer_.start(1/60);
+			}
+			pressedkeys.insert(event->key());
+			GlCamera::KeyboardKey k = (GlCamera::KeyboardKey)event->key();
+			if(mCamera.keyPressed(k, resolveKeyboardModifier(event->modifiers()))){
+				event->accept(); 
+			}else{
+				event->ignore(); 
+			};
+			return;
+	}
   // handle event by parent:
   event->ignore();
 }
+
+void Viewport::keyReleaseEvent(QKeyEvent* event) {
+	switch(event->key()){
+		//camera control
+		case Qt::Key_W:
+		case Qt::Key_A:
+		case Qt::Key_S:
+		case Qt::Key_D:
+			if(event->isAutoRepeat())
+				return;
+			pressedkeys.erase(event->key());
+			if (pressedkeys.empty()) {
+				timer_.stop();
+			}
+			GlCamera::KeyboardKey k = (GlCamera::KeyboardKey)event->key();
+			if(mCamera.keyReleased(k, resolveKeyboardModifier(event->modifiers()))){
+				event->accept(); 
+			}else{
+				event->ignore(); 
+			};
+			return;
+	}
+	event->ignore(); 
+	/*std::cout << "myset contains:";
+	  for (std::set<int>::iterator it=pressedkeys.begin(); it!=pressedkeys.end(); ++it)
+	    std::cout << ' ' << *it;
+	  std::cout << '\n';*/
+ }
+
 
 void Viewport::setTileInfo(float x, float y, float tileSize) {
   std::cout << x << ", " << y << ", " << tileSize << std::endl;

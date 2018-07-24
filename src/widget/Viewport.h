@@ -8,12 +8,15 @@
 #include <stdint.h>
 #include <list>
 #include <vector>
+#include <set>
+
 
 #include <glow/glbase.h>
 
 #include <QtCore/QTime>
 #include <QtCore/QTimer>
 #include <QtGui/QMouseEvent>
+#include <QtGui/QWheelEvent>
 #include <QtOpenGL/QGLWidget>
 
 #include <GL/gl.h>
@@ -104,6 +107,8 @@ class Viewport : public QGLWidget {
 
   void setFilteredLabels(const std::vector<uint32_t>& labels);
 
+  void keyPressEvent(QKeyEvent*);
+  void keyReleaseEvent(QKeyEvent*);
  protected:
   bool initContext() {
     // enabling core profile
@@ -132,10 +137,10 @@ class Viewport : public QGLWidget {
   void resizeGL(int width, int height);
   void paintGL();
 
+  void wheelEvent(QWheelEvent*);
   void mousePressEvent(QMouseEvent*);
   void mouseReleaseEvent(QMouseEvent*);
   void mouseMoveEvent(QMouseEvent*);
-  void keyPressEvent(QKeyEvent*);
 
   glow::GlCamera::KeyboardModifier resolveKeyboardModifier(Qt::KeyboardModifiers modifiers);
 
@@ -248,7 +253,7 @@ class Viewport : public QGLWidget {
     uint32_t start;
     uint32_t size;
   };
-
+  std::set<int> pressedkeys;
   std::vector<ScanInfo> scanInfos_;
 
   bool planeRemoval_{false};

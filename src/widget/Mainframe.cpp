@@ -688,19 +688,61 @@ void Mainframe::initializeIcons() {
 }
 
 void Mainframe::keyPressEvent(QKeyEvent* event) {
-  if (event->key() == Qt::Key_D || event->key() == Qt::Key_Right) {
-    if (ui.btnForward->isEnabled()) forward();
+  switch(event->key()){
+    case Qt::Key_Right: 
+      if (ui.btnForward->isEnabled()) forward();
+      return;
+    
+    case Qt::Key_Left:
+      if (ui.btnBackward->isEnabled()) backward();
+      return;
+    
+    case Qt::Key_O:
+      ui.actionOverwrite->trigger();
+      return;
+    
+    case Qt::Key_F:
+      ui.actionFilter->trigger();
+      return;
+    
+    case Qt::Key_Plus:
+      ui.spinPointSize->setValue(std::min<int32_t>(ui.spinPointSize->value() + 1, 10));
+      return;
+    
+    case Qt::Key_Minus:
+      ui.spinPointSize->setValue(std::max<int32_t>(ui.spinPointSize->value() - 1, 1));
+      return;
+    
+    case Qt::Key_1:
+      changeMode(Viewport::PAINT, true);
+      return;
+    
+    case Qt::Key_2:
+      changeMode(Viewport::POLYGON, true);
+      return;
 
-  } else if (event->key() == Qt::Key_A || event->key() == Qt::Key_Left) {
-    if (ui.btnBackward->isEnabled()) backward();
+    default:
+      ui.mViewportXYZ->keyPressEvent(event);
+      return;
   }
+}
 
-  if (event->key() == Qt::Key_O) ui.actionOverwrite->trigger();
-  if (event->key() == Qt::Key_F) ui.actionFilter->trigger();
-  if (event->key() == Qt::Key_Plus) ui.spinPointSize->setValue(std::min<int32_t>(ui.spinPointSize->value() + 1, 10));
-  if (event->key() == Qt::Key_Minus) ui.spinPointSize->setValue(std::max<int32_t>(ui.spinPointSize->value() - 1, 1));
-  if (event->key() == Qt::Key_1) changeMode(Viewport::PAINT, true);
-  if (event->key() == Qt::Key_2) changeMode(Viewport::POLYGON, true);
+void Mainframe::keyReleaseEvent(QKeyEvent* event) {
+  switch(event->key()){ 
+    case Qt::Key_Right: 
+    case Qt::Key_Left:
+    case Qt::Key_O:
+    case Qt::Key_F:
+    case Qt::Key_Plus:
+    case Qt::Key_Minus:
+    case Qt::Key_1:
+    case Qt::Key_2:
+      return;
+    
+    default:
+      ui.mViewportXYZ->keyReleaseEvent(event);
+      return;
+  }
 }
 
 void Mainframe::updateMovingStatus(bool isMoving) {
