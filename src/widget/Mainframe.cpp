@@ -167,10 +167,10 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   });
 
   connect(ui.actionOrthographic, &QAction::triggered, [this]() {
-      ui.actionPerspectiveProjection->setChecked(false);
-      ui.actionOrthographic->setChecked(true);
-      ui.mViewportXYZ->setCameraProjection(Viewport::CameraProjection::orthographic);
-    });
+    ui.actionPerspectiveProjection->setChecked(false);
+    ui.actionOrthographic->setChecked(true);
+    ui.mViewportXYZ->setCameraProjection(Viewport::CameraProjection::orthographic);
+  });
 
   /** load labels and colors **/
   std::map<uint32_t, glow::GlColor> label_colors;
@@ -712,6 +712,11 @@ void Mainframe::keyPressEvent(QKeyEvent* event) {
   if (event->key() == Qt::Key_Minus) ui.spinPointSize->setValue(std::max<int32_t>(ui.spinPointSize->value() - 1, 1));
   if (event->key() == Qt::Key_1) changeMode(Viewport::PAINT, true);
   if (event->key() == Qt::Key_2) changeMode(Viewport::POLYGON, true);
+
+  // change brush size.
+  if (event->key() == Qt::Key_F1) changeRadius(10);
+  if (event->key() == Qt::Key_F2) changeRadius(25);
+  if (event->key() == Qt::Key_F3) changeRadius(50);
 }
 
 void Mainframe::updateMovingStatus(bool isMoving) {
