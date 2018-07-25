@@ -52,6 +52,8 @@ class Viewport : public QGLWidget {
 
   enum FLAGS { FLAG_OVERWRITE = 1, FLAG_OTHER = 2 };
 
+  enum class CameraProjection { perspective, orthographic };
+
   Viewport(QWidget* parent = 0, Qt::WindowFlags f = 0);
   ~Viewport();
 
@@ -84,6 +86,8 @@ class Viewport : public QGLWidget {
 
   uint32_t loadedPointCount() const { return bufPoints_.size(); }
   uint32_t labeledPointCount() const { return labeledCount_; }
+
+  void setCameraProjection(const CameraProjection& proj);
 
  signals:
   void labelingChanged();
@@ -257,6 +261,8 @@ class Viewport : public QGLWidget {
   float planeDirection_{1.0f};
 
   uint32_t labeledCount_{0};
+
+  CameraProjection projectionMode_{CameraProjection::perspective};
 };
 
 #endif /* POINTVIEW_H_ */

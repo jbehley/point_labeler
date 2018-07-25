@@ -542,11 +542,18 @@ void Viewport::initializeGL() {
 void Viewport::resizeGL(int w, int h) {
   glViewport(0, 0, w, h);
 
-  // set projection matrix
-  float fov = radians(45.0f);
   float aspect = float(w) / float(h);
 
-  projection_ = glPerspective(fov, aspect, 0.1f, 2000.0f);
+  if (projectionMode_ == CameraProjection::perspective) {
+    float fov = radians(45.0f);
+    projection_ = glPerspective(fov, aspect, 0.1f, 2000.0f);
+  } else {
+    float fov = 10.0f;
+    if (w <= h)
+      projection_ = glOrthographic(-fov, fov, -fov / aspect, fov / aspect, 0.1f, 2000.0f);
+    else
+      projection_ = glOrthographic(-fov * aspect, fov * aspect, -fov, fov, 0.1, 2000.0f);
+  }
 }
 
 void Viewport::paintGL() {
@@ -1012,9 +1019,16 @@ void Viewport::setPlaneRemoval(bool value) {
   planeRemoval_ = value;
   updateGL();
 }
+
 void Viewport::setPlaneRemovalParams(float threshold, int32_t dim, float direction) {
   planeThreshold_ = threshold;
   planeDimension_ = dim;
   planeDirection_ = direction;
+  updateGL();
+}
+
+void Viewport::setCameraProjection(const CameraProjection& proj) {
+  projectionMode_ = proj;
+  resizeGL(width(), height());
   updateGL();
 }

@@ -160,6 +160,18 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     ui.mViewportXYZ->setPlaneRemovalParams(ui.sldPlaneThreshold->value() / 100.0f, dim, 1.0f);
   });
 
+  connect(ui.actionPerspectiveProjection, &QAction::triggered, [this]() {
+    ui.actionPerspectiveProjection->setChecked(true);
+    ui.actionOrthographic->setChecked(false);
+    ui.mViewportXYZ->setCameraProjection(Viewport::CameraProjection::perspective);
+  });
+
+  connect(ui.actionOrthographic, &QAction::triggered, [this]() {
+      ui.actionPerspectiveProjection->setChecked(false);
+      ui.actionOrthographic->setChecked(true);
+      ui.mViewportXYZ->setCameraProjection(Viewport::CameraProjection::orthographic);
+    });
+
   /** load labels and colors **/
   std::map<uint32_t, glow::GlColor> label_colors;
 
@@ -265,7 +277,6 @@ void Mainframe::save() {
   info.layout()->addWidget(new QLabel("Please wait while writing labels to disk."));
 
   info.show();
-
 
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
