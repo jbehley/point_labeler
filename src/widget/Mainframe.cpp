@@ -204,6 +204,14 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   ui.statusbar->addPermanentWidget(&lblOverwrite_);
   ui.statusbar->addPermanentWidget(&lblNumPoints_);
   ui.statusbar->addPermanentWidget(&progressLabeled_);
+
+  info_ = new QWidget(this, Qt::FramelessWindowHint);
+  info_->setAutoFillBackground(true);
+  info_->setLayout(new QHBoxLayout);
+  QLabel* label = new QLabel("Please wait while writing labels to disk.");
+  label->setAlignment(Qt::AlignCenter);
+  info_->layout()->addWidget(label);
+  info_->hide();
 }
 
 Mainframe::~Mainframe() {}
@@ -268,15 +276,9 @@ void Mainframe::open() {
 }
 
 void Mainframe::save() {
-  QDialog info(this, Qt::Dialog | Qt::FramelessWindowHint);
   int32_t w = 300, h = 150;
-  info.setGeometry(x() + width() / 2 - 0.5 * w, y() + height() / 2 - 0.5 * h, w, h);
-  info.setWindowTitle("Please wait.");
-  //  info.setModal(true);
-  info.setLayout(new QHBoxLayout);
-  info.layout()->addWidget(new QLabel("Please wait while writing labels to disk."));
-
-  info.show();
+  info_->setGeometry(x() + width() / 2 - 0.5 * w, y() + height() / 2 - 0.5 * h, w, h);
+  info_->show();
 
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
@@ -286,7 +288,7 @@ void Mainframe::save() {
 
   mChangesSinceLastSave = false;
   statusBar()->clearMessage();
-  info.close();
+  info_->close();
 }
 
 void Mainframe::changeRadius(int value) {

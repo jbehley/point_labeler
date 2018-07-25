@@ -98,6 +98,7 @@ class Mainframe : public QMainWindow {
   QLabel lblNumPoints_;
   QLabel lblOverwrite_;
   QProgressBar progressLabeled_;
+  QWidget* info_;
 };
 
 #endif /* MAINFRAME_H_ */
