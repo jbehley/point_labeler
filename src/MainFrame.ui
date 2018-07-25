@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1048</width>
-    <height>816</height>
+    <height>822</height>
    </rect>
   </property>
   <property name="focusPolicy">
@@ -155,8 +155,25 @@
     <property name="title">
      <string>View</string>
     </property>
+    <widget class="QMenu" name="menuProjection">
+     <property name="title">
+      <string>Projection</string>
+     </property>
+     <addaction name="actionPerspectiveProjection"/>
+     <addaction name="actionOrthographic"/>
+    </widget>
+    <widget class="QMenu" name="menuCamera_2">
+     <property name="title">
+      <string>Camera</string>
+     </property>
+     <addaction name="actionDefaultCamera"/>
+     <addaction name="actionBlenderCamera"/>
+    </widget>
     <addaction name="actionCenterView"/>
     <addaction name="actionShowImage"/>
+    <addaction name="separator"/>
+    <addaction name="menuProjection"/>
+    <addaction name="menuCamera_2"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menuTools"/>
@@ -191,7 +208,7 @@
    <property name="minimumSize">
     <size>
      <width>250</width>
-     <height>314</height>
+     <height>250</height>
     </size>
    </property>
    <property name="maximumSize">
@@ -896,7 +913,7 @@
           <x>0</x>
           <y>0</y>
           <width>232</width>
-          <height>302</height>
+          <height>372</height>
          </rect>
         </property>
         <attribute name="label">
@@ -1017,6 +1034,52 @@
   <action name="action_Quit">
    <property name="text">
     <string>&amp;Quit</string>
+   </property>
+  </action>
+  <action name="actionDefault">
+   <property name="text">
+    <string>Default</string>
+   </property>
+  </action>
+  <action name="actionPerspectiveProjection">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Perspective</string>
+   </property>
+   <property name="toolTip">
+    <string>Perspective Projection</string>
+   </property>
+  </action>
+  <action name="actionDefaultCamera">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Default</string>
+   </property>
+  </action>
+  <action name="actionBlenderCamera">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Blender</string>
+   </property>
+  </action>
+  <action name="actionOrthographic">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Orthographic</string>
    </property>
   </action>
  </widget>
