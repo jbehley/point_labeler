@@ -146,7 +146,7 @@ class Viewport : public QGLWidget {
   glow::GlCamera::MouseButton resolveMouseButton(Qt::MouseButtons button);
 
   //  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
-  void labelPoints(int32_t x, int32_t y, float radius, uint32_t label);
+  void labelPoints(int32_t x, int32_t y, float radius, uint32_t label, bool remove);
 
   bool contextInitialized_;
   std::map<uint32_t, glow::GlColor> mLabelColors;

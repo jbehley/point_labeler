@@ -722,9 +722,9 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
     buttonPressed = true;
     mChangeCamera = false;
     if (event->buttons() & Qt::LeftButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel);
+      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
     else if (event->buttons() & Qt::RightButton)
-      labelPoints(event->x(), event->y(), mRadius, 0);
+      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
 
     updateGL();
   } else if (mMode == POLYGON) {
@@ -785,7 +785,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
         //        bufTriangles_.assign(tris_verts);
 
-        labelPoints(event->x(), event->y(), 0, mCurrentLabel);
+        labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
       }
 
       polygonPoints_.clear();
@@ -815,9 +815,9 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
     buttonPressed = false;
 
     if (event->buttons() & Qt::LeftButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel);
+      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
     else if (event->buttons() & Qt::RightButton)
-      labelPoints(event->x(), event->y(), mRadius, 0);
+      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
 
     updateGL();
   } else if (mMode == POLYGON) {
@@ -844,9 +844,9 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
   } else if (mMode == PAINT) {
     if (buttonPressed) {
       if (event->buttons() & Qt::LeftButton)
-        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel);
+        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
       else
-        labelPoints(event->x(), event->y(), mRadius, 0);
+        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
     }
     updateGL();
   } else if (mMode == POLYGON) {
@@ -893,7 +893,7 @@ void Viewport::setTileInfo(float x, float y, float tileSize) {
   tileSize_ = tileSize;
 }
 
-void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label) {
+void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label, bool remove) {
   if (points_.size() == 0 || labels_.size() == 0) return;
 
   //  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::flush;
@@ -917,6 +917,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<float>("tileSize", tileSize_));
   prgUpdateLabels_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("heightMap", 1));
+  prgUpdateLabels_.setUniform(GlUniform<bool>("removeLabel", remove));
 
   float planeThreshold = planeThreshold_;
   prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
