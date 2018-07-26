@@ -160,6 +160,30 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     ui.mViewportXYZ->setPlaneRemovalParams(ui.sldPlaneThreshold->value() / 100.0f, dim, 1.0f);
   });
 
+
+
+  /** load cameras**/
+  cameras = ui.mViewportXYZ->getCameras();
+
+  for ( std::map<std::string, glow::GlCamera*>::iterator it = cameras.begin(); it != cameras.end(); it++ )
+  {
+    std::string name=it->first;
+    QAction* camact = new QAction(QString::fromUtf8(name.c_str()), this);
+    camact->setCheckable(true);
+    ui.menuCamera_Control->addAction(camact);
+    connect(camact, &QAction::toggled, [this, name, camact](bool toggled){ 
+      if(toggled){
+        std::cout<<cameras[name]<<std::endl; 
+        ui.mViewportXYZ->setCamera(cameras[name]);
+        foreach (QAction *action, ui.menuCamera_Control->actions()) {
+          if (action==camact) continue;
+          action->setChecked(false);
+        }
+        //camact->setChecked(true);
+      }
+    });
+  }
+
   /** load labels and colors **/
   std::map<uint32_t, glow::GlColor> label_colors;
 
@@ -600,6 +624,11 @@ void Mainframe::readConfig() {
       float range = boost::lexical_cast<float>(trim(tokens[1]));
       ui.mViewportXYZ->setMinRange(range);
       std::cout << "-- Setting 'min range' to " << range << std::endl;
+    }
+    if (tokens[0] == "flip mouse buttons") {
+      float value = boost::lexical_cast<float>(trim(tokens[1]));
+      ui.mViewportXYZ->setFlipMouseButtons((value==0)?false:true);
+      std::cout << "-- Setting 'flip mouse buttons' to " << ((value==0)?"false":"true") << std::endl;
     }
   }
 

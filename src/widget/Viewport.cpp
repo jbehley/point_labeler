@@ -536,7 +536,7 @@ void Viewport::initializeGL() {
   glDepthFunc(GL_LEQUAL);
   glEnable(GL_LINE_SMOOTH);
 
-  mCamera.lookAt(5.0f, 5.0f, 5.0f, 0.0f, 0.0f, 0.0f);
+  mCamera->lookAt(5.0f, 5.0f, 5.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void Viewport::resizeGL(int w, int h) {
@@ -556,7 +556,7 @@ void Viewport::paintGL() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPointSize(pointSize_);
 
-  view_ = mCamera.matrix();
+  view_ = mCamera->matrix();
 
   mvp_ = projection_ * view_ * conversion_;
 
@@ -712,7 +712,7 @@ void Viewport::wheelEvent(QWheelEvent* event) {
           delta = numDegrees.y() / 15.;
       }
 
-      mCamera.wheelEvent(delta,  resolveKeyboardModifier(event->modifiers()));
+      mCamera->wheelEvent(delta,  resolveKeyboardModifier(event->modifiers()));
       mChangeCamera = true;
       polygonPoints_.clear();  // start over again.#
       bufPolygonPoints_.assign(polygonPoints_);
@@ -730,7 +730,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
   mChangeCamera = false;
 
   if (event->modifiers() == Qt::ControlModifier) {
-    if (mCamera.mousePressed(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
+    if (mCamera->mousePressed(event->windowPos().x(), event->windowPos().y(), resolveMouseButtonFlip(event->buttons()),
                              resolveKeyboardModifier(event->modifiers()))) {
       if (pressedkeys.empty()) {
         timer_.start(1/60);
@@ -832,7 +832,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
       timer_.stop();
     }
     updateGL();
-    if (mCamera.mouseReleased(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
+    if (mCamera->mouseReleased(event->windowPos().x(), event->windowPos().y(), resolveMouseButtonFlip(event->buttons()),
                               resolveKeyboardModifier(event->modifiers()))) {
       //timer_.stop();
       updateGL();  // get the last action.
@@ -865,7 +865,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
 void Viewport::mouseMoveEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
   if (mChangeCamera) {
-    if (mCamera.mouseMoved(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
+    if (mCamera->mouseMoved(event->windowPos().x(), event->windowPos().y(), resolveMouseButtonFlip(event->buttons()),
                            resolveKeyboardModifier(event->modifiers()))) {
       return;
     }
@@ -928,7 +928,7 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
 			}
 			pressedkeys.insert(event->key());
 			GlCamera::KeyboardKey k = (GlCamera::KeyboardKey)event->key();
-			if(mCamera.keyPressed(k, resolveKeyboardModifier(event->modifiers()))){
+			if(mCamera->keyPressed(k, resolveKeyboardModifier(event->modifiers()))){
 				event->accept(); 
 			}else{
 				event->ignore(); 
@@ -953,7 +953,7 @@ void Viewport::keyReleaseEvent(QKeyEvent* event) {
 				timer_.stop();
 			}
 			GlCamera::KeyboardKey k = (GlCamera::KeyboardKey)event->key();
-			if(mCamera.keyReleased(k, resolveKeyboardModifier(event->modifiers()))){
+			if(mCamera->keyReleased(k, resolveKeyboardModifier(event->modifiers()))){
 				event->accept(); 
 			}else{
 				event->ignore(); 
@@ -1008,7 +1008,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
   prgUpdateLabels_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
 
-  mvp_ = projection_ * mCamera.matrix() * conversion_;
+  mvp_ = projection_ * mCamera->matrix() * conversion_;
   prgUpdateLabels_.setUniform(mvp_);
 
   if (mMode == Viewport::PAINT) prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 0));
@@ -1086,13 +1086,34 @@ glow::GlCamera::MouseButton Viewport::resolveMouseButton(Qt::MouseButtons button
   return btn;
 }
 
+glow::GlCamera::MouseButton Viewport::resolveMouseButtonFlip(Qt::MouseButtons button) {
+  // currently only single button presses are supported.
+  GlCamera::MouseButton btn = GlCamera::MouseButton::NoButton;
+  if(flipMouseButtons){
+    if (button & Qt::LeftButton)
+      btn = GlCamera::MouseButton::LeftButton;
+    else if (button & Qt::RightButton)
+      btn = GlCamera::MouseButton::MiddleButton;
+    else if (button & Qt::MiddleButton)
+      btn = GlCamera::MouseButton::RightButton;
+  }else{
+    if (button & Qt::LeftButton)
+      btn = GlCamera::MouseButton::LeftButton;
+    else if (button & Qt::RightButton)
+      btn = GlCamera::MouseButton::RightButton;
+    else if (button & Qt::MiddleButton)
+      btn = GlCamera::MouseButton::MiddleButton;
+    }
+  return btn;
+}
+
 void Viewport::centerOnCurrentTile() {
   // have to convert from robotic coordinate system to the opengl system.
   if (points_.size() == 0) return;
 
   Eigen::Vector4f t = points_[0]->pose.col(3);
 
-  mCamera.lookAt(-tilePos_.y + 20, t.z() + 25, -tilePos_.x + 20, -tilePos_.y, t.z(), -tilePos_.x);
+  mCamera->lookAt(-tilePos_.y + 20, t.z() + 25, -tilePos_.x + 20, -tilePos_.y, t.z(), -tilePos_.x);
   updateGL();
 }
 
@@ -1105,4 +1126,18 @@ void Viewport::setPlaneRemovalParams(float threshold, int32_t dim, float directi
   planeDimension_ = dim;
   planeDirection_ = direction;
   updateGL();
+}
+
+void Viewport::setFlipMouseButtons(bool value){
+  flipMouseButtons = value;
+}
+
+std::map<std::string, glow::GlCamera*> Viewport::getCameras(){
+  return cameras;
+}
+
+void Viewport::setCamera(glow::GlCamera* cam){
+  Eigen::Matrix4f m = mCamera->matrix();
+  mCamera=cam;
+  mCamera->setMatrix(m);
 }

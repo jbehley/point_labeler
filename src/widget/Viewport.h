@@ -31,6 +31,8 @@
 #include <glow/GlTexture.h>
 #include <glow/GlVertexArray.h>
 #include <glow/util/RoSeCamera.h>
+#include <glow/util/GlCamera.h>
+#include "CADCamera.h"
 
 #include "common.h"
 
@@ -87,6 +89,8 @@ class Viewport : public QGLWidget {
 
   uint32_t loadedPointCount() const { return bufPoints_.size(); }
   uint32_t labeledPointCount() const { return labeledCount_; }
+  std::map<std::string, glow::GlCamera*> getCameras();
+  void setCamera(glow::GlCamera*);
 
  signals:
   void labelingChanged();
@@ -109,6 +113,8 @@ class Viewport : public QGLWidget {
 
   void keyPressEvent(QKeyEvent*);
   void keyReleaseEvent(QKeyEvent*);
+  void setFlipMouseButtons(bool value);
+
  protected:
   bool initContext() {
     // enabling core profile
@@ -145,6 +151,7 @@ class Viewport : public QGLWidget {
   glow::GlCamera::KeyboardModifier resolveKeyboardModifier(Qt::KeyboardModifiers modifiers);
 
   glow::GlCamera::MouseButton resolveMouseButton(Qt::MouseButtons button);
+  glow::GlCamera::MouseButton resolveMouseButtonFlip(Qt::MouseButtons button);
 
   //  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
   void labelPoints(int32_t x, int32_t y, float radius, uint32_t label);
@@ -154,8 +161,10 @@ class Viewport : public QGLWidget {
 
   std::vector<PointcloudPtr> points_;
   std::vector<LabelsPtr> labels_;
-
-  glow::RoSeCamera mCamera;
+  glow::RoSeCamera rosecam;
+  CADCamera cadcam;
+  glow::GlCamera* mCamera{&cadcam};
+  std::map<std::string, glow::GlCamera*> cameras = {{"RoSeCamera", &rosecam}, {"CADCamera", &cadcam}};
   bool mChangeCamera{false};
 
   AXIS mAxis;
@@ -262,6 +271,7 @@ class Viewport : public QGLWidget {
   float planeDirection_{1.0f};
 
   uint32_t labeledCount_{0};
+  bool flipMouseButtons{false};
 };
 
 #endif /* POINTVIEW_H_ */

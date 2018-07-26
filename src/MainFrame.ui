@@ -41,16 +41,7 @@
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_5">
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
+        <property name="margin">
          <number>5</number>
         </property>
         <item>
@@ -122,7 +113,7 @@
      <x>0</x>
      <y>0</y>
      <width>1048</width>
-     <height>26</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -139,7 +130,13 @@
     <property name="title">
      <string>&amp;Settings</string>
     </property>
+    <widget class="QMenu" name="menuCamera_Control">
+     <property name="title">
+      <string>Camera Control</string>
+     </property>
+    </widget>
     <addaction name="actionAutomaticallySave"/>
+    <addaction name="menuCamera_Control"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -216,16 +213,7 @@
     <layout class="QVBoxLayout" name="verticalLayout_5">
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_6">
-       <property name="leftMargin">
-        <number>5</number>
-       </property>
-       <property name="topMargin">
-        <number>5</number>
-       </property>
-       <property name="rightMargin">
-        <number>5</number>
-       </property>
-       <property name="bottomMargin">
+       <property name="margin">
         <number>5</number>
        </property>
        <item>
@@ -282,7 +270,7 @@
      <item>
       <widget class="QToolBox" name="toolBox">
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="page">
         <property name="geometry">
@@ -290,7 +278,7 @@
           <x>0</x>
           <y>0</y>
           <width>219</width>
-          <height>596</height>
+          <height>588</height>
          </rect>
         </property>
         <attribute name="label">
@@ -299,16 +287,7 @@
         <layout class="QVBoxLayout" name="verticalLayout_4">
          <item>
           <layout class="QFormLayout" name="formLayout_2">
-           <property name="leftMargin">
-            <number>5</number>
-           </property>
-           <property name="topMargin">
-            <number>5</number>
-           </property>
-           <property name="rightMargin">
-            <number>5</number>
-           </property>
-           <property name="bottomMargin">
+           <property name="margin">
             <number>5</number>
            </property>
            <item row="0" column="1">
@@ -338,7 +317,7 @@
            <property name="focusPolicy">
             <enum>Qt::WheelFocus</enum>
            </property>
-           <property name="currentText">
+           <property name="currentText" stdset="0">
             <string>all</string>
            </property>
            <item>
@@ -443,16 +422,7 @@
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_4">
-           <property name="leftMargin">
-            <number>5</number>
-           </property>
-           <property name="topMargin">
-            <number>5</number>
-           </property>
-           <property name="rightMargin">
-            <number>5</number>
-           </property>
-           <property name="bottomMargin">
+           <property name="margin">
             <number>5</number>
            </property>
            <item>
@@ -491,16 +461,7 @@
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_2">
-           <property name="leftMargin">
-            <number>5</number>
-           </property>
-           <property name="topMargin">
-            <number>5</number>
-           </property>
-           <property name="rightMargin">
-            <number>5</number>
-           </property>
-           <property name="bottomMargin">
+           <property name="margin">
             <number>5</number>
            </property>
            <item>
@@ -590,16 +551,7 @@
            <layout class="QVBoxLayout" name="verticalLayout_3">
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_3">
-              <property name="leftMargin">
-               <number>5</number>
-              </property>
-              <property name="topMargin">
-               <number>5</number>
-              </property>
-              <property name="rightMargin">
-               <number>5</number>
-              </property>
-              <property name="bottomMargin">
+              <property name="margin">
                <number>5</number>
               </property>
               <item>
@@ -695,16 +647,7 @@
          </item>
          <item>
           <layout class="QFormLayout" name="formLayout">
-           <property name="leftMargin">
-            <number>5</number>
-           </property>
-           <property name="topMargin">
-            <number>5</number>
-           </property>
-           <property name="rightMargin">
-            <number>5</number>
-           </property>
-           <property name="bottomMargin">
+           <property name="margin">
             <number>5</number>
            </property>
            <item row="1" column="0">
@@ -744,16 +687,7 @@
          </item>
          <item>
           <layout class="QFormLayout" name="formLayout_3">
-           <property name="leftMargin">
-            <number>5</number>
-           </property>
-           <property name="topMargin">
-            <number>5</number>
-           </property>
-           <property name="rightMargin">
-            <number>5</number>
-           </property>
-           <property name="bottomMargin">
+           <property name="margin">
             <number>5</number>
            </property>
            <item row="0" column="0" colspan="2">
@@ -846,16 +780,7 @@
            </item>
            <item row="3" column="0" colspan="2">
             <layout class="QHBoxLayout" name="horizontalLayout_9">
-             <property name="leftMargin">
-              <number>5</number>
-             </property>
-             <property name="topMargin">
-              <number>5</number>
-             </property>
-             <property name="rightMargin">
-              <number>5</number>
-             </property>
-             <property name="bottomMargin">
+             <property name="margin">
               <number>5</number>
              </property>
              <item>
@@ -896,13 +821,23 @@
           <x>0</x>
           <y>0</y>
           <width>232</width>
-          <height>302</height>
+          <height>315</height>
          </rect>
         </property>
         <attribute name="label">
          <string>Visuals</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_7">
+         <item>
+          <widget class="QLabel" name="label_5">
+           <property name="text">
+            <string>Camera Control</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cmbSelectCamControl"/>
+         </item>
          <item>
           <widget class="QCheckBox" name="chkShowSingleScan">
            <property name="text">
@@ -1017,6 +952,11 @@
   <action name="action_Quit">
    <property name="text">
     <string>&amp;Quit</string>
+   </property>
+  </action>
+  <action name="actionB">
+   <property name="text">
+    <string>b</string>
    </property>
   </action>
  </widget>
