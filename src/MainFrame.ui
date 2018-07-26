@@ -285,7 +285,7 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>0</y>
+          <y>-305</y>
           <width>219</width>
           <height>588</height>
          </rect>
@@ -837,16 +837,6 @@
          <string>Visuals</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_7">
-         <item>
-          <widget class="QLabel" name="label_5">
-           <property name="text">
-            <string>Camera Control</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="cmbSelectCamControl"/>
-         </item>
          <item>
           <widget class="QCheckBox" name="chkShowSingleScan">
            <property name="text">
