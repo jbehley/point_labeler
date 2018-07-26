@@ -153,7 +153,7 @@ class Viewport : public QGLWidget {
   void mouseMoveEvent(QMouseEvent*);
 
   glow::GlCamera::KeyboardModifier resolveKeyboardModifier(Qt::KeyboardModifiers modifiers);
-
+  glow::GlCamera::KeyboardKey resolveKeyboardKey(int key);
   glow::GlCamera::MouseButton resolveMouseButton(Qt::MouseButtons button);
   glow::GlCamera::MouseButton resolveMouseButtonFlip(Qt::MouseButtons button);
 

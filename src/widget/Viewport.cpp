@@ -925,6 +925,7 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
 
 			if(event->isAutoRepeat())		
 				return;
+      std::cout<<event->key()<<std::endl;
 			if (mMode == POLYGON && polygonPoints_.size() > 0){ //ugly hack!
 				event->ignore(); 		
 				return;
@@ -934,7 +935,7 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
 				timer_.start(1/60);
 			}
 			pressedkeys.insert(event->key());
-			GlCamera::KeyboardKey k = (GlCamera::KeyboardKey)event->key();
+			GlCamera::KeyboardKey k = resolveKeyboardKey(event->key());
 			if(mCamera->keyPressed(k, resolveKeyboardModifier(event->modifiers()))){
 				event->accept(); 
 			}else{
@@ -943,6 +944,7 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
 			return;
 	}
   // handle event by parent:
+  std::cout<<event->key()<<std::endl;
   event->ignore();
 }
 
@@ -959,7 +961,7 @@ void Viewport::keyReleaseEvent(QKeyEvent* event) {
 			if (pressedkeys.empty()) {
 				timer_.stop();
 			}
-			GlCamera::KeyboardKey k = (GlCamera::KeyboardKey)event->key();
+			GlCamera::KeyboardKey k = resolveKeyboardKey(event->key());
 			if(mCamera->keyReleased(k, resolveKeyboardModifier(event->modifiers()))){
 				event->accept(); 
 			}else{
@@ -1066,6 +1068,68 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   emit labelingChanged();
 }
 
+glow::GlCamera::KeyboardKey Viewport::resolveKeyboardKey(int key) {
+  switch(key){
+    case Qt::Key_A: return glow::GlCamera::KeyboardKey::KeyA;
+    case Qt::Key_B: return glow::GlCamera::KeyboardKey::KeyB;
+    case Qt::Key_C: return glow::GlCamera::KeyboardKey::KeyC;
+    case Qt::Key_D: return glow::GlCamera::KeyboardKey::KeyD;
+    case Qt::Key_E: return glow::GlCamera::KeyboardKey::KeyE;
+    case Qt::Key_F: return glow::GlCamera::KeyboardKey::KeyF;
+    case Qt::Key_G: return glow::GlCamera::KeyboardKey::KeyG;
+    case Qt::Key_H: return glow::GlCamera::KeyboardKey::KeyH;
+    case Qt::Key_I: return glow::GlCamera::KeyboardKey::KeyI;
+    case Qt::Key_J: return glow::GlCamera::KeyboardKey::KeyJ;
+    case Qt::Key_K: return glow::GlCamera::KeyboardKey::KeyK;
+    case Qt::Key_L: return glow::GlCamera::KeyboardKey::KeyL;
+    case Qt::Key_M: return glow::GlCamera::KeyboardKey::KeyM;
+    case Qt::Key_N: return glow::GlCamera::KeyboardKey::KeyN;
+    case Qt::Key_O: return glow::GlCamera::KeyboardKey::KeyO;
+    case Qt::Key_P: return glow::GlCamera::KeyboardKey::KeyP;
+    case Qt::Key_Q: return glow::GlCamera::KeyboardKey::KeyQ;
+    case Qt::Key_R: return glow::GlCamera::KeyboardKey::KeyR;
+    case Qt::Key_S: return glow::GlCamera::KeyboardKey::KeyS;
+    case Qt::Key_T: return glow::GlCamera::KeyboardKey::KeyT;
+    case Qt::Key_U: return glow::GlCamera::KeyboardKey::KeyU;
+    case Qt::Key_V: return glow::GlCamera::KeyboardKey::KeyV;
+    case Qt::Key_W: return glow::GlCamera::KeyboardKey::KeyW;
+    case Qt::Key_X: return glow::GlCamera::KeyboardKey::KeyX;
+    case Qt::Key_Y: return glow::GlCamera::KeyboardKey::KeyY;
+    case Qt::Key_Z: return glow::GlCamera::KeyboardKey::KeyZ;
+    case Qt::Key_0: return glow::GlCamera::KeyboardKey::Key0;
+    case Qt::Key_1: return glow::GlCamera::KeyboardKey::Key1;
+    case Qt::Key_2: return glow::GlCamera::KeyboardKey::Key2;
+    case Qt::Key_3: return glow::GlCamera::KeyboardKey::Key3;
+    case Qt::Key_4: return glow::GlCamera::KeyboardKey::Key4;
+    case Qt::Key_5: return glow::GlCamera::KeyboardKey::Key5;
+    case Qt::Key_6: return glow::GlCamera::KeyboardKey::Key6;
+    case Qt::Key_7: return glow::GlCamera::KeyboardKey::Key7;
+    case Qt::Key_8: return glow::GlCamera::KeyboardKey::Key8;
+    case Qt::Key_9: return glow::GlCamera::KeyboardKey::Key9;
+    case Qt::Key_F1: return glow::GlCamera::KeyboardKey::KeyF1;
+    case Qt::Key_F2: return glow::GlCamera::KeyboardKey::KeyF2;
+    case Qt::Key_F3: return glow::GlCamera::KeyboardKey::KeyF3;
+    case Qt::Key_F4: return glow::GlCamera::KeyboardKey::KeyF4;
+    case Qt::Key_F5: return glow::GlCamera::KeyboardKey::KeyF5;
+    case Qt::Key_F6: return glow::GlCamera::KeyboardKey::KeyF6;
+    case Qt::Key_F7: return glow::GlCamera::KeyboardKey::KeyF7;
+    case Qt::Key_F8: return glow::GlCamera::KeyboardKey::KeyF8;
+    case Qt::Key_F9: return glow::GlCamera::KeyboardKey::KeyF9;
+    case Qt::Key_F10: return glow::GlCamera::KeyboardKey::KeyF10;
+    case Qt::Key_F11: return glow::GlCamera::KeyboardKey::KeyF11;
+    case Qt::Key_F12: return glow::GlCamera::KeyboardKey::KeyF12;
+    case Qt::Key_Escape: return glow::GlCamera::KeyboardKey::KeyEsc;
+    case Qt::Key_Up: return glow::GlCamera::KeyboardKey::KeyUpArrow;
+    case Qt::Key_Down: return glow::GlCamera::KeyboardKey::KeyDownArrow;
+    case Qt::Key_Left: return glow::GlCamera::KeyboardKey::KeyLeftArrow;
+    case Qt::Key_Right: return glow::GlCamera::KeyboardKey::KeyRightArrow;
+    case Qt::Key_Space: return glow::GlCamera::KeyboardKey::KeySpace;
+    case Qt::Key_Enter: return glow::GlCamera::KeyboardKey::KeyEnter;
+    case Qt::Key_Return: return glow::GlCamera::KeyboardKey::KeyEnter;
+    default: return glow::GlCamera::KeyboardKey::KeyNotSupported;
+  }
+
+}
 glow::GlCamera::KeyboardModifier Viewport::resolveKeyboardModifier(Qt::KeyboardModifiers modifiers) {
   // currently only single button presses are supported.
   GlCamera::KeyboardModifier modifier = GlCamera::KeyboardModifier::None;

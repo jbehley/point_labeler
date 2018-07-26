@@ -763,7 +763,7 @@ void Mainframe::keyPressEvent(QKeyEvent* event) {
       return;
 
     default:
-      ui.mViewportXYZ->keyPressEvent(event);
+      if(!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyPressEvent(event);
       return;
   }
 }
@@ -789,7 +789,7 @@ void Mainframe::keyReleaseEvent(QKeyEvent* event) {
       changeRadius(50); 
       return;
     default:
-      ui.mViewportXYZ->keyReleaseEvent(event);
+      if(!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyReleaseEvent(event);
       return;
   }
 }

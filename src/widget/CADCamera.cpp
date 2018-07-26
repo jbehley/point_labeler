@@ -200,7 +200,7 @@ bool CADCamera::mouseMoved(float x, float y, MouseButton btn, KeyboardModifier m
     float upfactor = (startcy_>10?5:(startcy_>1?startcy_*0.5:.5));
     
 
-    std::cout<<x_<<"\t"<<y_<<"\t"<<z_<<"\t"<<factor<<std::endl;
+    //std::cout<<x_<<"\t"<<y_<<"\t"<<z_<<"\t"<<factor<<std::endl;
 
 
     x_ = startcx_ + (sideways * c - forward * s) * factor ;
@@ -249,50 +249,53 @@ bool CADCamera::wheelEvent(float delta, KeyboardModifier modifier) {
 }
 
 bool CADCamera::keyPressed(KeyboardKey key, KeyboardModifier modifier){	
-	switch(static_cast<std::underlying_type<KeyboardKey>::type>(key)){
-	  case 65: //a
-		startTime_ = std::chrono::system_clock::now();
-  		startdrag_ = true;
-		sideVel_ = -10*y_;
-		return true;
-	case 68: //d
-		startTime_ = std::chrono::system_clock::now();
-  		startdrag_ = true;
-		sideVel_ = 10*y_;
-		return true;
-	case 87: //w
-		startTime_ = std::chrono::system_clock::now();
-  		startdrag_ = true;
-		forwardVel_ = 10*y_;
-		return true;
-	case 83: //s
-		startTime_ = std::chrono::system_clock::now();
-  		startdrag_ = true;
-		forwardVel_ = -10*y_;
-		return true;
-	}
-	return false;
+	float factor = (y_>50?50:(y_>1?y_:1));
+  switch(key){
+    case KeyboardKey::KeyA:
+      startTime_ = std::chrono::system_clock::now();
+      startdrag_ = true;
+      sideVel_ = -10*factor;
+      return true;
+    case KeyboardKey::KeyD:
+      startTime_ = std::chrono::system_clock::now();
+      startdrag_ = true;
+      sideVel_ = 10*factor;
+      return true;
+    case KeyboardKey::KeyW:
+      startTime_ = std::chrono::system_clock::now();
+      startdrag_ = true;
+      forwardVel_ = 10*factor;
+      return true;
+    case KeyboardKey::KeyS:
+      startTime_ = std::chrono::system_clock::now();
+      startdrag_ = true;
+      forwardVel_ = -10*factor;
+      return true;
+    default: 
+      return false;
+  }
 }
 
    
 bool CADCamera::keyReleased(KeyboardKey key, KeyboardModifier modifier){	
-	switch(static_cast<std::underlying_type<KeyboardKey>::type>(key)){
-	  case 65:
-	  case 68:
-		startTime_ = std::chrono::system_clock::now();
-  		
-		sideVel_ = 0;
-		if (forwardVel_==0) startdrag_ = false;
-		return true;
-	  case 87:
-	  case 83:
-		startTime_ = std::chrono::system_clock::now();
+ switch(key){
+    case KeyboardKey::KeyA:
+    case KeyboardKey::KeyD:
+      startTime_ = std::chrono::system_clock::now();
+        
+      sideVel_ = 0;
+      if (forwardVel_==0) startdrag_ = false;
+      return true;
+    case KeyboardKey::KeyW:
+    case KeyboardKey::KeyS:
+      startTime_ = std::chrono::system_clock::now();
 
-		forwardVel_ = 0;
-		if (sideVel_==0) startdrag_ = false;
-		return true;
-	}
-	return false;
+      forwardVel_ = 0;
+      if (sideVel_==0) startdrag_ = false;
+      return true;
+    default: 
+      return false;
+  }
 }
 
 /* namespace rv */
