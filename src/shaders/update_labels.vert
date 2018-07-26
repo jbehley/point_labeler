@@ -31,6 +31,8 @@ uniform int planeDimension;
 uniform float planeThreshold;
 uniform float planeDirection;
 
+uniform bool removeLabel;
+
 
 out uint out_label;
 
@@ -79,10 +81,16 @@ void main()
       if(labelingMode == 0)
       {
         float distance =  length(pos.xy - window_pos);
-        if( (distance < radius) && (overwrite || in_label == uint(0)))
-        {
-          out_label = new_label;
-        } 
+        if(distance < radius) {
+          if(removeLabel && (overwrite || (in_label == new_label)))
+          {
+            out_label = uint(0);
+          }
+          else if(!removeLabel && (overwrite || (in_label == uint(0))))
+          {
+            out_label = new_label;
+          }
+        }
       } 
       else if(labelingMode == 1)
       {

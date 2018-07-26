@@ -542,11 +542,18 @@ void Viewport::initializeGL() {
 void Viewport::resizeGL(int w, int h) {
   glViewport(0, 0, w, h);
 
-  // set projection matrix
-  float fov = radians(45.0f);
   float aspect = float(w) / float(h);
 
-  projection_ = glPerspective(fov, aspect, 0.1f, 2000.0f);
+  if (projectionMode_ == CameraProjection::perspective) {
+    float fov = radians(45.0f);
+    projection_ = glPerspective(fov, aspect, 0.1f, 2000.0f);
+  } else {
+    float fov = 10.0f;
+    if (w <= h)
+      projection_ = glOrthographic(-fov, fov, -fov / aspect, fov / aspect, 0.1f, 2000.0f);
+    else
+      projection_ = glOrthographic(-fov * aspect, fov * aspect, -fov, fov, 0.1, 2000.0f);
+  }
 }
 
 void Viewport::paintGL() {
@@ -747,9 +754,9 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
     buttonPressed = true;
     mChangeCamera = false;
     if (event->buttons() & Qt::LeftButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel);
+      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
     else if (event->buttons() & Qt::RightButton)
-      labelPoints(event->x(), event->y(), mRadius, 0);
+      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
 
     updateGL();
   } else if (mMode == POLYGON) {
@@ -810,7 +817,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
         //        bufTriangles_.assign(tris_verts);
 
-        labelPoints(event->x(), event->y(), 0, mCurrentLabel);
+        labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
       }
 
       polygonPoints_.clear();
@@ -843,9 +850,9 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
     buttonPressed = false;
 
     if (event->buttons() & Qt::LeftButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel);
+      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
     else if (event->buttons() & Qt::RightButton)
-      labelPoints(event->x(), event->y(), mRadius, 0);
+      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
 
     updateGL();
   } else if (mMode == POLYGON) {
@@ -872,9 +879,9 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
   } else if (mMode == PAINT) {
     if (buttonPressed) {
       if (event->buttons() & Qt::LeftButton)
-        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel);
+        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
       else
-        labelPoints(event->x(), event->y(), mRadius, 0);
+        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
     }
     updateGL();
   } else if (mMode == POLYGON) {
@@ -974,7 +981,7 @@ void Viewport::setTileInfo(float x, float y, float tileSize) {
   tileSize_ = tileSize;
 }
 
-void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label) {
+void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label, bool remove) {
   if (points_.size() == 0 || labels_.size() == 0) return;
 
   //  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::flush;
@@ -998,6 +1005,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<float>("tileSize", tileSize_));
   prgUpdateLabels_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("heightMap", 1));
+  prgUpdateLabels_.setUniform(GlUniform<bool>("removeLabel", remove));
 
   float planeThreshold = planeThreshold_;
   prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
@@ -1121,6 +1129,7 @@ void Viewport::setPlaneRemoval(bool value) {
   planeRemoval_ = value;
   updateGL();
 }
+
 void Viewport::setPlaneRemovalParams(float threshold, int32_t dim, float direction) {
   planeThreshold_ = threshold;
   planeDimension_ = dim;
@@ -1140,4 +1149,11 @@ void Viewport::setCamera(glow::GlCamera* cam){
   Eigen::Matrix4f m = mCamera->matrix();
   mCamera=cam;
   mCamera->setMatrix(m);
+
+}
+
+void Viewport::setCameraProjection(const CameraProjection& proj) {
+  projectionMode_ = proj;
+  resizeGL(width(), height());
+  updateGL();
 }

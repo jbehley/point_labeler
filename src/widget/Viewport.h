@@ -57,6 +57,8 @@ class Viewport : public QGLWidget {
 
   enum FLAGS { FLAG_OVERWRITE = 1, FLAG_OTHER = 2 };
 
+  enum class CameraProjection { perspective, orthographic };
+
   Viewport(QWidget* parent = 0, Qt::WindowFlags f = 0);
   ~Viewport();
 
@@ -91,6 +93,8 @@ class Viewport : public QGLWidget {
   uint32_t labeledPointCount() const { return labeledCount_; }
   std::map<std::string, glow::GlCamera*> getCameras();
   void setCamera(glow::GlCamera*);
+
+  void setCameraProjection(const CameraProjection& proj);
 
  signals:
   void labelingChanged();
@@ -154,7 +158,7 @@ class Viewport : public QGLWidget {
   glow::GlCamera::MouseButton resolveMouseButtonFlip(Qt::MouseButtons button);
 
   //  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
-  void labelPoints(int32_t x, int32_t y, float radius, uint32_t label);
+  void labelPoints(int32_t x, int32_t y, float radius, uint32_t label, bool remove);
 
   bool contextInitialized_;
   std::map<uint32_t, glow::GlColor> mLabelColors;
@@ -272,6 +276,9 @@ class Viewport : public QGLWidget {
 
   uint32_t labeledCount_{0};
   bool flipMouseButtons{false};
+
+
+  CameraProjection projectionMode_{CameraProjection::perspective};
 };
 
 #endif /* POINTVIEW_H_ */

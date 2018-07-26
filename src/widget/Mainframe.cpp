@@ -161,7 +161,6 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   });
 
 
-
   /** load cameras**/
   cameras = ui.mViewportXYZ->getCameras();
 
@@ -183,6 +182,18 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
       }
     });
   }
+
+  connect(ui.actionPerspectiveProjection, &QAction::triggered, [this]() {
+    ui.actionPerspectiveProjection->setChecked(true);
+    ui.actionOrthographic->setChecked(false);
+    ui.mViewportXYZ->setCameraProjection(Viewport::CameraProjection::perspective);
+  });
+
+  connect(ui.actionOrthographic, &QAction::triggered, [this]() {
+    ui.actionPerspectiveProjection->setChecked(false);
+    ui.actionOrthographic->setChecked(true);
+    ui.mViewportXYZ->setCameraProjection(Viewport::CameraProjection::orthographic);
+  });
 
   /** load labels and colors **/
   std::map<uint32_t, glow::GlColor> label_colors;
@@ -216,6 +227,14 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   ui.statusbar->addPermanentWidget(&lblOverwrite_);
   ui.statusbar->addPermanentWidget(&lblNumPoints_);
   ui.statusbar->addPermanentWidget(&progressLabeled_);
+
+  info_ = new QWidget(this, Qt::FramelessWindowHint);
+  info_->setAutoFillBackground(true);
+  info_->setLayout(new QHBoxLayout);
+  QLabel* label = new QLabel("Please wait while writing labels to disk.");
+  label->setAlignment(Qt::AlignCenter);
+  info_->layout()->addWidget(label);
+  info_->hide();
 }
 
 Mainframe::~Mainframe() {}
@@ -280,16 +299,9 @@ void Mainframe::open() {
 }
 
 void Mainframe::save() {
-  QDialog info(this, Qt::Dialog | Qt::FramelessWindowHint);
   int32_t w = 300, h = 150;
-  info.setGeometry(x() + width() / 2 - 0.5 * w, y() + height() / 2 - 0.5 * h, w, h);
-  info.setWindowTitle("Please wait.");
-  //  info.setModal(true);
-  info.setLayout(new QHBoxLayout);
-  info.layout()->addWidget(new QLabel("Please wait while writing labels to disk."));
-
-  info.show();
-
+  info_->setGeometry(x() + width() / 2 - 0.5 * w, y() + height() / 2 - 0.5 * h, w, h);
+  info_->show();
 
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
@@ -299,7 +311,7 @@ void Mainframe::save() {
 
   mChangesSinceLastSave = false;
   statusBar()->clearMessage();
-  info.close();
+  info_->close();
 }
 
 void Mainframe::changeRadius(int value) {
@@ -767,7 +779,15 @@ void Mainframe::keyReleaseEvent(QKeyEvent* event) {
     case Qt::Key_1:
     case Qt::Key_2:
       return;
-    
+    case Qt::Key_F1: 
+      changeRadius(10); 
+      return;
+    case Qt::Key_F2: 
+      changeRadius(25); 
+      return;
+    case Qt::Key_F3: 
+      changeRadius(50); 
+      return;
     default:
       ui.mViewportXYZ->keyReleaseEvent(event);
       return;
