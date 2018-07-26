@@ -153,18 +153,16 @@
      <addaction name="actionPerspectiveProjection"/>
      <addaction name="actionOrthographic"/>
     </widget>
-    <widget class="QMenu" name="menuCamera_control">
+    <widget class="QMenu" name="menuCamera_Control">
      <property name="title">
       <string>Camera</string>
      </property>
-     <addaction name="actionDefaultCamera"/>
-     <addaction name="actionBlenderCamera"/>
     </widget>
     <addaction name="actionCenterView"/>
     <addaction name="actionShowImage"/>
     <addaction name="separator"/>
     <addaction name="menuProjection"/>
-    <addaction name="menuCamera_control"/>
+    <addaction name="menuCamera_Control"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menuTools"/>
@@ -832,7 +830,7 @@
           <x>0</x>
           <y>0</y>
           <width>232</width>
-          <height>372</height>
+          <height>283</height>
          </rect>
         </property>
         <attribute name="label">
