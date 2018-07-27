@@ -192,6 +192,7 @@
    <addaction name="separator"/>
    <addaction name="actionCenterView"/>
    <addaction name="actionShowImage"/>
+   <addaction name="actionScreenshot"/>
   </widget>
   <widget class="QDockWidget" name="dockWidget">
    <property name="minimumSize">
@@ -829,8 +830,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>232</width>
-          <height>283</height>
+          <width>159</width>
+          <height>80</height>
          </rect>
         </property>
         <attribute name="label">
@@ -978,6 +979,11 @@
    </property>
    <property name="text">
     <string>Orthographic</string>
+   </property>
+  </action>
+  <action name="actionScreenshot">
+   <property name="text">
+    <string>screenshot</string>
    </property>
   </action>
  </widget>
