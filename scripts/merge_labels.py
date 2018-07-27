@@ -56,12 +56,14 @@ if __name__ == "__main__":
 
   if len([f.endswith(".label") for f in os.listdir(out)]) > 0:
     print("-- Found label files in output directory. Delete? ", end="")
-    answer = input("[y/N] ")
+    answer = input("[y/N/c(ontinue)] ")
     if answer.lower() == "y":
       print("-- Deleting files in output directory.")
       files = [os.path.join(out, f) for f in os.listdir(out) if f.endswith(".label")]
       for f in files:
         os.remove(f)
+    elif answer.lower() == "c":
+      print("-- Continue.")
     else:
       print("Aborted.")
       sys.exit(1)
@@ -72,6 +74,9 @@ if __name__ == "__main__":
   # print(len(labels1))
   # print(len(labels2))
 
+  already_merged = [f for f in os.listdir(out) if f.endswith(".label")]
+  print(already_merged[:10])
+
   if len(labels1) != len(labels2) or len(labels1) == 0:
     print("-- Error: Inconsistent number of labels. Aborting.")
     sys.exit(1)
@@ -80,13 +85,20 @@ if __name__ == "__main__":
   progress = 10
   count = 0
   for (f, f1) in labels1.items():
+    
     count += 1
     if 100 * count / len(labels1) > progress:
       print(progress, end=" ", flush=True)
       progress += 10
 
+    if f in already_merged: continue
+  
     f2 = labels2[f]
     labels = [read_labels(f1), read_labels(f2)]
+
+    if len(labels[0]) != len(labels[1]):
+      print("Inconsistent number of labels for {}: Expected {}, but got {} labels.".format(f, len(labels[0]), len(labels[1])))
+      sys.exit(1)
 
     keep_index = 0
     if args.keep is None:
