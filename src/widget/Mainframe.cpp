@@ -14,6 +14,7 @@
 
 #include <QtWidgets/QMessageBox>
 
+#include <QtGui/QClipboard>
 #include <boost/lexical_cast.hpp>
 
 using namespace glow;
@@ -212,6 +213,12 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   label->setAlignment(Qt::AlignCenter);
   info_->layout()->addWidget(label);
   info_->hide();
+
+  connect(ui.actionScreenshot, &QAction::triggered, [this]() {
+    QImage img = ui.mViewportXYZ->grabFrameBuffer();
+    img.save("screenshot.png");
+    QApplication::clipboard()->setImage(img);
+  });
 }
 
 Mainframe::~Mainframe() {}
