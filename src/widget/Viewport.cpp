@@ -602,8 +602,18 @@ void Viewport::paintGL() {
     if (planeDimension_ == 0) planeThreshold += tilePos_.x;
     if (planeDimension_ == 1) planeThreshold += tilePos_.y;
     if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
+    prgDrawPoints_.setUniform(GlUniform<float>("planeA1", planeA1_));
+    prgDrawPoints_.setUniform(GlUniform<float>("planeA2", planeA2_));
+    prgDrawPoints_.setUniform(GlUniform<float>("planeA3", planeA3_));
     prgDrawPoints_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
     prgDrawPoints_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
+
+    float planeThresholdNormal = planeThresholdNormal_;
+    prgDrawPoints_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
+    // planeThresholdNormal += tilePos_.x;
+    // planeThresholdNormal += tilePos_.y;
+    prgDrawPoints_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal));
+    prgDrawPoints_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
 
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.bind();
@@ -928,6 +938,19 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
   prgUpdateLabels_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
 
+
+  float planeThresholdNormal = planeThresholdNormal_;
+  prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
+  // planeThresholdNormal += tilePos_.x;
+  // planeThresholdNormal += tilePos_.y;
+  prgUpdateLabels_.setUniform(GlUniform<float>("planeA1", planeA1_));
+  prgUpdateLabels_.setUniform(GlUniform<float>("planeA2", planeA2_));
+  prgUpdateLabels_.setUniform(GlUniform<float>("planeA3", planeA3_));
+  prgUpdateLabels_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal));
+  prgUpdateLabels_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
+
+
+
   mvp_ = projection_ * mCamera.matrix() * conversion_;
   prgUpdateLabels_.setUniform(mvp_);
 
@@ -1016,6 +1039,8 @@ void Viewport::centerOnCurrentTile() {
   updateGL();
 }
 
+
+
 void Viewport::setPlaneRemoval(bool value) {
   planeRemoval_ = value;
   updateGL();
@@ -1027,6 +1052,26 @@ void Viewport::setPlaneRemovalParams(float threshold, int32_t dim, float directi
   planeDirection_ = direction;
   updateGL();
 }
+
+
+
+void Viewport::setPlaneRemovalNormal(bool value) {
+  planeRemovalNormal_ = value;
+  updateGL();
+}
+
+void Viewport::setPlaneRemovalNormalParams(float threshold, float A1, float A2, float A3, float direction){
+  planeThresholdNormal_ = threshold;
+  // TODO Use the parameters correctly
+  std::cout << "A1: " << A1 << " A2: " << A2 << " A3: " << A3 << std::endl;
+  planeA1_ = A1;
+  planeA2_ = A2;
+  planeA3_ = A3;
+  planeDirectionNormal_ = direction;
+  updateGL();
+}
+
+
 
 void Viewport::setCameraProjection(const CameraProjection& proj) {
   projectionMode_ = proj;

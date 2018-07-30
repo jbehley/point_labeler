@@ -25,6 +25,14 @@ uniform int planeDimension;
 uniform float planeThreshold;
 uniform float planeDirection;
 
+uniform bool planeRemovalNormal;
+uniform float planeA1;
+uniform float planeA2;
+uniform float planeA3;
+uniform float planeThresholdNormal;
+uniform float planeDirectionNormal;
+
+
 uniform vec2 tilePos;
 uniform float tileSize;
 
@@ -44,7 +52,13 @@ void main()
   bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
   
   if(planeRemoval) visible = visible && (planeDirection * (in_vertex[planeDimension] - planeThreshold)  < 0);
+
+  if(planeRemovalNormal){
+    float scalar_product = in_vertex[0] * planeA1 + in_vertex[1] * planeA2 + in_vertex[2] * planeA3;
   
+    visible = visible && (planeDirectionNormal * (scalar_product - planeThresholdNormal) < 0);
+  }
+
   
   // if(!visible || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);
   if(!visible) gl_Position = vec4(-10, -10, -10, 1);
