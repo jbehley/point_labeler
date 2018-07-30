@@ -10,10 +10,10 @@ void TileSelectorWidget::initialize(const std::vector<KittiReader::Tile>& tiles,
   numTilesX_ = numTilesX;
   numTilesY_ = numTilesY;
 
-  size_ = float(width() - 1) / std::max(numTilesX_, numTilesY_);
+  size_ = float(std::min(width(), height()) - 1) / (std::max(numTilesX_, numTilesY_) + 1);
 
-  cx_ = width() - 0.5f * (width() - numTilesY * size_);
-  cy_ = height() - 0.5f * (height() - numTilesX * size_);
+  cx_ = width() - 0.5f * (width() - (numTilesY_ + 1) * size_);
+  cy_ = height() - 0.5f * (height() - (numTilesX_ + 1) * size_);
 
   for (uint32_t i = 0; i < tiles.size(); ++i) {
     const auto& tile = tiles[i];
@@ -69,10 +69,10 @@ void TileSelectorWidget::mouseReleaseEvent(QMouseEvent* event) {
 }
 
 void TileSelectorWidget::resizeEvent(QResizeEvent* event) {
-  size_ = float(std::min(width(), height()) - 1) / std::max(numTilesX_, numTilesY_);
+  size_ = float(std::min(width(), height()) - 1) / (std::max(numTilesX_, numTilesY_) + 1);
 
-  cx_ = width() - 0.5f * (width() - numTilesY_ * size_);
-  cy_ = height() - 0.5f * (height() - numTilesX_ * size_);
+  cx_ = width() - 0.5f * (width() - (numTilesY_ + 1) * size_);
+  cy_ = height() - 0.5f * (height() - (numTilesX_ + 1) * size_);
 
   for (uint32_t i = 0; i < tiles_.size(); ++i) {
     auto& tile = tiles_[i];
@@ -104,6 +104,37 @@ void TileSelectorWidget::paintEvent(QPaintEvent* event) {
     const auto& tile = tiles_[i];
 
     painter.drawRect(tile.x, tile.y, tile.size, tile.size);
+  }
+
+  // draw legend.
+  int32_t i_current = -1;
+  int32_t j_current = -1;
+  if (selectedTile_ > -1) {
+    const auto& tile = tiles_[selectedTile_];
+    i_current = tile.i;
+    j_current = tile.j;
+  }
+
+  for (uint32_t i = 0; i < numTilesY_; ++i) {
+    uint32_t x = cx_ - (numTilesY_ - i - 1) * size_ - size_;
+    uint32_t y = cy_ - (numTilesX_)*size_ - size_;
+
+    painter.setPen(Qt::black);
+    if (j_current == int32_t(numTilesY_ - i - 1)) painter.setPen(Qt::red);
+
+    std::stringstream sstr;
+    sstr << (char)(65 + i);
+    painter.drawText(QRect(x, y, size_, size_), Qt::AlignCenter, QString::fromStdString(sstr.str()));
+  }
+
+  for (uint32_t j = 0; j < numTilesX_; ++j) {
+    uint32_t x = cx_ - (numTilesY_)*size_ - size_;
+    uint32_t y = cy_ - (numTilesX_ - j - 1) * size_ - size_;
+
+    painter.setPen(Qt::black);
+    if (i_current == int32_t(numTilesX_ - j - 1)) painter.setPen(Qt::red);
+
+    painter.drawText(QRect(x, y, size_, size_), Qt::AlignCenter, QString::number(j + 1));
   }
 
   if (selectedTile_ > -1) {
