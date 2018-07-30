@@ -80,7 +80,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   drawingOption_["color"] = false;
   drawingOption_["single scan"] = false;
   drawingOption_["show all points"] = false;
-  drawingOption_["draw heightmap"] = false;
+  drawingOption_["draw heightmap"] = true;
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
@@ -334,6 +334,8 @@ void Viewport::updateHeightmap() {
     }
   }
 
+  std::cout << "w x h: " << width << " x " << height << std::endl;
+
   //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
   bufHeightMapPoints_.assign(indexes);
 
@@ -350,6 +352,8 @@ void Viewport::updateHeightmap() {
 
   GLint vp[4];
   glGetIntegerv(GL_VIEWPORT, vp);
+
+  glPointSize(1.0f);
 
   glViewport(0, 0, fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height());
 

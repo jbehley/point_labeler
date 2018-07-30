@@ -263,6 +263,20 @@ void Mainframe::closeEvent(QCloseEvent* event) {
 }
 
 void Mainframe::open() {
+  if (readerFuture_.valid()) readerFuture_.wait();
+
+  if (mChangesSinceLastSave) {
+    int32_t ret =
+        QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+                                                              "Do you want to save your changes?"),
+                             QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+    if (ret == QMessageBox::Save) {
+      save();
+    } else if (ret == QMessageBox::Cancel) {
+      return;
+    }
+  }
+
   QString retValue =
       QFileDialog::getExistingDirectory(this, "Select scan directory", lastDirectory, QFileDialog::ShowDirsOnly);
 
@@ -526,8 +540,8 @@ void Mainframe::readAsync(uint32_t i, uint32_t j) {
   std::vector<LabelsPtr> labels;
   std::vector<std::string> images;
 
-  std::vector<uint32_t> oldIndexes = indexes_;
-  std::vector<LabelsPtr> oldLabels = labels_;
+//  std::vector<uint32_t> oldIndexes = indexes_;
+//  std::vector<LabelsPtr> oldLabels = labels_;
 
   reader_.retrieve(i, j, indexes, points, labels, images);
 
@@ -536,19 +550,19 @@ void Mainframe::readAsync(uint32_t i, uint32_t j) {
   labels_ = labels;
   images_ = images;
 
-  // find difference.
-  std::vector<uint32_t> diff_indexes;
-  index_difference(oldLabels, labels_, diff_indexes);
-
-  std::vector<uint32_t> removedIndexes;
-  std::vector<LabelsPtr> removedLabels;
-
-  for (auto index : diff_indexes) {
-    removedIndexes.push_back(oldIndexes[index]);
-    removedLabels.push_back(oldLabels[index]);
-  }
-  // only update really needed label files.
-  reader_.update(removedIndexes, removedLabels);
+//  // find difference.
+//  std::vector<uint32_t> diff_indexes;
+//  index_difference(oldLabels, labels_, diff_indexes);
+//
+//  std::vector<uint32_t> removedIndexes;
+//  std::vector<LabelsPtr> removedLabels;
+//
+//  for (auto index : diff_indexes) {
+//    removedIndexes.push_back(oldIndexes[index]);
+//    removedLabels.push_back(oldLabels[index]);
+//  }
+//  // only update really needed label files.
+//  //  reader_.update(removedIndexes, removedLabels);
 
   const auto& tile = reader_.getTile(i, j);
   ui.mViewportXYZ->setTileInfo(tile.x, tile.y, tile.size);
