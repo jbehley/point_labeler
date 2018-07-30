@@ -29,6 +29,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       texLabelColors_(1024, 1, TextureFormat::RGB),
       fbMinimumHeightMap_(100, 100),
       texMinimumHeightMap_(100, 100, TextureFormat::R_FLOAT),
+      texTempHeightMap_(100, 100, TextureFormat::R_FLOAT),
       texTriangles_(3 * 100, 1, TextureFormat::RGB) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
@@ -80,7 +81,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   drawingOption_["color"] = false;
   drawingOption_["single scan"] = false;
   drawingOption_["show all points"] = false;
-  drawingOption_["draw heightmap"] = true;
+  drawingOption_["draw heightmap"] = false;
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
@@ -90,6 +91,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   texMinimumHeightMap_.setMinifyingOperation(TexMinOp::NEAREST);
   texMinimumHeightMap_.setMagnifyingOperation(TexMagOp::NEAREST);
+
+  texTempHeightMap_.setMinifyingOperation(TexMinOp::NEAREST);
+  texTempHeightMap_.setMagnifyingOperation(TexMagOp::NEAREST);
 
   fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texMinimumHeightMap_);
   GlRenderbuffer depthbuffer(fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height(),
@@ -158,6 +162,11 @@ void Viewport::initPrograms() {
   prgDrawHeightmap_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/draw_heightmap.geom"));
   prgDrawHeightmap_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgDrawHeightmap_.link();
+
+  prgAverageHeightMap_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/empty.vert"));
+  prgAverageHeightMap_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/quad.geom"));
+  prgAverageHeightMap_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/average_heightmap.frag"));
+  prgAverageHeightMap_.link();
 
   glow::_CheckGlError(__FILE__, __LINE__);
 }
@@ -334,7 +343,7 @@ void Viewport::updateHeightmap() {
     }
   }
 
-  std::cout << "w x h: " << width << " x " << height << std::endl;
+//  std::cout << "w x h: " << width << " x " << height << std::endl;
 
   //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
   bufHeightMapPoints_.assign(indexes);
@@ -342,13 +351,16 @@ void Viewport::updateHeightmap() {
   if (fbMinimumHeightMap_.width() != width || fbMinimumHeightMap_.height() != height) {
     fbMinimumHeightMap_.resize(width, height);
     texMinimumHeightMap_.resize(width, height);
+    texTempHeightMap_.resize(width, height);
 
     // update also depth buffer.
     GlRenderbuffer depthbuffer(fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height(),
                                RenderbufferFormat::DEPTH_STENCIL);
-    fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texMinimumHeightMap_);
+    fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texTempHeightMap_);
     fbMinimumHeightMap_.attach(FramebufferAttachment::DEPTH_STENCIL, depthbuffer);
   }
+
+  fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texTempHeightMap_);
 
   GLint vp[4];
   glGetIntegerv(GL_VIEWPORT, vp);
@@ -374,8 +386,23 @@ void Viewport::updateHeightmap() {
 
   glDrawArrays(GL_POINTS, 0, bufPoints_.size());
 
-  vao_points_.release();
   prgMinimumHeightMap_.release();
+  vao_points_.release();
+
+  fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texMinimumHeightMap_);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glDisable(GL_DEPTH_TEST);
+
+  vao_no_points_.bind();
+  prgAverageHeightMap_.bind();
+  glActiveTexture(GL_TEXTURE0);
+  texTempHeightMap_.bind();
+
+  glDrawArrays(GL_POINTS, 0, 1);
+
+  texTempHeightMap_.release();
+  prgAverageHeightMap_.release();
+  vao_no_points_.release();
   fbMinimumHeightMap_.release();
 
   glViewport(vp[0], vp[1], vp[2], vp[3]);

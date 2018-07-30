@@ -239,7 +239,9 @@ class Viewport : public QGLWidget {
 
   glow::GlFramebuffer fbMinimumHeightMap_;
   glow::GlTexture texMinimumHeightMap_;
+  glow::GlTexture texTempHeightMap_;
   glow::GlProgram prgMinimumHeightMap_;
+  glow::GlProgram prgAverageHeightMap_;
 
   int32_t pointSize_{1};
 
