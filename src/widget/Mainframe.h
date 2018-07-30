@@ -69,6 +69,8 @@ class Mainframe : public QMainWindow {
   std::string filename;
 
   void keyPressEvent(QKeyEvent* event);
+  void keyReleaseEvent(QKeyEvent* event);
+  std::map<std::string, glow::GlCamera*> cameras;
 
  protected slots:
   void unsavedChanges();

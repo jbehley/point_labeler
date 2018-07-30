@@ -161,6 +161,29 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     ui.mViewportXYZ->setPlaneRemovalParams(ui.sldPlaneThreshold->value() / 100.0f, dim, 1.0f);
   });
 
+
+  /** load cameras**/
+  cameras = ui.mViewportXYZ->getCameras();
+
+  for ( std::map<std::string, glow::GlCamera*>::iterator it = cameras.begin(); it != cameras.end(); it++ )
+  {
+    std::string name=it->first;
+    QAction* camact = new QAction(QString::fromUtf8(name.c_str()), this);
+    camact->setCheckable(true);
+    ui.menuCamera_Control->addAction(camact);
+    connect(camact, &QAction::toggled, [this, name, camact](bool toggled){ 
+      if(toggled){
+        std::cout<<cameras[name]<<std::endl; 
+        ui.mViewportXYZ->setCamera(cameras[name]);
+        foreach (QAction *action, ui.menuCamera_Control->actions()) {
+          if (action==camact) continue;
+          action->setChecked(false);
+        }
+        //camact->setChecked(true);
+      }
+    });
+  }
+
   connect(ui.actionPerspectiveProjection, &QAction::triggered, [this]() {
     ui.actionPerspectiveProjection->setChecked(true);
     ui.actionOrthographic->setChecked(false);
@@ -621,6 +644,22 @@ void Mainframe::readConfig() {
       ui.mViewportXYZ->setMinRange(range);
       std::cout << "-- Setting 'min range' to " << range << std::endl;
     }
+    if (tokens[0] == "flip mouse buttons") {
+      float value = boost::lexical_cast<float>(trim(tokens[1]));
+      ui.mViewportXYZ->setFlipMouseButtons((value==0)?false:true);
+      std::cout << "-- Setting 'flip mouse buttons' to " << ((value==0)?"false":"true") << std::endl;
+    }
+    if (tokens[0] == "camera") {
+      std::string value =trim(tokens[1]);
+      cameras = ui.mViewportXYZ->getCameras();
+      auto it = cameras.find(value);
+      if(it != cameras.end()){
+        ui.mViewportXYZ->setCamera(it->second);
+        std::cout << "-- Setting 'camera' to " << value << std::endl;
+      }else{
+        std::cout << "-- [ERROR] Could not set 'camera' to " << value << ". Undefined camera. Using default." <<std::endl;
+      }
+    }
   }
 
   in.close();
@@ -708,24 +747,69 @@ void Mainframe::initializeIcons() {
 }
 
 void Mainframe::keyPressEvent(QKeyEvent* event) {
-  if (event->key() == Qt::Key_D || event->key() == Qt::Key_Right) {
-    if (ui.btnForward->isEnabled()) forward();
+  switch(event->key()){
+    case Qt::Key_Right: 
+      if (ui.btnForward->isEnabled()) forward();
+      return;
+    
+    case Qt::Key_Left:
+      if (ui.btnBackward->isEnabled()) backward();
+      return;
+    
+    case Qt::Key_O:
+      ui.actionOverwrite->trigger();
+      return;
+    
+    case Qt::Key_F:
+      ui.actionFilter->trigger();
+      return;
+    
+    case Qt::Key_Plus:
+      ui.spinPointSize->setValue(std::min<int32_t>(ui.spinPointSize->value() + 1, 10));
+      return;
+    
+    case Qt::Key_Minus:
+      ui.spinPointSize->setValue(std::max<int32_t>(ui.spinPointSize->value() - 1, 1));
+      return;
+    
+    case Qt::Key_1:
+      changeMode(Viewport::PAINT, true);
+      return;
+    
+    case Qt::Key_2:
+      changeMode(Viewport::POLYGON, true);
+      return;
 
-  } else if (event->key() == Qt::Key_A || event->key() == Qt::Key_Left) {
-    if (ui.btnBackward->isEnabled()) backward();
+    default:
+      if(!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyPressEvent(event);
+      return;
   }
+}
 
-  if (event->key() == Qt::Key_O) ui.actionOverwrite->trigger();
-  if (event->key() == Qt::Key_F) ui.actionFilter->trigger();
-  if (event->key() == Qt::Key_Plus) ui.spinPointSize->setValue(std::min<int32_t>(ui.spinPointSize->value() + 1, 10));
-  if (event->key() == Qt::Key_Minus) ui.spinPointSize->setValue(std::max<int32_t>(ui.spinPointSize->value() - 1, 1));
-  if (event->key() == Qt::Key_1) changeMode(Viewport::PAINT, true);
-  if (event->key() == Qt::Key_2) changeMode(Viewport::POLYGON, true);
-
-  // change brush size.
-  if (event->key() == Qt::Key_F1) changeRadius(10);
-  if (event->key() == Qt::Key_F2) changeRadius(25);
-  if (event->key() == Qt::Key_F3) changeRadius(50);
+void Mainframe::keyReleaseEvent(QKeyEvent* event) {
+  switch(event->key()){ 
+    case Qt::Key_Right: 
+    case Qt::Key_Left:
+    case Qt::Key_O:
+    case Qt::Key_F:
+    case Qt::Key_Plus:
+    case Qt::Key_Minus:
+    case Qt::Key_1:
+    case Qt::Key_2:
+      return;
+    case Qt::Key_F1: 
+      changeRadius(10); 
+      return;
+    case Qt::Key_F2: 
+      changeRadius(25); 
+      return;
+    case Qt::Key_F3: 
+      changeRadius(50); 
+      return;
+    default:
+      if(!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyReleaseEvent(event);
+      return;
+  }
 }
 
 void Mainframe::updateMovingStatus(bool isMoving) {

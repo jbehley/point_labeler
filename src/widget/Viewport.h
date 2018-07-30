@@ -8,12 +8,15 @@
 #include <stdint.h>
 #include <list>
 #include <vector>
+#include <set>
+
 
 #include <glow/glbase.h>
 
 #include <QtCore/QTime>
 #include <QtCore/QTimer>
 #include <QtGui/QMouseEvent>
+#include <QtGui/QWheelEvent>
 #include <QtOpenGL/QGLWidget>
 
 #include <GL/gl.h>
@@ -28,6 +31,8 @@
 #include <glow/GlTexture.h>
 #include <glow/GlVertexArray.h>
 #include <glow/util/RoSeCamera.h>
+#include <glow/util/GlCamera.h>
+#include "CADCamera.h"
 
 #include "common.h"
 
@@ -86,6 +91,8 @@ class Viewport : public QGLWidget {
 
   uint32_t loadedPointCount() const { return bufPoints_.size(); }
   uint32_t labeledPointCount() const { return labeledCount_; }
+  std::map<std::string, glow::GlCamera*> getCameras();
+  void setCamera(glow::GlCamera*);
 
   void setCameraProjection(const CameraProjection& proj);
 
@@ -107,6 +114,10 @@ class Viewport : public QGLWidget {
   void setOverwrite(bool value);
 
   void setFilteredLabels(const std::vector<uint32_t>& labels);
+
+  void keyPressEvent(QKeyEvent*);
+  void keyReleaseEvent(QKeyEvent*);
+  void setFlipMouseButtons(bool value);
 
  protected:
   bool initContext() {
@@ -136,14 +147,15 @@ class Viewport : public QGLWidget {
   void resizeGL(int width, int height);
   void paintGL();
 
+  void wheelEvent(QWheelEvent*);
   void mousePressEvent(QMouseEvent*);
   void mouseReleaseEvent(QMouseEvent*);
   void mouseMoveEvent(QMouseEvent*);
-  void keyPressEvent(QKeyEvent*);
 
   glow::GlCamera::KeyboardModifier resolveKeyboardModifier(Qt::KeyboardModifiers modifiers);
-
+  glow::GlCamera::KeyboardKey resolveKeyboardKey(int key);
   glow::GlCamera::MouseButton resolveMouseButton(Qt::MouseButtons button);
+  glow::GlCamera::MouseButton resolveMouseButtonFlip(Qt::MouseButtons button);
 
   //  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
   void labelPoints(int32_t x, int32_t y, float radius, uint32_t label, bool remove);
@@ -153,8 +165,10 @@ class Viewport : public QGLWidget {
 
   std::vector<PointcloudPtr> points_;
   std::vector<LabelsPtr> labels_;
-
-  glow::RoSeCamera mCamera;
+  glow::RoSeCamera rosecam;
+  CADCamera cadcam;
+  glow::GlCamera* mCamera{&cadcam};
+  std::map<std::string, glow::GlCamera*> cameras = {{"RoSeCamera", &rosecam}, {"CADCamera", &cadcam}};
   bool mChangeCamera{false};
 
   AXIS mAxis;
@@ -228,6 +242,7 @@ class Viewport : public QGLWidget {
   Eigen::Matrix4f projection_{Eigen::Matrix4f::Identity()};
   Eigen::Matrix4f conversion_{glow::RoSe2GL::matrix};
 
+
   std::map<std::string, bool> drawingOption_;
 
   float minRange_{0.0f}, maxRange_{100.0f};
@@ -252,7 +267,7 @@ class Viewport : public QGLWidget {
     uint32_t start;
     uint32_t size;
   };
-
+  std::set<int> pressedkeys;
   std::vector<ScanInfo> scanInfos_;
 
   bool planeRemoval_{false};
@@ -261,6 +276,8 @@ class Viewport : public QGLWidget {
   float planeDirection_{1.0f};
 
   uint32_t labeledCount_{0};
+  bool flipMouseButtons{false};
+
 
   CameraProjection projectionMode_{CameraProjection::perspective};
 };

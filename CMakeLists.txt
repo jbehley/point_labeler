@@ -90,6 +90,8 @@ add_executable(labeler
   src/widget/LabelButton.cpp
   src/widget/Mainframe.cpp
   src/widget/Viewport.cpp
+  src/widget/CADCamera.h
+  src/widget/CADCamera.cpp
   src/widget/KittiReader.cpp
   src/widget/TileSelectorWidget.cpp
   src/widget/waitingspinnerwidget.cpp
