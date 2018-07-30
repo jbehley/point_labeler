@@ -7,9 +7,8 @@
 
 #include <stdint.h>
 #include <list>
-#include <vector>
 #include <set>
-
+#include <vector>
 
 #include <glow/glbase.h>
 
@@ -30,8 +29,8 @@
 #include <glow/GlShaderCache.h>
 #include <glow/GlTexture.h>
 #include <glow/GlVertexArray.h>
-#include <glow/util/RoSeCamera.h>
 #include <glow/util/GlCamera.h>
+#include <glow/util/RoSeCamera.h>
 #include "CADCamera.h"
 
 #include "common.h"
@@ -91,8 +90,17 @@ class Viewport : public QGLWidget {
 
   uint32_t loadedPointCount() const { return bufPoints_.size(); }
   uint32_t labeledPointCount() const { return labeledCount_; }
-  std::map<std::string, glow::GlCamera*> getCameras();
-  void setCamera(glow::GlCamera*);
+
+  std::map<std::string, std::shared_ptr<glow::GlCamera>> getCameras() const;
+
+  /** \brief set camera names **/
+  std::vector<std::string> getCameraNames() const;
+
+  /** \brief set camera explcitly. **/
+  void setCamera(const std::shared_ptr<glow::GlCamera>& cam);
+
+  /** \brief set camera by name. **/
+  void setCameraByName(const std::string& name);
 
   void setCameraProjection(const CameraProjection& proj);
 
@@ -167,8 +175,8 @@ class Viewport : public QGLWidget {
   std::vector<LabelsPtr> labels_;
   glow::RoSeCamera rosecam;
   CADCamera cadcam;
-  glow::GlCamera* mCamera{&cadcam};
-  std::map<std::string, glow::GlCamera*> cameras = {{"RoSeCamera", &rosecam}, {"CADCamera", &cadcam}};
+  std::shared_ptr<glow::GlCamera> mCamera;
+  std::map<std::string, std::shared_ptr<glow::GlCamera>> cameras_;
   bool mChangeCamera{false};
 
   AXIS mAxis;
@@ -242,7 +250,6 @@ class Viewport : public QGLWidget {
   Eigen::Matrix4f projection_{Eigen::Matrix4f::Identity()};
   Eigen::Matrix4f conversion_{glow::RoSe2GL::matrix};
 
-
   std::map<std::string, bool> drawingOption_;
 
   float minRange_{0.0f}, maxRange_{100.0f};
@@ -277,7 +284,6 @@ class Viewport : public QGLWidget {
 
   uint32_t labeledCount_{0};
   bool flipMouseButtons{false};
-
 
   CameraProjection projectionMode_{CameraProjection::perspective};
 };

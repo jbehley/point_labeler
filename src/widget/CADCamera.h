@@ -4,7 +4,7 @@
  *  Created on: Jul 24, 2018
  *      Author: cagcoach
  * inspired by: behley
- * 
+ *
  */
 
 #ifndef INCLUDE_RV_CADCAMERA_H_
@@ -15,27 +15,12 @@
 #include <chrono>
 #include <mutex>
 
-
-/** \brief velocity-based OpenGL camera used in FKIE's RoSe
+/** \brief Blender-like camera.
  *
- *  Adoption of the camera used in FKIE applications. This is also an example for velocity-based navigation, where we
- *  apply some velocity on the camera to "fly" through the scene.
- *
- *  Basically, we have with this camera a camera position and a yaw/pitch angle defining the view direction.
- *
- *  Shortly, this corresponds to:
- *
- *  LMB = move forward and rotation in x/z-plane
- *  MMB = move upwards and sidewaysn in x/y-plane
- *  RMB = change of yaw and pitch angles (viewing direction.)
- *
- *  no key "overloads", no mouse wheel...
- *
- *  \author behley
+ *  \author christian
  */
 class CADCamera : public glow::GlCamera {
  public:
-
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   /** \brief update the view matrix and return it. **/
   const Eigen::Matrix4f& matrix() override;
@@ -115,7 +100,6 @@ class CADCamera : public glow::GlCamera {
   // TODO: expose other parameters (sensitivity, etc.)
 
   std::mutex mutex_;
-
 };
 
 #endif /* INCLUDE_RV_CADCAMERA_H_ */

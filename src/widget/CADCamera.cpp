@@ -2,7 +2,6 @@
 #include <glow/glutil.h>
 #include <iostream>
 
-
 const Eigen::Matrix4f& CADCamera::matrix() {
   mutex_.lock();
 
@@ -51,9 +50,7 @@ void CADCamera::setPosition(float x, float y, float z) {
   mutex_.unlock();
 }
 
-Eigen::Vector4f CADCamera::getPosition() const {
-  return Eigen::Vector4f(x_, y_, z_, 1.0f);
-}
+Eigen::Vector4f CADCamera::getPosition() const { return Eigen::Vector4f(x_, y_, z_, 1.0f); }
 
 void CADCamera::lookAt(float x_ref, float y_ref, float z_ref) {
   mutex_.lock();
@@ -128,14 +125,11 @@ bool CADCamera::mousePressed(float x, float y, MouseButton btn, KeyboardModifier
   startcz_ = z_;
   startTime_ = std::chrono::system_clock::now();
   startdrag_ = true;
-  //std::cout<<static_cast<std::underlying_type<MouseButton>::type>(btn)<<std::endl;
+  // std::cout<<static_cast<std::underlying_type<MouseButton>::type>(btn)<<std::endl;
   return true;
 }
 
-bool CADCamera::mouseReleased(float x, float y, MouseButton btn, KeyboardModifier modifier) {
-
-  return true;
-}
+bool CADCamera::mouseReleased(float x, float y, MouseButton btn, KeyboardModifier modifier) { return true; }
 
 void CADCamera::translate(float forward, float up, float sideways) {
   // forward = -z, sideways = x , up = y. Remember: inverse of yaw is applied, i.e., we have to apply yaw (?)
@@ -165,21 +159,19 @@ bool CADCamera::mouseMoved(float x, float y, MouseButton btn, KeyboardModifier m
 
   // TODO: expose parameters:
   static const float MIN_MOVE = 0;
-  static const float WALK_SENSITIVITY = 0.5f;
-  static const float TURN_SENSITIVITY = 0.01f;
-  static const float SLIDE_SENSITIVITY = 0.5f;
+  //  static const float WALK_SENSITIVITY = 0.5f;
+  //  static const float TURN_SENSITIVITY = 0.01f;
+  //  static const float SLIDE_SENSITIVITY = 0.5f;
   static const float SLIDEX_SENSITIVITY = 0.01f;
   static const float SLIDEY_SENSITIVITY = 0.01f;
   static const float SLIDEU_SENSITIVITY = 0.01f;
-  static const float RAISE_SENSITIVITY = 0.5f;
-
+  //  static const float RAISE_SENSITIVITY = 0.5f;
 
   static const float LOOK_SENSITIVITY = 0.01f;
   static const float FREE_TURN_SENSITIVITY = 0.01f;
 
   float dx = x - startx_;
   float dy = y - starty_;
-  
 
   if (dx > 0.0f) dx = std::max(0.0f, dx - MIN_MOVE);
   if (dx < 0.0f) dx = std::min(0.0f, dx + MIN_MOVE);
@@ -189,37 +181,32 @@ bool CADCamera::mouseMoved(float x, float y, MouseButton btn, KeyboardModifier m
   // idea: if the velocity changes, we have to reset the start_time and update the camera parameters.
 
   if (btn == MouseButton::RightButton) {
-   //translate(TURN_SENSITIVITY * dx,0,TURN_SENSITIVITY * dy);
+    // translate(TURN_SENSITIVITY * dx,0,TURN_SENSITIVITY * dy);
     float sideways = SLIDEX_SENSITIVITY * dx * (-1);
-    float forward = SLIDEY_SENSITIVITY * dy * std::sin(pitch_) * (-1);    
+    float forward = SLIDEY_SENSITIVITY * dy * std::sin(pitch_) * (-1);
     float up = SLIDEU_SENSITIVITY * dy * std::cos(pitch_);
     float s = std::sin(yaw_);
     float c = std::cos(yaw_);
 
-    float factor = (startcy_>50?25:(startcy_>1?startcy_*0.5:.5));
-    float upfactor = (startcy_>10?5:(startcy_>1?startcy_*0.5:.5));
-    
+    float factor = (startcy_ > 50 ? 25 : (startcy_ > 1 ? startcy_ * 0.5 : .5));
+    float upfactor = (startcy_ > 10 ? 5 : (startcy_ > 1 ? startcy_ * 0.5 : .5));
 
-    //std::cout<<x_<<"\t"<<y_<<"\t"<<z_<<"\t"<<factor<<std::endl;
+    // std::cout<<x_<<"\t"<<y_<<"\t"<<z_<<"\t"<<factor<<std::endl;
 
-
-    x_ = startcx_ + (sideways * c - forward * s) * factor ;
+    x_ = startcx_ + (sideways * c - forward * s) * factor;
     y_ = startcy_ + up * upfactor;
     z_ = startcz_ - (sideways * s - forward * c * (-1)) * factor;
 
-  //} else if (btn == MouseButton::LeftButton) {
-   
-  
+    //} else if (btn == MouseButton::LeftButton) {
 
-} else if (btn == MouseButton::MiddleButton) {
-    yaw_ = startyaw_ - FREE_TURN_SENSITIVITY * dx ;
+  } else if (btn == MouseButton::MiddleButton) {
+    yaw_ = startyaw_ - FREE_TURN_SENSITIVITY * dx;
     pitch_ = startpitch_ - LOOK_SENSITIVITY * dy;
 
     // ensure valid values.
     if (pitch_ < -M_PI_2) pitch_ = -M_PI_2;
     if (pitch_ > M_PI_2) pitch_ = M_PI_2;
   }
-
 
   mutex_.unlock();
 
@@ -230,70 +217,66 @@ bool CADCamera::wheelEvent(float delta, KeyboardModifier modifier) {
   mutex_.lock();
   static const float ZOOM_SENSITIVITY = 3.f;
   // move along the viewing direction specified by yaw and pitch.
-  
-    
-    float forward = ZOOM_SENSITIVITY * delta * std::cos(pitch_);    
-    float up = ZOOM_SENSITIVITY * delta * std::sin(pitch_) * (-1);
-    float s = std::sin(yaw_);
-    float c = std::cos(yaw_);
 
+  float forward = ZOOM_SENSITIVITY * delta * std::cos(pitch_);
+  float up = ZOOM_SENSITIVITY * delta * std::sin(pitch_) * (-1);
+  float s = std::sin(yaw_);
+  float c = std::cos(yaw_);
 
-
-    x_ -= forward * s;
-    y_ -= up;
-    z_ += forward * c * (-1);
+  x_ -= forward * s;
+  y_ -= up;
+  z_ += forward * c * (-1);
   // TODO: implement me!
-   mutex_.unlock();
+  mutex_.unlock();
 
   return true;
 }
 
-bool CADCamera::keyPressed(KeyboardKey key, KeyboardModifier modifier){	
-	float factor = (y_>50?50:(y_>1?y_:1));
-  switch(key){
+bool CADCamera::keyPressed(KeyboardKey key, KeyboardModifier modifier) {
+  float factor = (y_ > 50 ? 50 : (y_ > 1 ? y_ : 1));
+  switch (key) {
     case KeyboardKey::KeyA:
       startTime_ = std::chrono::system_clock::now();
       startdrag_ = true;
-      sideVel_ = -10*factor;
+      sideVel_ = -10 * factor;
       return true;
     case KeyboardKey::KeyD:
       startTime_ = std::chrono::system_clock::now();
       startdrag_ = true;
-      sideVel_ = 10*factor;
+      sideVel_ = 10 * factor;
       return true;
     case KeyboardKey::KeyW:
       startTime_ = std::chrono::system_clock::now();
       startdrag_ = true;
-      forwardVel_ = 10*factor;
+      forwardVel_ = 10 * factor;
       return true;
     case KeyboardKey::KeyS:
       startTime_ = std::chrono::system_clock::now();
       startdrag_ = true;
-      forwardVel_ = -10*factor;
+      forwardVel_ = -10 * factor;
       return true;
-    default: 
+    default:
       return false;
   }
 }
 
-   
-bool CADCamera::keyReleased(KeyboardKey key, KeyboardModifier modifier){	
- switch(key){
+bool CADCamera::keyReleased(KeyboardKey key, KeyboardModifier modifier) {
+  switch (key) {
     case KeyboardKey::KeyA:
     case KeyboardKey::KeyD:
       startTime_ = std::chrono::system_clock::now();
-        
+
       sideVel_ = 0;
-      if (forwardVel_==0) startdrag_ = false;
+      if (forwardVel_ == 0) startdrag_ = false;
       return true;
     case KeyboardKey::KeyW:
     case KeyboardKey::KeyS:
       startTime_ = std::chrono::system_clock::now();
 
       forwardVel_ = 0;
-      if (sideVel_==0) startdrag_ = false;
+      if (sideVel_ == 0) startdrag_ = false;
       return true;
-    default: 
+    default:
       return false;
   }
 }
