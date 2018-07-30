@@ -642,6 +642,17 @@ void Mainframe::readConfig() {
       ui.mViewportXYZ->setFlipMouseButtons((value==0)?false:true);
       std::cout << "-- Setting 'flip mouse buttons' to " << ((value==0)?"false":"true") << std::endl;
     }
+    if (tokens[0] == "camera") {
+      std::string value =trim(tokens[1]);
+      cameras = ui.mViewportXYZ->getCameras();
+      auto it = cameras.find(value);
+      if(it != cameras.end()){
+        ui.mViewportXYZ->setCamera(it->second);
+        std::cout << "-- Setting 'camera' to " << value << std::endl;
+      }else{
+        std::cout << "-- [ERROR] Could not set 'camera' to " << value << ". Undefined camera. Using default." <<std::endl;
+      }
+    }
   }
 
   in.close();

@@ -242,6 +242,7 @@ class Viewport : public QGLWidget {
   Eigen::Matrix4f projection_{Eigen::Matrix4f::Identity()};
   Eigen::Matrix4f conversion_{glow::RoSe2GL::matrix};
 
+
   std::map<std::string, bool> drawingOption_;
 
   float minRange_{0.0f}, maxRange_{100.0f};

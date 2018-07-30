@@ -733,7 +733,6 @@ void Viewport::wheelEvent(QWheelEvent* event) {
 
 void Viewport::mousePressEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
-
   mChangeCamera = false;
 
   if (event->modifiers() == Qt::ControlModifier) {
@@ -918,6 +917,14 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
 
 	    return;
 		//camera control
+    case Qt::Key_C:
+      if (points_.size() > 0) {
+        if (points_.size() == 0) return;
+        auto mat =  conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse() ;
+        mCamera->setMatrix(mat);
+        updateGL();
+      }
+      return;
 		case Qt::Key_W:
 		case Qt::Key_A:
 		case Qt::Key_S:
@@ -951,7 +958,7 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
 void Viewport::keyReleaseEvent(QKeyEvent* event) {
 	switch(event->key()){
 		//camera control
-		case Qt::Key_W:
+    case Qt::Key_W:
 		case Qt::Key_A:
 		case Qt::Key_S:
 		case Qt::Key_D:
