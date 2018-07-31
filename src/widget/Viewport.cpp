@@ -602,16 +602,12 @@ void Viewport::paintGL() {
     if (planeDimension_ == 0) planeThreshold += tilePos_.x;
     if (planeDimension_ == 1) planeThreshold += tilePos_.y;
     if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
-    prgDrawPoints_.setUniform(GlUniform<float>("planeA1", planeA1_));
-    prgDrawPoints_.setUniform(GlUniform<float>("planeA2", planeA2_));
-    prgDrawPoints_.setUniform(GlUniform<float>("planeA3", planeA3_));
+    prgDrawPoints_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
     prgDrawPoints_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
     prgDrawPoints_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
 
     float planeThresholdNormal = planeThresholdNormal_;
     prgDrawPoints_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
-    // planeThresholdNormal += tilePos_.x;
-    // planeThresholdNormal += tilePos_.y;
     prgDrawPoints_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal));
     prgDrawPoints_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
 
@@ -941,11 +937,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 
   float planeThresholdNormal = planeThresholdNormal_;
   prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
-  // planeThresholdNormal += tilePos_.x;
-  // planeThresholdNormal += tilePos_.y;
-  prgUpdateLabels_.setUniform(GlUniform<float>("planeA1", planeA1_));
-  prgUpdateLabels_.setUniform(GlUniform<float>("planeA2", planeA2_));
-  prgUpdateLabels_.setUniform(GlUniform<float>("planeA3", planeA3_));
+  prgUpdateLabels_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
   prgUpdateLabels_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal));
   prgUpdateLabels_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
 
@@ -1060,13 +1052,21 @@ void Viewport::setPlaneRemovalNormal(bool value) {
   updateGL();
 }
 
+const double PI = std::acos(-1);
 void Viewport::setPlaneRemovalNormalParams(float threshold, float A1, float A2, float A3, float direction){
   planeThresholdNormal_ = threshold;
-  // TODO Use the parameters correctly
-  std::cout << "A1: " << A1 << " A2: " << A2 << " A3: " << A3 << std::endl;
-  planeA1_ = A1;
-  planeA2_ = A2;
-  planeA3_ = A3;
+  Eigen::Vector4f unit_vect(1.0, 0, 0, 0);
+  auto rotX = glow::glRotateX(A1*PI/180);
+  auto rotY = glow::glRotateY(A2*PI/180);
+  auto rotZ = glow::glRotateZ(A3*PI/180);
+
+  auto normal_vect = rotX * rotY * rotZ * unit_vect;
+  std::cout << "rotation matrix: " << std::endl << rotX * rotY * rotZ << std::endl;
+  std::cout << "normal_vect: " << normal_vect << std::endl;
+
+  planeNormal_[0] = normal_vect[0];
+  planeNormal_[1] = normal_vect[1];
+  planeNormal_[2] = normal_vect[2];
   planeDirectionNormal_ = direction;
   updateGL();
 }

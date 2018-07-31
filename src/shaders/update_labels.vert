@@ -31,6 +31,11 @@ uniform int planeDimension;
 uniform float planeThreshold;
 uniform float planeDirection;
 
+uniform bool planeRemovalNormal;
+uniform vec3 planeNormal;
+uniform float planeThresholdNormal;
+uniform float planeDirectionNormal;
+
 uniform bool removeLabel;
 
 
@@ -73,6 +78,11 @@ void main()
 
   if(planeRemoval) visible = visible && (planeDirection * (in_vertex[planeDimension] - planeThreshold)  < 0);
   
+  if(planeRemovalNormal){
+    float scalar_product = (in_vertex[0] - tilePos[0]) * planeNormal[0] + (in_vertex[1] - tilePos[1]) * planeNormal[1] + in_vertex[2] * planeNormal[2];
+  
+    visible = visible && (planeDirectionNormal * (scalar_product - planeThresholdNormal) < 0);
+  }
 
   if(visible)
   {

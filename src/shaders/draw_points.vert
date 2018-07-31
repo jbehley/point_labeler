@@ -16,7 +16,6 @@ uniform bool useRemission;
 uniform bool useColor;
 
 
-
 uniform bool removeGround;
 uniform float groundThreshold;
 
@@ -26,12 +25,9 @@ uniform float planeThreshold;
 uniform float planeDirection;
 
 uniform bool planeRemovalNormal;
-uniform float planeA1;
-uniform float planeA2;
-uniform float planeA3;
+uniform vec3 planeNormal;
 uniform float planeThresholdNormal;
 uniform float planeDirectionNormal;
-
 
 uniform vec2 tilePos;
 uniform float tileSize;
@@ -54,7 +50,7 @@ void main()
   if(planeRemoval) visible = visible && (planeDirection * (in_vertex[planeDimension] - planeThreshold)  < 0);
 
   if(planeRemovalNormal){
-    float scalar_product = in_vertex[0] * planeA1 + in_vertex[1] * planeA2 + in_vertex[2] * planeA3;
+    float scalar_product = (in_vertex[0] - tilePos[0]) * planeNormal[0] + (in_vertex[1] - tilePos[1]) * planeNormal[1] + in_vertex[2] * planeNormal[2];
   
     visible = visible && (planeDirectionNormal * (scalar_product - planeThresholdNormal) < 0);
   }
