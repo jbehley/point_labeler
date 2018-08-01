@@ -29,6 +29,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       texLabelColors_(1024, 1, TextureFormat::RGB),
       fbMinimumHeightMap_(100, 100),
       texMinimumHeightMap_(100, 100, TextureFormat::R_FLOAT),
+      texTempHeightMap_(100, 100, TextureFormat::R_FLOAT),
       texTriangles_(3 * 100, 1, TextureFormat::RGB) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
@@ -91,12 +92,19 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   texMinimumHeightMap_.setMinifyingOperation(TexMinOp::NEAREST);
   texMinimumHeightMap_.setMagnifyingOperation(TexMagOp::NEAREST);
 
+  texTempHeightMap_.setMinifyingOperation(TexMinOp::NEAREST);
+  texTempHeightMap_.setMagnifyingOperation(TexMagOp::NEAREST);
+
   fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texMinimumHeightMap_);
   GlRenderbuffer depthbuffer(fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height(),
                              RenderbufferFormat::DEPTH_STENCIL);
   fbMinimumHeightMap_.attach(FramebufferAttachment::DEPTH_STENCIL, depthbuffer);
 
   setAutoFillBackground(false);
+
+  cameras_["Default"] = std::make_shared<RoSeCamera>();
+  cameras_["CAD"] = std::make_shared<CADCamera>();
+  mCamera = cameras_["Default"];
 
   glow::_CheckGlError(__FILE__, __LINE__);
 }
@@ -154,6 +162,11 @@ void Viewport::initPrograms() {
   prgDrawHeightmap_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/draw_heightmap.geom"));
   prgDrawHeightmap_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgDrawHeightmap_.link();
+
+  prgAverageHeightMap_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/empty.vert"));
+  prgAverageHeightMap_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/quad.geom"));
+  prgAverageHeightMap_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/average_heightmap.frag"));
+  prgAverageHeightMap_.link();
 
   glow::_CheckGlError(__FILE__, __LINE__);
 }
@@ -330,22 +343,29 @@ void Viewport::updateHeightmap() {
     }
   }
 
+//  std::cout << "w x h: " << width << " x " << height << std::endl;
+
   //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
   bufHeightMapPoints_.assign(indexes);
 
   if (fbMinimumHeightMap_.width() != width || fbMinimumHeightMap_.height() != height) {
     fbMinimumHeightMap_.resize(width, height);
     texMinimumHeightMap_.resize(width, height);
+    texTempHeightMap_.resize(width, height);
 
     // update also depth buffer.
     GlRenderbuffer depthbuffer(fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height(),
                                RenderbufferFormat::DEPTH_STENCIL);
-    fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texMinimumHeightMap_);
+    fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texTempHeightMap_);
     fbMinimumHeightMap_.attach(FramebufferAttachment::DEPTH_STENCIL, depthbuffer);
   }
 
+  fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texTempHeightMap_);
+
   GLint vp[4];
   glGetIntegerv(GL_VIEWPORT, vp);
+
+  glPointSize(1.0f);
 
   glViewport(0, 0, fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height());
 
@@ -366,8 +386,23 @@ void Viewport::updateHeightmap() {
 
   glDrawArrays(GL_POINTS, 0, bufPoints_.size());
 
-  vao_points_.release();
   prgMinimumHeightMap_.release();
+  vao_points_.release();
+
+  fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texMinimumHeightMap_);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glDisable(GL_DEPTH_TEST);
+
+  vao_no_points_.bind();
+  prgAverageHeightMap_.bind();
+  glActiveTexture(GL_TEXTURE0);
+  texTempHeightMap_.bind();
+
+  glDrawArrays(GL_POINTS, 0, 1);
+
+  texTempHeightMap_.release();
+  prgAverageHeightMap_.release();
+  vao_no_points_.release();
   fbMinimumHeightMap_.release();
 
   glViewport(vp[0], vp[1], vp[2], vp[3]);
@@ -536,7 +571,7 @@ void Viewport::initializeGL() {
   glDepthFunc(GL_LEQUAL);
   glEnable(GL_LINE_SMOOTH);
 
-  mCamera.lookAt(5.0f, 5.0f, 5.0f, 0.0f, 0.0f, 0.0f);
+  mCamera->lookAt(5.0f, 5.0f, 5.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void Viewport::resizeGL(int w, int h) {
@@ -563,7 +598,7 @@ void Viewport::paintGL() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPointSize(pointSize_);
 
-  view_ = mCamera.matrix();
+  view_ = mCamera->matrix();
 
   mvp_ = projection_ * view_ * conversion_;
 
@@ -709,15 +744,42 @@ std::ostream& operator<<(std::ostream& os, const vec2& v) {
   return os;
 }
 
+void Viewport::wheelEvent(QWheelEvent* event) {
+  mChangeCamera = false;
+
+  if (event->modifiers() == Qt::ControlModifier || mMode == PAINT || polygonPoints_.empty()) {
+    QPoint numPixels = event->pixelDelta();
+    QPoint numDegrees = event->angleDelta() / 8.;
+    float delta = 0.0f;
+
+    if (!numPixels.isNull()) {
+      delta = numPixels.y();
+    } else if (!numDegrees.isNull()) {
+      delta = numDegrees.y() / 15.;
+    }
+
+    mCamera->wheelEvent(delta, resolveKeyboardModifier(event->modifiers()));
+    mChangeCamera = true;
+    polygonPoints_.clear();  // start over again.#
+    bufPolygonPoints_.assign(polygonPoints_);
+    bufTriangles_.resize(0);
+  }
+  this->updateGL();
+  return;
+}
+
 void Viewport::mousePressEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
-
   mChangeCamera = false;
 
   if (event->modifiers() == Qt::ControlModifier) {
-    if (mCamera.mousePressed(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
-                             resolveKeyboardModifier(event->modifiers()))) {
-      timer_.start(1. / 30.);
+    if (mCamera->mousePressed(event->windowPos().x(), event->windowPos().y(), resolveMouseButtonFlip(event->buttons()),
+                              resolveKeyboardModifier(event->modifiers()))) {
+      if (pressedkeys.empty()) {
+        timer_.start(1 / 60);
+      }
+      pressedkeys.insert(Qt::Key_F25);  // abuse F25 for mouse events
+
       mChangeCamera = true;
       polygonPoints_.clear();  // start over again.#
       bufPolygonPoints_.assign(polygonPoints_);
@@ -808,11 +870,14 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
 void Viewport::mouseReleaseEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
   if (mChangeCamera) {
-    timer_.stop();
-    updateGL();
-    if (mCamera.mouseReleased(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
-                              resolveKeyboardModifier(event->modifiers()))) {
+    pressedkeys.erase(Qt::Key_F25);  // abuse F25 for mouse events
+    if (pressedkeys.empty()) {
       timer_.stop();
+    }
+    updateGL();
+    if (mCamera->mouseReleased(event->windowPos().x(), event->windowPos().y(), resolveMouseButtonFlip(event->buttons()),
+                               resolveKeyboardModifier(event->modifiers()))) {
+      // timer_.stop();
       updateGL();  // get the last action.
 
       return;
@@ -843,8 +908,8 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
 void Viewport::mouseMoveEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
   if (mChangeCamera) {
-    if (mCamera.mouseMoved(event->windowPos().x(), event->windowPos().y(), resolveMouseButton(event->buttons()),
-                           resolveKeyboardModifier(event->modifiers()))) {
+    if (mCamera->mouseMoved(event->windowPos().x(), event->windowPos().y(), resolveMouseButtonFlip(event->buttons()),
+                            resolveKeyboardModifier(event->modifiers()))) {
       return;
     }
   } else if (mMode == PAINT) {
@@ -870,27 +935,87 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void Viewport::keyPressEvent(QKeyEvent* event) {
-  if (event->key() == Qt::Key_Escape) {
-    polygonPoints_.clear();  // start over again.#
-    bufPolygonPoints_.assign(polygonPoints_);
-    repaint();
-
-    return;
-  } else if (event->key() == Qt::Key_Delete) {
-    // delete last polygon point.
-
-    if (mMode == POLYGON && polygonPoints_.size() > 0) {
-      polygonPoints_.pop_back();
-
+  switch (event->key()) {
+    case Qt::Key_Escape:
+      polygonPoints_.clear();  // start over again.#
       bufPolygonPoints_.assign(polygonPoints_);
       repaint();
-    }
 
-    return;
+      return;
+    case Qt::Key_Delete:
+      // delete last polygon point.
+
+      if (mMode == POLYGON && polygonPoints_.size() > 0) {
+        polygonPoints_.pop_back();
+
+        bufPolygonPoints_.assign(polygonPoints_);
+        repaint();
+      }
+
+      return;
+    // camera control
+    case Qt::Key_C:
+      if (points_.size() > 0) {
+        if (points_.size() == 0) return;
+        auto mat = conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse();
+        mCamera->setMatrix(mat);
+        updateGL();
+      }
+      return;
+    case Qt::Key_W:
+    case Qt::Key_A:
+    case Qt::Key_S:
+    case Qt::Key_D:
+
+      if (event->isAutoRepeat()) return;
+      //      std::cout << event->key() << std::endl;
+      if (mMode == POLYGON && polygonPoints_.size() > 0) {  // ugly hack!
+        event->ignore();
+        return;
+      }
+
+      if (pressedkeys.empty()) {
+        timer_.start(1 / 60);
+      }
+      pressedkeys.insert(event->key());
+      GlCamera::KeyboardKey k = resolveKeyboardKey(event->key());
+      if (mCamera->keyPressed(k, resolveKeyboardModifier(event->modifiers()))) {
+        event->accept();
+      } else {
+        event->ignore();
+      };
+      return;
   }
-
   // handle event by parent:
+  //  std::cout << event->key() << std::endl;
   event->ignore();
+}
+
+void Viewport::keyReleaseEvent(QKeyEvent* event) {
+  switch (event->key()) {
+    // camera control
+    case Qt::Key_W:
+    case Qt::Key_A:
+    case Qt::Key_S:
+    case Qt::Key_D:
+      if (event->isAutoRepeat()) return;
+      pressedkeys.erase(event->key());
+      if (pressedkeys.empty()) {
+        timer_.stop();
+      }
+      GlCamera::KeyboardKey k = resolveKeyboardKey(event->key());
+      if (mCamera->keyReleased(k, resolveKeyboardModifier(event->modifiers()))) {
+        event->accept();
+      } else {
+        event->ignore();
+      };
+      return;
+  }
+  event->ignore();
+  /*std::cout << "myset contains:";
+    for (std::set<int>::iterator it=pressedkeys.begin(); it!=pressedkeys.end(); ++it)
+      std::cout << ' ' << *it;
+    std::cout << '\n';*/
 }
 
 void Viewport::setTileInfo(float x, float y, float tileSize) {
@@ -943,7 +1068,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 
 
 
-  mvp_ = projection_ * mCamera.matrix() * conversion_;
+  mvp_ = projection_ * mCamera->matrix() * conversion_;
   prgUpdateLabels_.setUniform(mvp_);
 
   if (mMode == Viewport::PAINT) prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 0));
@@ -993,6 +1118,124 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   emit labelingChanged();
 }
 
+glow::GlCamera::KeyboardKey Viewport::resolveKeyboardKey(int key) {
+  switch (key) {
+    case Qt::Key_A:
+      return glow::GlCamera::KeyboardKey::KeyA;
+    case Qt::Key_B:
+      return glow::GlCamera::KeyboardKey::KeyB;
+    case Qt::Key_C:
+      return glow::GlCamera::KeyboardKey::KeyC;
+    case Qt::Key_D:
+      return glow::GlCamera::KeyboardKey::KeyD;
+    case Qt::Key_E:
+      return glow::GlCamera::KeyboardKey::KeyE;
+    case Qt::Key_F:
+      return glow::GlCamera::KeyboardKey::KeyF;
+    case Qt::Key_G:
+      return glow::GlCamera::KeyboardKey::KeyG;
+    case Qt::Key_H:
+      return glow::GlCamera::KeyboardKey::KeyH;
+    case Qt::Key_I:
+      return glow::GlCamera::KeyboardKey::KeyI;
+    case Qt::Key_J:
+      return glow::GlCamera::KeyboardKey::KeyJ;
+    case Qt::Key_K:
+      return glow::GlCamera::KeyboardKey::KeyK;
+    case Qt::Key_L:
+      return glow::GlCamera::KeyboardKey::KeyL;
+    case Qt::Key_M:
+      return glow::GlCamera::KeyboardKey::KeyM;
+    case Qt::Key_N:
+      return glow::GlCamera::KeyboardKey::KeyN;
+    case Qt::Key_O:
+      return glow::GlCamera::KeyboardKey::KeyO;
+    case Qt::Key_P:
+      return glow::GlCamera::KeyboardKey::KeyP;
+    case Qt::Key_Q:
+      return glow::GlCamera::KeyboardKey::KeyQ;
+    case Qt::Key_R:
+      return glow::GlCamera::KeyboardKey::KeyR;
+    case Qt::Key_S:
+      return glow::GlCamera::KeyboardKey::KeyS;
+    case Qt::Key_T:
+      return glow::GlCamera::KeyboardKey::KeyT;
+    case Qt::Key_U:
+      return glow::GlCamera::KeyboardKey::KeyU;
+    case Qt::Key_V:
+      return glow::GlCamera::KeyboardKey::KeyV;
+    case Qt::Key_W:
+      return glow::GlCamera::KeyboardKey::KeyW;
+    case Qt::Key_X:
+      return glow::GlCamera::KeyboardKey::KeyX;
+    case Qt::Key_Y:
+      return glow::GlCamera::KeyboardKey::KeyY;
+    case Qt::Key_Z:
+      return glow::GlCamera::KeyboardKey::KeyZ;
+    case Qt::Key_0:
+      return glow::GlCamera::KeyboardKey::Key0;
+    case Qt::Key_1:
+      return glow::GlCamera::KeyboardKey::Key1;
+    case Qt::Key_2:
+      return glow::GlCamera::KeyboardKey::Key2;
+    case Qt::Key_3:
+      return glow::GlCamera::KeyboardKey::Key3;
+    case Qt::Key_4:
+      return glow::GlCamera::KeyboardKey::Key4;
+    case Qt::Key_5:
+      return glow::GlCamera::KeyboardKey::Key5;
+    case Qt::Key_6:
+      return glow::GlCamera::KeyboardKey::Key6;
+    case Qt::Key_7:
+      return glow::GlCamera::KeyboardKey::Key7;
+    case Qt::Key_8:
+      return glow::GlCamera::KeyboardKey::Key8;
+    case Qt::Key_9:
+      return glow::GlCamera::KeyboardKey::Key9;
+    case Qt::Key_F1:
+      return glow::GlCamera::KeyboardKey::KeyF1;
+    case Qt::Key_F2:
+      return glow::GlCamera::KeyboardKey::KeyF2;
+    case Qt::Key_F3:
+      return glow::GlCamera::KeyboardKey::KeyF3;
+    case Qt::Key_F4:
+      return glow::GlCamera::KeyboardKey::KeyF4;
+    case Qt::Key_F5:
+      return glow::GlCamera::KeyboardKey::KeyF5;
+    case Qt::Key_F6:
+      return glow::GlCamera::KeyboardKey::KeyF6;
+    case Qt::Key_F7:
+      return glow::GlCamera::KeyboardKey::KeyF7;
+    case Qt::Key_F8:
+      return glow::GlCamera::KeyboardKey::KeyF8;
+    case Qt::Key_F9:
+      return glow::GlCamera::KeyboardKey::KeyF9;
+    case Qt::Key_F10:
+      return glow::GlCamera::KeyboardKey::KeyF10;
+    case Qt::Key_F11:
+      return glow::GlCamera::KeyboardKey::KeyF11;
+    case Qt::Key_F12:
+      return glow::GlCamera::KeyboardKey::KeyF12;
+    case Qt::Key_Escape:
+      return glow::GlCamera::KeyboardKey::KeyEsc;
+    case Qt::Key_Up:
+      return glow::GlCamera::KeyboardKey::KeyUpArrow;
+    case Qt::Key_Down:
+      return glow::GlCamera::KeyboardKey::KeyDownArrow;
+    case Qt::Key_Left:
+      return glow::GlCamera::KeyboardKey::KeyLeftArrow;
+    case Qt::Key_Right:
+      return glow::GlCamera::KeyboardKey::KeyRightArrow;
+    case Qt::Key_Space:
+      return glow::GlCamera::KeyboardKey::KeySpace;
+    case Qt::Key_Enter:
+      return glow::GlCamera::KeyboardKey::KeyEnter;
+    case Qt::Key_Return:
+      return glow::GlCamera::KeyboardKey::KeyEnter;
+    default:
+      return glow::GlCamera::KeyboardKey::KeyNotSupported;
+  }
+}
 glow::GlCamera::KeyboardModifier Viewport::resolveKeyboardModifier(Qt::KeyboardModifiers modifiers) {
   // currently only single button presses are supported.
   GlCamera::KeyboardModifier modifier = GlCamera::KeyboardModifier::None;
@@ -1021,13 +1264,34 @@ glow::GlCamera::MouseButton Viewport::resolveMouseButton(Qt::MouseButtons button
   return btn;
 }
 
+glow::GlCamera::MouseButton Viewport::resolveMouseButtonFlip(Qt::MouseButtons button) {
+  // currently only single button presses are supported.
+  GlCamera::MouseButton btn = GlCamera::MouseButton::NoButton;
+  if (flipMouseButtons) {
+    if (button & Qt::LeftButton)
+      btn = GlCamera::MouseButton::LeftButton;
+    else if (button & Qt::RightButton)
+      btn = GlCamera::MouseButton::MiddleButton;
+    else if (button & Qt::MiddleButton)
+      btn = GlCamera::MouseButton::RightButton;
+  } else {
+    if (button & Qt::LeftButton)
+      btn = GlCamera::MouseButton::LeftButton;
+    else if (button & Qt::RightButton)
+      btn = GlCamera::MouseButton::RightButton;
+    else if (button & Qt::MiddleButton)
+      btn = GlCamera::MouseButton::MiddleButton;
+  }
+  return btn;
+}
+
 void Viewport::centerOnCurrentTile() {
   // have to convert from robotic coordinate system to the opengl system.
   if (points_.size() == 0) return;
 
   Eigen::Vector4f t = points_[0]->pose.col(3);
 
-  mCamera.lookAt(-tilePos_.y + 20, t.z() + 25, -tilePos_.x + 20, -tilePos_.y, t.z(), -tilePos_.x);
+  mCamera->lookAt(-tilePos_.y + 20, t.z() + 25, -tilePos_.x + 20, -tilePos_.y, t.z(), -tilePos_.x);
   updateGL();
 }
 
@@ -1073,8 +1337,30 @@ void Viewport::setPlaneRemovalNormalParams(float threshold, float A1, float A2, 
 
 
 
+void Viewport::setFlipMouseButtons(bool value) { flipMouseButtons = value; }
+
+std::vector<std::string> Viewport::getCameraNames() const {
+  std::vector<std::string> keys;
+  for (auto it = cameras_.begin(); it != cameras_.end(); ++it) keys.push_back(it->first);
+  return keys;
+}
+
+std::map<std::string, std::shared_ptr<glow::GlCamera>> Viewport::getCameras() const { return cameras_; }
+
+void Viewport::setCamera(const std::shared_ptr<glow::GlCamera>& cam) {
+  Eigen::Matrix4f m = mCamera->matrix();
+  mCamera = cam;
+  mCamera->setMatrix(m);
+}
+
 void Viewport::setCameraProjection(const CameraProjection& proj) {
   projectionMode_ = proj;
   resizeGL(width(), height());
   updateGL();
+}
+
+void Viewport::setCameraByName(const std::string& name) {
+  if (cameras_.find(name) == cameras_.end()) return;
+
+  setCamera(cameras_[name]);
 }

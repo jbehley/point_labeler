@@ -71,6 +71,7 @@ COMPILE_SHADERS(${VIZ_SHADER_SRC}
   src/shaders/draw_frustum.geom
   src/shaders/draw_heightmap.geom
   src/shaders/draw_heightmap.vert
+  src/shaders/average_heightmap.frag
 )
 
 add_executable(labeler 
@@ -90,6 +91,8 @@ add_executable(labeler
   src/widget/LabelButton.cpp
   src/widget/Mainframe.cpp
   src/widget/Viewport.cpp
+  src/widget/CADCamera.h
+  src/widget/CADCamera.cpp
   src/widget/KittiReader.cpp
   src/widget/TileSelectorWidget.cpp
   src/widget/waitingspinnerwidget.cpp

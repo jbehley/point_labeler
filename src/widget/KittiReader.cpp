@@ -250,9 +250,27 @@ void KittiReader::setTileSize(float size) { tileSize_ = size; }
 void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels) {
   for (uint32_t i = 0; i < indexes.size(); ++i) {
     if (labels[i]->size() == 0) {
-      std::cout << "0 labels?" << std::endl;
+      std::cout << "Warning: 0 labels?" << std::endl;
       continue;
     }
+
+    if (pointsCache_.find(indexes[i]) == pointsCache_.end()) {
+      std::cout << "Warning: labels of non cached points?" << std::endl;
+      continue;
+    }
+
+    if (labels[i]->size() != pointsCache_[indexes[i]]->size()) {
+      std::cout << "Warning: inconsistent numbers of labels for given point cloud!" << std::endl;
+
+      continue;
+    }
+
+    if (label_filenames_.size() < indexes[i]) {
+      std::cout << "Warning: wrong index?" << std::endl;
+
+      continue;
+    }
+
     std::ofstream out(label_filenames_[indexes[i]].c_str());
     out.write((const char*)&(*labels[i])[0], labels[i]->size() * sizeof(uint32_t));
     out.close();

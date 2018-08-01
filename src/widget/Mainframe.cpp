@@ -232,6 +232,26 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   // Camera Projection
   // ------------------------------------------
 
+  /** load cameras**/
+  std::vector<std::string> names = ui.mViewportXYZ->getCameraNames();
+
+  for (auto name : names) {
+    QAction* camact = new QAction(QString::fromStdString(name), this);
+    camact->setCheckable(true);
+    ui.menuCamera_Control->addAction(camact);
+    connect(camact, &QAction::toggled, [this, name, camact](bool toggled) {
+      if (toggled) {
+        //        std::cout << cameras[name] << std::endl;
+        ui.mViewportXYZ->setCameraByName(name);
+        foreach (QAction* action, ui.menuCamera_Control->actions()) {
+          if (action == camact) continue;
+          action->setChecked(false);
+        }
+        // camact->setChecked(true);
+      }
+    });
+  }
+
   connect(ui.actionPerspectiveProjection, &QAction::triggered, [this]() {
     ui.actionPerspectiveProjection->setChecked(true);
     ui.actionOrthographic->setChecked(false);
@@ -314,6 +334,20 @@ void Mainframe::closeEvent(QCloseEvent* event) {
 }
 
 void Mainframe::open() {
+  if (readerFuture_.valid()) readerFuture_.wait();
+
+  if (mChangesSinceLastSave) {
+    int32_t ret =
+        QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+                                                              "Do you want to save your changes?"),
+                             QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+    if (ret == QMessageBox::Save) {
+      save();
+    } else if (ret == QMessageBox::Cancel) {
+      return;
+    }
+  }
+
   QString retValue =
       QFileDialog::getExistingDirectory(this, "Select scan directory", lastDirectory, QFileDialog::ShowDirsOnly);
 
@@ -577,8 +611,8 @@ void Mainframe::readAsync(uint32_t i, uint32_t j) {
   std::vector<LabelsPtr> labels;
   std::vector<std::string> images;
 
-  std::vector<uint32_t> oldIndexes = indexes_;
-  std::vector<LabelsPtr> oldLabels = labels_;
+//  std::vector<uint32_t> oldIndexes = indexes_;
+//  std::vector<LabelsPtr> oldLabels = labels_;
 
   reader_.retrieve(i, j, indexes, points, labels, images);
 
@@ -587,19 +621,19 @@ void Mainframe::readAsync(uint32_t i, uint32_t j) {
   labels_ = labels;
   images_ = images;
 
-  // find difference.
-  std::vector<uint32_t> diff_indexes;
-  index_difference(oldLabels, labels_, diff_indexes);
-
-  std::vector<uint32_t> removedIndexes;
-  std::vector<LabelsPtr> removedLabels;
-
-  for (auto index : diff_indexes) {
-    removedIndexes.push_back(oldIndexes[index]);
-    removedLabels.push_back(oldLabels[index]);
-  }
-  // only update really needed label files.
-  reader_.update(removedIndexes, removedLabels);
+//  // find difference.
+//  std::vector<uint32_t> diff_indexes;
+//  index_difference(oldLabels, labels_, diff_indexes);
+//
+//  std::vector<uint32_t> removedIndexes;
+//  std::vector<LabelsPtr> removedLabels;
+//
+//  for (auto index : diff_indexes) {
+//    removedIndexes.push_back(oldIndexes[index]);
+//    removedLabels.push_back(oldLabels[index]);
+//  }
+//  // only update really needed label files.
+//  //  reader_.update(removedIndexes, removedLabels);
 
   const auto& tile = reader_.getTile(i, j);
   ui.mViewportXYZ->setTileInfo(tile.x, tile.y, tile.size);
@@ -692,6 +726,25 @@ void Mainframe::readConfig() {
       ui.mViewportXYZ->setMinRange(range);
       std::cout << "-- Setting 'min range' to " << range << std::endl;
     }
+    if (tokens[0] == "flip mouse buttons") {
+      float value = boost::lexical_cast<float>(trim(tokens[1]));
+      ui.mViewportXYZ->setFlipMouseButtons((value == 0) ? false : true);
+      std::cout << "-- Setting 'flip mouse buttons' to " << ((value == 0) ? "false" : "true") << std::endl;
+    }
+    if (tokens[0] == "camera") {
+      std::string value = trim(tokens[1]);
+      auto cameras = ui.mViewportXYZ->getCameraNames();
+      bool found = false;
+      for (auto name : cameras) {
+        if (name == value) ui.mViewportXYZ->setCameraByName(name);
+      }
+      if (found) {
+        std::cout << "-- Setting 'camera' to " << value << std::endl;
+      } else {
+        std::cout << "-- [ERROR] Could not set 'camera' to " << value << ". Undefined camera. Using default."
+                  << std::endl;
+      }
+    }
   }
 
   in.close();
@@ -779,24 +832,69 @@ void Mainframe::initializeIcons() {
 }
 
 void Mainframe::keyPressEvent(QKeyEvent* event) {
-  if (event->key() == Qt::Key_D || event->key() == Qt::Key_Right) {
-    if (ui.btnForward->isEnabled()) forward();
+  switch (event->key()) {
+    case Qt::Key_Right:
+      if (ui.btnForward->isEnabled()) forward();
+      return;
 
-  } else if (event->key() == Qt::Key_A || event->key() == Qt::Key_Left) {
-    if (ui.btnBackward->isEnabled()) backward();
+    case Qt::Key_Left:
+      if (ui.btnBackward->isEnabled()) backward();
+      return;
+
+    case Qt::Key_O:
+      ui.actionOverwrite->trigger();
+      return;
+
+    case Qt::Key_F:
+      ui.actionFilter->trigger();
+      return;
+
+    case Qt::Key_Plus:
+      ui.spinPointSize->setValue(std::min<int32_t>(ui.spinPointSize->value() + 1, 10));
+      return;
+
+    case Qt::Key_Minus:
+      ui.spinPointSize->setValue(std::max<int32_t>(ui.spinPointSize->value() - 1, 1));
+      return;
+
+    case Qt::Key_1:
+      changeMode(Viewport::PAINT, true);
+      return;
+
+    case Qt::Key_2:
+      changeMode(Viewport::POLYGON, true);
+      return;
+
+    default:
+      if (!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyPressEvent(event);
+      return;
   }
+}
 
-  if (event->key() == Qt::Key_O) ui.actionOverwrite->trigger();
-  if (event->key() == Qt::Key_F) ui.actionFilter->trigger();
-  if (event->key() == Qt::Key_Plus) ui.spinPointSize->setValue(std::min<int32_t>(ui.spinPointSize->value() + 1, 10));
-  if (event->key() == Qt::Key_Minus) ui.spinPointSize->setValue(std::max<int32_t>(ui.spinPointSize->value() - 1, 1));
-  if (event->key() == Qt::Key_1) changeMode(Viewport::PAINT, true);
-  if (event->key() == Qt::Key_2) changeMode(Viewport::POLYGON, true);
-
-  // change brush size.
-  if (event->key() == Qt::Key_F1) changeRadius(10);
-  if (event->key() == Qt::Key_F2) changeRadius(25);
-  if (event->key() == Qt::Key_F3) changeRadius(50);
+void Mainframe::keyReleaseEvent(QKeyEvent* event) {
+  switch (event->key()) {
+    case Qt::Key_Right:
+    case Qt::Key_Left:
+    case Qt::Key_O:
+    case Qt::Key_F:
+    case Qt::Key_Plus:
+    case Qt::Key_Minus:
+    case Qt::Key_1:
+    case Qt::Key_2:
+      return;
+    case Qt::Key_F1:
+      changeRadius(10);
+      return;
+    case Qt::Key_F2:
+      changeRadius(25);
+      return;
+    case Qt::Key_F3:
+      changeRadius(50);
+      return;
+    default:
+      if (!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyReleaseEvent(event);
+      return;
+  }
 }
 
 void Mainframe::updateMovingStatus(bool isMoving) {

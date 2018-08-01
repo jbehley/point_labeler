@@ -69,6 +69,9 @@ class Mainframe : public QMainWindow {
   std::string filename;
 
   void keyPressEvent(QKeyEvent* event);
+  void keyReleaseEvent(QKeyEvent* event);
+
+
 
  protected slots:
   void unsavedChanges();
