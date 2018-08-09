@@ -82,6 +82,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   drawingOption_["single scan"] = false;
   drawingOption_["show all points"] = false;
   drawingOption_["draw heightmap"] = false;
+  drawingOption_["draw triangles"] = false;
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
@@ -721,12 +722,13 @@ void Viewport::paintGL() {
     glDrawArrays(GL_POINTS, 0, bufPolygonPoints_.size());
     vao_polygon_points_.release();
 
-    //    vao_triangles_.bind();
-    //
-    //    glDrawArrays(GL_LINES, 0, bufTriangles_.size());
-    //
-    //    vao_triangles_.release();
+    if (drawingOption_["draw triangles"]) {
+      vao_triangles_.bind();
 
+      glDrawArrays(GL_LINES, 0, bufTriangles_.size());
+
+      vao_triangles_.release();
+    }
     texLabelColors_.release();
   }
 
@@ -826,7 +828,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         //        else std::cout << "winding: CCW" << std::endl;
 
         std::vector<Triangle> triangles;
-        //        std::vector<glow::vec2> tris_verts;
+        std::vector<glow::vec2> tris_verts;
 
         triangulate(points, triangles);
 
@@ -839,18 +841,18 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
           texContent[3 * i + 1] = vec3(t.j.x / width(), (height() - t.j.y) / height(), 0);
           texContent[3 * i + 2] = vec3(t.k.x / width(), (height() - t.k.y) / height(), 0);
 
-          //          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
-          //          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
-          //          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
-          //          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
-          //          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
-          //          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
         }
 
         numTriangles_ = triangles.size();
         // note: colors are in range [0,1] for FLOAT!
         texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
-        //        bufTriangles_.assign(tris_verts);
+        bufTriangles_.assign(tris_verts);
 
         labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
       }
