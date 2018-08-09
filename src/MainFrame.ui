@@ -304,7 +304,7 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>0</y>
+          <y>-197</y>
           <width>219</width>
           <height>627</height>
          </rect>
@@ -749,7 +749,7 @@
               <double>30.000000000000000</double>
              </property>
              <property name="singleStep">
-              <double>5.000000000000000</double>
+              <double>0.050000000000000</double>
              </property>
              <property name="value">
               <double>0.300000000000000</double>

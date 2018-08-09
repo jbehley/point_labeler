@@ -793,7 +793,9 @@ void Mainframe::keyPressEvent(QKeyEvent* event) {
     case Qt::Key_2:
       changeMode(Viewport::POLYGON, true);
       return;
-
+    case Qt::Key_R:
+      ui.chkRemoveGround->toggle();
+      return;
     default:
       if (!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyPressEvent(event);
       return;
@@ -801,6 +803,9 @@ void Mainframe::keyPressEvent(QKeyEvent* event) {
 }
 
 void Mainframe::keyReleaseEvent(QKeyEvent* event) {
+  double value = ui.spinGroundThreshold->value();
+  double step = ui.spinGroundThreshold->singleStep();
+
   switch (event->key()) {
     case Qt::Key_Right:
     case Qt::Key_Left:
@@ -819,6 +824,12 @@ void Mainframe::keyReleaseEvent(QKeyEvent* event) {
       return;
     case Qt::Key_F3:
       changeRadius(50);
+      return;
+    case Qt::Key_E:
+      ui.spinGroundThreshold->setValue(value + step);
+      return;
+    case Qt::Key_Q:
+      ui.spinGroundThreshold->setValue(value - step);
       return;
     default:
       if (!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyReleaseEvent(event);
