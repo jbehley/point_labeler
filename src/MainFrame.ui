@@ -122,7 +122,7 @@
      <x>0</x>
      <y>0</y>
      <width>1048</width>
-     <height>27</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -306,13 +306,20 @@
           <x>0</x>
           <y>0</y>
           <width>219</width>
-          <height>607</height>
+          <height>627</height>
          </rect>
         </property>
         <attribute name="label">
          <string>Tools</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_4">
+         <item>
+          <widget class="QCheckBox" name="chkShowSingleScan">
+           <property name="text">
+            <string>show single scan</string>
+           </property>
+          </widget>
+         </item>
          <item>
           <layout class="QFormLayout" name="formLayout_2">
            <property name="leftMargin">
@@ -736,13 +743,13 @@
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
              <property name="minimum">
-              <double>-2.000000000000000</double>
+              <double>-15.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>5.000000000000000</double>
+              <double>30.000000000000000</double>
              </property>
              <property name="singleStep">
-              <double>0.100000000000000</double>
+              <double>5.000000000000000</double>
              </property>
              <property name="value">
               <double>0.300000000000000</double>
@@ -912,7 +919,7 @@
           <x>0</x>
           <y>0</y>
           <width>232</width>
-          <height>241</height>
+          <height>372</height>
          </rect>
         </property>
         <attribute name="label">
@@ -920,7 +927,7 @@
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_7">
          <item>
-          <widget class="QCheckBox" name="chkShowSingleScan">
+          <widget class="QCheckBox" name="chkShowSingleScan_2">
            <property name="text">
             <string>show single scan</string>
            </property>
@@ -980,6 +987,9 @@
   <action name="actionSave">
    <property name="text">
     <string>&amp;Save...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
   <action name="actionOverwrite">
