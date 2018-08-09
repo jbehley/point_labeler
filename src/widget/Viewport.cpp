@@ -343,7 +343,7 @@ void Viewport::updateHeightmap() {
     }
   }
 
-//  std::cout << "w x h: " << width << " x " << height << std::endl;
+  //  std::cout << "w x h: " << width << " x " << height << std::endl;
 
   //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
   bufHeightMapPoints_.assign(indexes);
@@ -791,7 +791,12 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
     updateGL();
   } else if (mMode == POLYGON) {
     if (event->buttons() & Qt::LeftButton) {
-      polygonPoints_.push_back(vec2(event->x(), event->y()));
+      if (polygonPoints_.size() == 100) {
+        polygonPoints_.back().x = event->x();
+        polygonPoints_.back().y = event->y();
+      } else {
+        polygonPoints_.push_back(vec2(event->x(), event->y()));
+      }
 
     } else if (event->buttons() & Qt::RightButton) {
       if (polygonPoints_.size() > 2) {
