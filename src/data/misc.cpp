@@ -90,7 +90,7 @@ bool triangulate(const std::vector<glow::vec2>& points, std::vector<Triangle>& t
     if (g < 0) {
       // check for other point inside triangle.
       bool intriangle = false;
-      for (int32_t j = 2; j < int32_t(lst.size()) - 2; ++j) {
+      for (int32_t j = 2; j <= int32_t(lst.size()) - 2; ++j) {
         glow::vec2 pt = lst[(i + j + lst.size()) % lst.size()];
 
         if (insideTriangle(pt, p1, p, p2)) {

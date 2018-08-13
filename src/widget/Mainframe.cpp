@@ -611,8 +611,8 @@ void Mainframe::readAsync(uint32_t i, uint32_t j) {
   std::vector<LabelsPtr> labels;
   std::vector<std::string> images;
 
-//  std::vector<uint32_t> oldIndexes = indexes_;
-//  std::vector<LabelsPtr> oldLabels = labels_;
+  //  std::vector<uint32_t> oldIndexes = indexes_;
+  //  std::vector<LabelsPtr> oldLabels = labels_;
 
   reader_.retrieve(i, j, indexes, points, labels, images);
 
@@ -621,19 +621,19 @@ void Mainframe::readAsync(uint32_t i, uint32_t j) {
   labels_ = labels;
   images_ = images;
 
-//  // find difference.
-//  std::vector<uint32_t> diff_indexes;
-//  index_difference(oldLabels, labels_, diff_indexes);
-//
-//  std::vector<uint32_t> removedIndexes;
-//  std::vector<LabelsPtr> removedLabels;
-//
-//  for (auto index : diff_indexes) {
-//    removedIndexes.push_back(oldIndexes[index]);
-//    removedLabels.push_back(oldLabels[index]);
-//  }
-//  // only update really needed label files.
-//  //  reader_.update(removedIndexes, removedLabels);
+  //  // find difference.
+  //  std::vector<uint32_t> diff_indexes;
+  //  index_difference(oldLabels, labels_, diff_indexes);
+  //
+  //  std::vector<uint32_t> removedIndexes;
+  //  std::vector<LabelsPtr> removedLabels;
+  //
+  //  for (auto index : diff_indexes) {
+  //    removedIndexes.push_back(oldIndexes[index]);
+  //    removedLabels.push_back(oldLabels[index]);
+  //  }
+  //  // only update really needed label files.
+  //  //  reader_.update(removedIndexes, removedLabels);
 
   const auto& tile = reader_.getTile(i, j);
   ui.mViewportXYZ->setTileInfo(tile.x, tile.y, tile.size);
@@ -864,7 +864,9 @@ void Mainframe::keyPressEvent(QKeyEvent* event) {
     case Qt::Key_2:
       changeMode(Viewport::POLYGON, true);
       return;
-
+    case Qt::Key_R:
+      ui.chkRemoveGround->toggle();
+      return;
     default:
       if (!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyPressEvent(event);
       return;
@@ -872,6 +874,9 @@ void Mainframe::keyPressEvent(QKeyEvent* event) {
 }
 
 void Mainframe::keyReleaseEvent(QKeyEvent* event) {
+  double value = ui.spinGroundThreshold->value();
+  double step = ui.spinGroundThreshold->singleStep();
+
   switch (event->key()) {
     case Qt::Key_Right:
     case Qt::Key_Left:
@@ -890,6 +895,12 @@ void Mainframe::keyReleaseEvent(QKeyEvent* event) {
       return;
     case Qt::Key_F3:
       changeRadius(50);
+      return;
+    case Qt::Key_E:
+      ui.spinGroundThreshold->setValue(value + step);
+      return;
+    case Qt::Key_Q:
+      ui.spinGroundThreshold->setValue(value - step);
       return;
     default:
       if (!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyReleaseEvent(event);
@@ -911,6 +922,19 @@ void Mainframe::updateMovingStatus(bool isMoving) {
 
     labelButtons[i]->setHighlighted(contains(filteredLabels, id));
   }
+
+  // update the label.
+
+  uint32_t label_id = labelDefinitions_[selectedLabelButtonIdx_].id;
+  bool potentiallyMoving = labelDefinitions_[selectedLabelButtonIdx_].potentiallyMoving;
+
+  if (potentiallyMoving && ui.rdoMoving->isChecked()) {
+    label_id = labelDefinitions_[selectedLabelButtonIdx_].id_moving;
+  }
+
+  ui.mViewportXYZ->setLabel(label_id);
+
+  ui.txtSelectedLabel->setText(QString::fromStdString(label_names[label_id]));
 }
 
 void Mainframe::updateLabelButtons() {
