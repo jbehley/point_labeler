@@ -960,6 +960,24 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
       }
 
       return;
+    case Qt::Key_P:
+      // Set plane parameters to car pose
+      {
+      planeThresholdNormal_ = 0;
+      Eigen::Vector4f unit_vect(1.0, 0, 0, 0);
+      auto normal_vect = points_[singleScanIdx_]->pose * unit_vect;
+
+      std::cout << "pose_matrix: " << std::endl << points_[singleScanIdx_]->pose << std::endl;
+      std::cout << "normal_vect: " << normal_vect << std::endl;
+
+      planeNormal_[0] = normal_vect[0];
+      planeNormal_[1] = normal_vect[1];
+      planeNormal_[2] = normal_vect[2];
+      planeDirectionNormal_ = 1.0;
+      updateGL();
+
+      return;
+      }
     // camera control
     case Qt::Key_C:
       if (points_.size() > 0) {

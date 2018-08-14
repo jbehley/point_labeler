@@ -304,9 +304,9 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>0</y>
+          <y>-492</y>
           <width>219</width>
-          <height>854</height>
+          <height>882</height>
          </rect>
         </property>
         <attribute name="label">
@@ -1005,7 +1005,7 @@
              </item>
             </layout>
            </item>
-           <item row="5" column="0" colspan="2">
+           <item row="6" column="0" colspan="2">
             <layout class="QHBoxLayout" name="horizontalLayout_11">
              <property name="leftMargin">
               <number>5</number>
@@ -1143,6 +1143,13 @@
              </item>
             </layout>
            </item>
+           <item row="5" column="0" colspan="2">
+            <widget class="QCheckBox" name="chkCarPoseAsBase">
+             <property name="text">
+              <string>car pose as base</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </item>
         </layout>
@@ -1152,8 +1159,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>232</width>
-          <height>390</height>
+          <width>161</width>
+          <height>74</height>
          </rect>
         </property>
         <attribute name="label">
