@@ -304,22 +304,15 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>-492</y>
+          <y>0</y>
           <width>219</width>
-          <height>882</height>
+          <height>854</height>
          </rect>
         </property>
         <attribute name="label">
          <string>Tools</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_4">
-         <item>
-          <widget class="QCheckBox" name="chkShowSingleScan">
-           <property name="text">
-            <string>show single scan</string>
-           </property>
-          </widget>
-         </item>
          <item>
           <layout class="QFormLayout" name="formLayout_2">
            <property name="leftMargin">
@@ -1159,8 +1152,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>161</width>
-          <height>74</height>
+          <width>232</width>
+          <height>390</height>
          </rect>
         </property>
         <attribute name="label">
@@ -1168,7 +1161,7 @@
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_7">
          <item>
-          <widget class="QCheckBox" name="chkShowSingleScan_2">
+          <widget class="QCheckBox" name="chkShowSingleScan">
            <property name="text">
             <string>show single scan</string>
            </property>
