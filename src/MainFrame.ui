@@ -122,7 +122,7 @@
      <x>0</x>
      <y>0</y>
      <width>1048</width>
-     <height>25</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -304,9 +304,9 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>-492</y>
+          <y>-463</y>
           <width>219</width>
-          <height>882</height>
+          <height>830</height>
          </rect>
         </property>
         <attribute name="label">
@@ -781,6 +781,9 @@
            </item>
            <item row="1" column="1">
             <widget class="QSlider" name="sldPlaneThreshold">
+             <property name="focusPolicy">
+              <enum>Qt::WheelFocus</enum>
+             </property>
              <property name="minimum">
               <number>-10000</number>
              </property>
@@ -925,8 +928,18 @@
              </property>
             </widget>
            </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_5">
+             <property name="text">
+              <string>Threshold</string>
+             </property>
+            </widget>
+           </item>
            <item row="1" column="1">
             <widget class="QSlider" name="sldPlaneThresholdNormal">
+             <property name="focusPolicy">
+              <enum>Qt::WheelFocus</enum>
+             </property>
              <property name="minimum">
               <number>-10000</number>
              </property>
@@ -950,13 +963,6 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_5">
-             <property name="text">
-              <string>Threshold</string>
-             </property>
-            </widget>
-           </item>
            <item row="2" column="0" colspan="2">
             <layout class="QHBoxLayout" name="horizontalLayout_10">
              <property name="leftMargin">
@@ -974,17 +980,71 @@
              <item>
               <widget class="QLabel" name="label_6">
                <property name="text">
-                <string>A1</string>
+                <string>theta</string>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QSlider" name="sldPlaneNormalA1">
+               <property name="focusPolicy">
+                <enum>Qt::WheelFocus</enum>
+               </property>
                <property name="minimum">
                 <number>0</number>
                </property>
                <property name="maximum">
-                <number>360</number>
+                <number>1440</number>
+               </property>
+               <property name="singleStep">
+                <number>1</number>
+               </property>
+               <property name="pageStep">
+                <number>180</number>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="tickPosition">
+                <enum>QSlider::TicksBelow</enum>
+               </property>
+               <property name="tickInterval">
+                <number>90</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="3" column="0" colspan="2">
+            <layout class="QHBoxLayout" name="horizontalLayout_12">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>3</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_7">
+               <property name="text">
+                <string>phi</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSlider" name="sldPlaneNormalA2">
+               <property name="focusPolicy">
+                <enum>Qt::WheelFocus</enum>
+               </property>
+               <property name="minimum">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <number>1440</number>
                </property>
                <property name="singleStep">
                 <number>1</number>
@@ -1005,7 +1065,14 @@
              </item>
             </layout>
            </item>
-           <item row="6" column="0" colspan="2">
+           <item row="4" column="0" colspan="2">
+            <widget class="QCheckBox" name="chkCarPoseAsBase">
+             <property name="text">
+              <string>car pose as base</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0" colspan="2">
             <layout class="QHBoxLayout" name="horizontalLayout_11">
              <property name="leftMargin">
               <number>5</number>
@@ -1047,109 +1114,6 @@
              </item>
             </layout>
            </item>
-           <item row="3" column="0" colspan="2">
-            <layout class="QHBoxLayout" name="horizontalLayout_12">
-             <property name="leftMargin">
-              <number>5</number>
-             </property>
-             <property name="topMargin">
-              <number>5</number>
-             </property>
-             <property name="rightMargin">
-              <number>3</number>
-             </property>
-             <property name="bottomMargin">
-              <number>5</number>
-             </property>
-             <item>
-              <widget class="QLabel" name="label_7">
-               <property name="text">
-                <string>A2</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QSlider" name="sldPlaneNormalA2">
-               <property name="minimum">
-                <number>0</number>
-               </property>
-               <property name="maximum">
-                <number>360</number>
-               </property>
-               <property name="singleStep">
-                <number>1</number>
-               </property>
-               <property name="pageStep">
-                <number>90</number>
-               </property>
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="tickPosition">
-                <enum>QSlider::TicksBelow</enum>
-               </property>
-               <property name="tickInterval">
-                <number>90</number>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="4" column="0" colspan="2">
-            <layout class="QHBoxLayout" name="horizontalLayout_13">
-             <property name="leftMargin">
-              <number>5</number>
-             </property>
-             <property name="topMargin">
-              <number>5</number>
-             </property>
-             <property name="rightMargin">
-              <number>3</number>
-             </property>
-             <property name="bottomMargin">
-              <number>5</number>
-             </property>
-             <item>
-              <widget class="QLabel" name="label_8">
-               <property name="text">
-                <string>A3</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QSlider" name="sldPlaneNormalA3">
-               <property name="minimum">
-                <number>0</number>
-               </property>
-               <property name="maximum">
-                <number>360</number>
-               </property>
-               <property name="singleStep">
-                <number>1</number>
-               </property>
-               <property name="pageStep">
-                <number>90</number>
-               </property>
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="tickPosition">
-                <enum>QSlider::TicksBelow</enum>
-               </property>
-               <property name="tickInterval">
-                <number>90</number>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="5" column="0" colspan="2">
-            <widget class="QCheckBox" name="chkCarPoseAsBase">
-             <property name="text">
-              <string>car pose as base</string>
-             </property>
-            </widget>
-           </item>
           </layout>
          </item>
         </layout>
@@ -1159,8 +1123,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>161</width>
-          <height>74</height>
+          <width>232</width>
+          <height>367</height>
          </rect>
         </property>
         <attribute name="label">

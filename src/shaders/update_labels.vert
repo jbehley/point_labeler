@@ -32,9 +32,12 @@ uniform float planeThreshold;
 uniform float planeDirection;
 
 uniform bool planeRemovalNormal;
+uniform bool carAsBase;
 uniform vec3 planeNormal;
 uniform float planeThresholdNormal;
 uniform float planeDirectionNormal;
+
+uniform mat4 pose;
 
 uniform bool removeLabel;
 
@@ -74,12 +77,17 @@ void main()
   vec4 v_global = vec4(in_vertex.xyz, 1.0);
   vec2 v = v_global.xy - tilePos;
   
+  vec4 plane_normal = pose * vec4(planeDirection * float(planeDimension == 0), planeDirection * float(planeDimension == 1), planeDirection * float(planeDimension == 2), 0);
+  
   bool visible = (in_visible > uint(0)) && (!removeGround || v_global.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
 
-  if(planeRemoval) visible = visible && (planeDirection * (in_vertex[planeDimension] - planeThreshold)  < 0);
+  if(planeRemoval) visible = visible && ((dot(plane_normal, in_vertex) - planeThreshold)  < 0);
   
   if(planeRemovalNormal){
-    float scalar_product = (in_vertex[0] - tilePos[0]) * planeNormal[0] + (in_vertex[1] - tilePos[1]) * planeNormal[1] + in_vertex[2] * planeNormal[2];
+    vec3 pn = planeNormal;
+    if(carAsBase) pn = (pose * vec4(planeNormal, 0.0)).xyz;
+    
+    float scalar_product = (in_vertex[0] - tilePos[0]) * pn[0] + (in_vertex[1] - tilePos[1]) * pn[1] + in_vertex[2] * pn[2];
   
     visible = visible && (planeDirectionNormal * (scalar_product - planeThresholdNormal) < 0);
   }
