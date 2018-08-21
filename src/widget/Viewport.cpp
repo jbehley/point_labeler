@@ -83,6 +83,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   drawingOption_["show all points"] = false;
   drawingOption_["draw heightmap"] = false;
   drawingOption_["draw triangles"] = false;
+  drawingOption_["show plane"] = true;
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
@@ -168,6 +169,11 @@ void Viewport::initPrograms() {
   prgAverageHeightMap_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/quad.geom"));
   prgAverageHeightMap_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/average_heightmap.frag"));
   prgAverageHeightMap_.link();
+
+  prgDrawPlane_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/empty.vert"));
+  prgDrawPlane_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/draw_plane.geom"));
+  prgDrawPlane_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
+  prgDrawPlane_.link();
 
   glow::_CheckGlError(__FILE__, __LINE__);
 }
@@ -632,14 +638,31 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
     prgDrawPoints_.setUniform(GlUniform<int32_t>("heightMap", 1));
 
-    float planeThreshold = planeThreshold_;
-    prgDrawPoints_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
-    prgDrawPoints_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
-    if (planeDimension_ == 0) planeThreshold += tilePos_.x;
-    if (planeDimension_ == 1) planeThreshold += tilePos_.y;
-    if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
-    prgDrawPoints_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
-    prgDrawPoints_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
+    //    float planeThreshold = planeThreshold_;
+    //    prgDrawPoints_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
+    //    prgDrawPoints_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
+    //    if (planeDimension_ == 0) planeThreshold += tilePos_.x;
+    //    if (planeDimension_ == 1) planeThreshold += tilePos_.y;
+    //    if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
+    //
+    //    prgDrawPoints_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
+    //    prgDrawPoints_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
+
+    prgDrawPoints_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
+    prgDrawPoints_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
+    prgDrawPoints_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
+    prgDrawPoints_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
+    //    prgDrawPoints_.setUniform(GlUniform<bool>("carAsBase", drawingOption_["carAsBase"]));
+    Eigen::Matrix4f plane_pose = Eigen::Matrix4f::Identity();
+    plane_pose(0, 3) = tilePos_.x;
+    plane_pose(1, 3) = tilePos_.y;
+    plane_pose(2, 3) = points_[0]->pose(2, 3);
+    if (drawingOption_["carAsBase"] && points_.size() > singleScanIdx_) {
+      //      plane_pose = points_[singleScanIdx_]->pose;
+      plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
+    }
+
+    prgDrawPoints_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
 
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.bind();
@@ -658,6 +681,53 @@ void Viewport::paintGL() {
     texLabelColors_.release();
     glActiveTexture(GL_TEXTURE1);
     texMinimumHeightMap_.release();
+  }
+
+  if (planeRemovalNormal_ && drawingOption_["show plane"]) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // FIXME: state changed.
+
+    ScopedBinder<GlProgram> program_binder(prgDrawPlane_);
+    ScopedBinder<GlVertexArray> vao_binder(vao_no_points_);
+
+    prgDrawPlane_.setUniform(mvp_);
+
+    //    prgDrawPlane_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
+    //    if (points_.size() > singleScanIdx_)
+    //      prgDrawPlane_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[singleScanIdx_]->pose));
+
+    //    float planeThreshold = planeThreshold_;
+    //    prgDrawPlane_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
+    //    prgDrawPlane_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
+    //    if (planeDimension_ == 0) planeThreshold += tilePos_.x;
+    //    if (planeDimension_ == 1) planeThreshold += tilePos_.y;
+    //    if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
+    //    prgDrawPlane_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
+    //    prgDrawPlane_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
+    //    prgDrawPlane_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
+    //    prgDrawPlane_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
+    //    prgDrawPlane_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+    //    prgDrawPlane_.setUniform(GlUniform<float>("tileSize", tileSize_));
+
+    prgDrawPlane_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
+    prgDrawPlane_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
+    prgDrawPlane_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
+    prgDrawPlane_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
+    //    prgDrawPoints_.setUniform(GlUniform<bool>("carAsBase", drawingOption_["carAsBase"]));
+    Eigen::Matrix4f plane_pose = Eigen::Matrix4f::Identity();
+
+    plane_pose(0, 3) = tilePos_.x;
+    plane_pose(1, 3) = tilePos_.y;
+    if (points_.size() > 0) plane_pose(2, 3) = points_[0]->pose(2, 3);
+    if (drawingOption_["carAsBase"] && points_.size() > singleScanIdx_) {
+      // plane_pose = points_[singleScanIdx_]->pose;
+      plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
+    }
+
+    prgDrawPlane_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
+    glDrawArrays(GL_POINTS, 0, 1);
+
+    glDisable(GL_BLEND);
   }
 
   if (showSingleScan) {
@@ -954,6 +1024,24 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
       }
 
       return;
+    //    case Qt::Key_P:
+    //      // Set plane parameters to car pose
+    //      {
+    //        planeThresholdNormal_ = 0;
+    //        Eigen::Vector4f unit_vect(1.0, 0, 0, 0);
+    //        auto normal_vect = points_[singleScanIdx_]->pose * unit_vect;
+    //
+    //        //        std::cout << "pose_matrix: " << std::endl << points_[singleScanIdx_]->pose << std::endl;
+    //        //        std::cout << "normal_vect: " << normal_vect << std::endl;
+    //
+    //        planeNormal_[0] = normal_vect[0];
+    //        planeNormal_[1] = normal_vect[1];
+    //        planeNormal_[2] = normal_vect[2];
+    //        planeDirectionNormal_ = 1.0;
+    //        updateGL();
+    //
+    //        return;
+    //      }
     // camera control
     case Qt::Key_C:
       if (points_.size() > 0) {
@@ -1037,6 +1125,10 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   ScopedBinder<GlProgram> programBinder(prgUpdateLabels_);
   ScopedBinder<GlTransformFeedback> feedbackBinder(tfUpdateLabels_);
 
+  prgUpdateLabels_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
+  if (points_.size() > singleScanIdx_)
+    prgUpdateLabels_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[singleScanIdx_]->pose));
+
   prgUpdateLabels_.setUniform(GlUniform<vec2>("window_pos", glow::vec2(x, y)));
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("width", width()));
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("height", height()));
@@ -1051,14 +1143,31 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("heightMap", 1));
   prgUpdateLabels_.setUniform(GlUniform<bool>("removeLabel", remove));
 
-  float planeThreshold = planeThreshold_;
-  prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
-  prgUpdateLabels_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
-  if (planeDimension_ == 0) planeThreshold += tilePos_.x;
-  if (planeDimension_ == 1) planeThreshold += tilePos_.y;
-  if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
-  prgUpdateLabels_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
-  prgUpdateLabels_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
+  //  float planeThreshold = planeThreshold_;
+  //  prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
+  //  prgUpdateLabels_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
+  //  if (planeDimension_ == 0) planeThreshold += tilePos_.x;
+  //  if (planeDimension_ == 1) planeThreshold += tilePos_.y;
+  //  if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
+  //  prgUpdateLabels_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
+  //  prgUpdateLabels_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
+  //  prgUpdateLabels_.setUniform(GlUniform<bool>("carAsBase", drawingOption_["carAsBase"]));
+
+  prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
+  prgUpdateLabels_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
+  prgUpdateLabels_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
+  prgUpdateLabels_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
+
+  Eigen::Matrix4f plane_pose = Eigen::Matrix4f::Identity();
+  plane_pose(0, 3) = tilePos_.x;
+  plane_pose(1, 3) = tilePos_.y;
+  plane_pose(2, 3) = points_[0]->pose(2, 3);
+  if (drawingOption_["carAsBase"] && points_.size() > singleScanIdx_) {
+    //        plane_pose = points_[singleScanIdx_]->pose;
+    plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
+  }
+
+  prgUpdateLabels_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
 
   mvp_ = projection_ * mCamera->matrix() * conversion_;
   prgUpdateLabels_.setUniform(mvp_);
@@ -1296,6 +1405,58 @@ void Viewport::setPlaneRemovalParams(float threshold, int32_t dim, float directi
   planeThreshold_ = threshold;
   planeDimension_ = dim;
   planeDirection_ = direction;
+  updateGL();
+}
+
+void Viewport::setPlaneRemovalNormal(bool value) {
+  planeRemovalNormal_ = value;
+  updateGL();
+}
+
+const double PI = std::acos(-1);
+void Viewport::setPlaneRemovalNormalParams(float threshold, float A1, float A2, float A3, float direction) {
+  planeThresholdNormal_ = threshold;
+  Eigen::Vector4f unit_vect(1.0, 0, 0, 0);
+  //  auto rotX = glow::glRotateX(A1 * PI / 180);
+  //  auto rotY = glow::glRotateY(A2 * PI / 180);
+  //  auto rotZ = glow::glRotateZ(A3 * PI / 180);
+
+  //  auto normal_vect = rotX * rotY * rotZ * unit_vect;
+
+  float theta = A1 * PI / 180;
+  float phi = A2 * PI / 180;
+
+  //  Eigen::Matrix4f R = Eigen::Matrix4f::Identity();
+  //  R(0, 0) = std::sin(theta) * std::cos(phi);
+  //  R(0, 1) = std::cos(theta) * std::cos(phi);
+  //  R(0, 2) = -std::sin(phi);
+  //
+  //  R(1, 0) = std::sin(theta) * std::sin(phi);
+  //  R(1, 1) = std::cos(theta) * std::sin(phi);
+  //  R(1, 2) = std::cos(phi);
+  //
+  //  R(2, 0) = std::cos(theta);
+  //  R(2, 1) = -std::sin(phi);
+  //  R(2, 2) = 0;
+  //
+  //  auto rotX = glow::glRotateX(theta);
+  //  auto rotY = glow::glRotateY(phi);
+  //  R = rotX * rotY;
+  //  auto normal_vect = R * Eigen::Vector4f(1, 0, 0, 0);
+
+  float a = std::tan(theta);
+  float b = std::tan(phi);
+  Eigen::Vector3f n(a, b, 1);
+  n.normalize();
+
+  //  std::cout << "rotation matrix: " << std::endl << rotX * rotY * rotZ << std::endl;
+  //  std::cout << "normal_vect: " << normal_vect << std::endl;
+
+  //  planeNormal_[0] = normal_vect[0];
+  //  planeNormal_[1] = normal_vect[1];
+  //  planeNormal_[2] = normal_vect[2];
+  planeNormal_ = n;  // normal_vect.head(3);
+  planeDirectionNormal_ = direction;
   updateGL();
 }
 
