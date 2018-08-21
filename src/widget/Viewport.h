@@ -290,7 +290,7 @@ class Viewport : public QGLWidget {
 
   bool planeRemovalNormal_{false};
   float planeThresholdNormal_{0.0f};
-  Eigen::Vector3f planeNormal_{1.0, 0.0, 0.0};
+  Eigen::Vector3f planeNormal_{0.0, 0.0, 1.0};
   float planeDirectionNormal_{1.0f};
 
   uint32_t labeledCount_{0};
