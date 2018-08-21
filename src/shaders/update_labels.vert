@@ -26,10 +26,16 @@ uniform sampler2D heightMap;
 uniform vec2 tilePos;
 uniform float tileSize;
 
-uniform bool planeRemoval;
-uniform int planeDimension;
-uniform float planeThreshold;
-uniform float planeDirection;
+//uniform bool planeRemoval;
+//uniform int planeDimension;
+//uniform float planeThreshold;
+//uniform float planeDirection;
+
+uniform bool planeRemovalNormal;
+uniform vec3 planeNormal;
+uniform float planeThresholdNormal;
+uniform float planeDirectionNormal;
+uniform mat4 plane_pose;
 
 uniform bool removeLabel;
 
@@ -69,10 +75,21 @@ void main()
   vec4 v_global = vec4(in_vertex.xyz, 1.0);
   vec2 v = v_global.xy - tilePos;
   
+  //vec4 plane_normal = pose * vec4(planeDirection * float(planeDimension == 0), planeDirection * float(planeDimension == 1), planeDirection * float(planeDimension == 2), 0);
+  
   bool visible = (in_visible > uint(0)) && (!removeGround || v_global.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
 
-  if(planeRemoval) visible = visible && (planeDirection * (in_vertex[planeDimension] - planeThreshold)  < 0);
+  //if(planeRemoval) visible = visible && ((dot(plane_normal, in_vertex) - planeThreshold)  < 0);
   
+  if(planeRemovalNormal){
+    vec3 pn = (plane_pose * vec4(planeNormal, 0.0)).xyz;
+    vec3 po = (plane_pose * vec4(0,0,0,1)).xyz;
+    
+    float scalar_product = dot(in_vertex.xyz - po.xyz, pn);
+    
+    visible = visible && (planeDirectionNormal * (scalar_product - planeThresholdNormal) < 0);
+  }
+
 
   if(visible)
   {
