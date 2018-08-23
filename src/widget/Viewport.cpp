@@ -658,8 +658,8 @@ void Viewport::paintGL() {
     plane_pose(1, 3) = tilePos_.y;
     plane_pose(2, 3) = points_[0]->pose(2, 3);
     if (drawingOption_["carAsBase"] && points_.size() > singleScanIdx_) {
-      //      plane_pose = points_[singleScanIdx_]->pose;
-      plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
+      plane_pose = points_[singleScanIdx_]->pose;
+      //      plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
     }
 
     prgDrawPoints_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
@@ -720,8 +720,8 @@ void Viewport::paintGL() {
     plane_pose(1, 3) = tilePos_.y;
     if (points_.size() > 0) plane_pose(2, 3) = points_[0]->pose(2, 3);
     if (drawingOption_["carAsBase"] && points_.size() > singleScanIdx_) {
-      // plane_pose = points_[singleScanIdx_]->pose;
-      plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
+      plane_pose = points_[singleScanIdx_]->pose;
+      //      plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
     }
 
     prgDrawPlane_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
@@ -1163,8 +1163,8 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   plane_pose(1, 3) = tilePos_.y;
   plane_pose(2, 3) = points_[0]->pose(2, 3);
   if (drawingOption_["carAsBase"] && points_.size() > singleScanIdx_) {
-    //        plane_pose = points_[singleScanIdx_]->pose;
-    plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
+    plane_pose = points_[singleScanIdx_]->pose;
+    //    plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
   }
 
   prgUpdateLabels_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
