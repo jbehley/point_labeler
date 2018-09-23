@@ -167,6 +167,13 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   //    ui.mViewportXYZ->setPlaneRemovalParams(ui.sldPlaneThreshold->value() / 100.0f, dim, -1.0f);
   //  });
 
+  connect(ui.chkShowScanRange, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("show scan range", value); });
+  connect(ui.spinRangeBegin, static_cast<void (QSpinBox::*)(int32_t)>(&QSpinBox::valueChanged),
+          [this](int32_t value) { ui.mViewportXYZ->setScanRange(value, ui.spinRangeEnd->value()); });
+  connect(ui.spinRangeEnd, static_cast<void (QSpinBox::*)(int32_t)>(&QSpinBox::valueChanged),
+          [this](int32_t value) { ui.mViewportXYZ->setScanRange(ui.spinRangeBegin->value(), value); });
+
   // ------------------------------------------
   // Removal with plane in arbitrary normal direction
   // ------------------------------------------
@@ -663,6 +670,11 @@ void Mainframe::updateScans() {
   dotted_number = number + dotted_number;
   lblNumPoints_.setText(dotted_number + " ");
   progressLabeled_.setValue(100.0f * ui.mViewportXYZ->labeledPointCount() / ui.mViewportXYZ->loadedPointCount());
+
+  ui.spinRangeBegin->setValue(0);
+  ui.spinRangeBegin->setMaximum(indexes_.size() - 1);
+  ui.spinRangeEnd->setValue(indexes_.size() - 1);
+  ui.spinRangeEnd->setMaximum(indexes_.size() - 1);
 }
 
 void Mainframe::forward() {

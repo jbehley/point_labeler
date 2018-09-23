@@ -107,6 +107,12 @@ class Viewport : public QGLWidget {
 
   void setCameraProjection(const CameraProjection& proj);
 
+  void setScanRange(uint32_t begin, uint32_t end) {
+    scanRangeBegin_ = begin;
+    scanRangeEnd_ = end;
+    updateGL();
+  }
+
  signals:
   void labelingChanged();
 
@@ -295,6 +301,7 @@ class Viewport : public QGLWidget {
 
   uint32_t labeledCount_{0};
   bool flipMouseButtons{false};
+  uint32_t scanRangeBegin_{0}, scanRangeEnd_{100};
 
   CameraProjection projectionMode_{CameraProjection::perspective};
 };
