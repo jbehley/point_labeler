@@ -60,6 +60,13 @@ bool insideTriangle(vec2 p, vec2 v1, vec2 v2, vec2 v3) {
 
 void main()
 {
+  // lower 16 bits correspond to the label,
+  // upper 16 bits correspond to the class.
+  uint label = in_label & uint(0xFFFF);
+  uint instance = (in_label >> 16) & uint(0xFFFF);
+  
+  // NOTE: labeling points destroys the instance id.
+
   float range = length(in_vertex.xyz);
   float in_remission = in_vertex.w;
   
@@ -99,11 +106,11 @@ void main()
       {
         float distance =  length(pos.xy - window_pos);
         if(distance < radius) {
-          if(removeLabel && (overwrite || (in_label == new_label)))
+          if(removeLabel && (overwrite || (label == new_label)))
           {
             out_label = uint(0);
           }
-          else if(!removeLabel && (overwrite || (in_label == uint(0))))
+          else if(!removeLabel && (overwrite || (label == uint(0))))
           {
             out_label = new_label;
           }
@@ -117,7 +124,7 @@ void main()
           vec2 v2 = texture(triangles, vec2(3 * i + 1.5, 0.5)).xy * vec2(width, height);
           vec2 v3 = texture(triangles, vec2(3 * i + 2.5, 0.5)).xy * vec2(width, height);
 
-          if(insideTriangle(pos.xy, v1, v2, v3) && (overwrite || in_label == uint(0)))
+          if(insideTriangle(pos.xy, v1, v2, v3) && (overwrite || label == uint(0)))
           {
             out_label = new_label;
             break;

@@ -73,6 +73,8 @@ COMPILE_SHADERS(${VIZ_SHADER_SRC}
   src/shaders/draw_heightmap.vert
   src/shaders/average_heightmap.frag
   src/shaders/draw_plane.geom
+  src/shaders/assign_instances.vert
+  src/shaders/build_instancemap.vert
 )
 
 add_executable(labeler 

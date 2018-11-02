@@ -113,6 +113,8 @@ class Viewport : public QGLWidget {
     updateGL();
   }
 
+  void initializeInstanceLables();
+
  signals:
   void labelingChanged();
 
@@ -177,6 +179,11 @@ class Viewport : public QGLWidget {
   //  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
   void labelPoints(int32_t x, int32_t y, float radius, uint32_t label, bool remove);
 
+  uint32_t startUniqueId_;
+  void generateInstanceMap(uint32_t label);
+  uint32_t floodfill(uint32_t startUniqueId);
+  void assignPoints(uint32_t label);
+
   bool contextInitialized_;
   std::map<uint32_t, glow::GlColor> mLabelColors;
 
@@ -225,6 +232,7 @@ class Viewport : public QGLWidget {
   glow::GlBuffer<uint32_t> bufUpdatedVisiblity_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
   glow::GlBuffer<glow::vec2> bufHeightMapPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<glow::vec2> bufInstanceMapPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
   glow::GlTransformFeedback tfFillTilePoints_;
 
@@ -236,6 +244,7 @@ class Viewport : public QGLWidget {
   glow::GlVertexArray vao_triangles_;
   glow::GlVertexArray vao_temp_points_;
   glow::GlVertexArray vao_heightmap_points_;
+  glow::GlVertexArray vao_instancemap_points_;
 
   glow::GlProgram prgDrawPose_;
   glow::GlProgram prgDrawPoints_;
@@ -276,11 +285,16 @@ class Viewport : public QGLWidget {
   glow::GlBuffer<glow::vec2> bufTriangles_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   uint32_t numTriangles_{0};
 
+  glow::GlProgram prgBuildInstanceMap_;
+  glow::GlProgram prgAssignInstanceIds_;
+  glow::GlFramebuffer fbInstanceMap_;
+  glow::GlTexture texInstanceMap_;
+
   uint32_t singleScanIdx_{0};
 
   glow::vec2 tilePos_;
   float tileSize_;
-  float tileBoundary_{2.0f};
+  float tileBoundary_{5.0f};
 
   struct ScanInfo {
     uint32_t start;

@@ -19,11 +19,6 @@ uniform bool useColor;
 uniform bool removeGround;
 uniform float groundThreshold;
 
-//uniform bool planeRemoval;
-//uniform int planeDimension;
-//uniform float planeThreshold;
-//suniform float planeDirection;
-
 uniform bool planeRemovalNormal;
 uniform vec3 planeNormal;
 uniform float planeThresholdNormal;
@@ -33,12 +28,19 @@ uniform mat4 plane_pose;
 uniform vec2 tilePos;
 uniform float tileSize;
 
+uniform bool drawInstances;
+
 
 out vec4 color;
 
 void main()
 {
-  vec4 in_color = texture(label_colors, vec2(in_label, 0));
+  // lower 16 bits correspond to the label,
+  // upper 16 bits correspond to the class.
+  uint label = in_label & uint(0xFFFF);
+  uint instance = (in_label >> 16) & uint(0xFFFF);
+  
+  vec4 in_color = texture(label_colors, vec2(label, 0));
   float in_remission = in_vertex.w;
   
   float range = length(in_vertex.xyz);
@@ -49,9 +51,6 @@ void main()
     
   bool visible = (in_visible > uint(0)) && (!removeGround || in_vertex.z > texture(heightMap, v / tileSize + 0.5).r + groundThreshold); 
   
-  //vec4 plane_normal = pose * vec4(planeDirection * float(planeDimension == 0), planeDirection * float(planeDimension == 1), planeDirection * float(planeDimension == 2), 0);
-  //if(planeRemoval) visible = visible && ((dot(plane_normal.xyz, in_vertex.xyz) - planeThreshold) < 0);
-
   if(planeRemovalNormal){
     vec3 pn = (plane_pose * vec4(planeNormal, 0.0)).xyz;
     vec3 po = (plane_pose * vec4(0,0,0,1)).xyz;
@@ -68,13 +67,26 @@ void main()
   
   if(useRemission)
   { 
-    in_remission = clamp(in_remission, 0.0, 1.0);
-    float r = in_remission * 0.25 + 0.75; // ensure r in [0.75, 1.0]
-    if(in_label == uint(0)) r = in_remission * 0.7 + 0.3; // r in [0.3, 1.0]
-    vec3 hsv = rgb2hsv(in_color.rgb);
-    hsv.b = max(hsv.b, 0.8);
-    
-    color = vec4(hsv2rgb(vec3(1, 1, r) * hsv), 1.0);
+    if(drawInstances && instance > uint(0))
+    {
+      in_remission = clamp(in_remission, 0.0, 1.0);
+      float r = in_remission * 0.25 + 0.75; // ensure r in [0.75, 1.0]
+      if(label == uint(0)) r = in_remission * 0.7 + 0.3; // r in [0.3, 1.0]
+      vec3 hsv = vec3(fract(float(instance) / float(5)), 1.0, 1.0);
+      hsv.b = max(hsv.b, 0.8);
+      
+      color = vec4(hsv2rgb(vec3(1, 1, r) * hsv), 1.0);
+    }
+    else
+    {
+      in_remission = clamp(in_remission, 0.0, 1.0);
+      float r = in_remission * 0.25 + 0.75; // ensure r in [0.75, 1.0]
+      if(label == uint(0)) r = in_remission * 0.7 + 0.3; // r in [0.3, 1.0]
+      vec3 hsv = rgb2hsv(in_color.rgb);
+      hsv.b = max(hsv.b, 0.8);
+      
+      color = vec4(hsv2rgb(vec3(1, 1, r) * hsv), 1.0);
+    }
   }
   else 
   {

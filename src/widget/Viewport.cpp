@@ -13,6 +13,7 @@
 #include "rv/Stopwatch.h"
 
 #include <glow/GlState.h>
+#include <deque>
 
 using namespace glow;
 using namespace rv;
@@ -30,7 +31,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       fbMinimumHeightMap_(100, 100),
       texMinimumHeightMap_(100, 100, TextureFormat::R_FLOAT),
       texTempHeightMap_(100, 100, TextureFormat::R_FLOAT),
-      texTriangles_(3 * 100, 1, TextureFormat::RGB) {
+      texTriangles_(3 * 100, 1, TextureFormat::RGB),
+      fbInstanceMap_(100, 100),
+      texInstanceMap_(100, 100, TextureFormat::R_FLOAT) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
   //  setMouseTracking(true);
@@ -84,6 +87,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   drawingOption_["draw heightmap"] = false;
   drawingOption_["draw triangles"] = false;
   drawingOption_["show plane"] = true;
+  drawingOption_["draw instances"] = false;
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
@@ -96,6 +100,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   texTempHeightMap_.setMinifyingOperation(TexMinOp::NEAREST);
   texTempHeightMap_.setMagnifyingOperation(TexMagOp::NEAREST);
+
+  texInstanceMap_.setMinifyingOperation(TexMinOp::NEAREST);
+  texInstanceMap_.setMagnifyingOperation(TexMagOp::NEAREST);
 
   fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texMinimumHeightMap_);
   GlRenderbuffer depthbuffer(fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height(),
@@ -115,10 +122,19 @@ Viewport::~Viewport() {
   // workaround for strange behaviour with my Nvidia 860m. Even though the buffers fit into memory, they mess up
   // something up. However, I noticed that it does not cause havoc if the buffers are empty or small.
 
-  bufPoints_.assign(std::vector<vec4>());
-  bufLabels_.assign(std::vector<uint32_t>());
-  bufScanIndexes_.assign(std::vector<vec2>());
-  bufVisible_.assign(std::vector<uint32_t>());
+  //  bufPoints_.assign(std::vector<vec4>());
+  //  bufLabels_.assign(std::vector<uint32_t>());
+  //  bufScanIndexes_.assign(std::vector<vec2>());
+  //  bufVisible_.assign(std::vector<uint32_t>());
+
+  texTempHeightMap_.resize(1, 1);
+  texInstanceMap_.resize(1, 1);
+  texMinimumHeightMap_.resize(1, 1);
+
+  std::vector<PointcloudPtr> points;
+  std::vector<LabelsPtr> labels;
+  setPoints(points, labels);
+  setPoints(points, labels);
 }
 
 void Viewport::initPrograms() {
@@ -175,6 +191,15 @@ void Viewport::initPrograms() {
   prgDrawPlane_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgDrawPlane_.link();
 
+  prgBuildInstanceMap_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/build_instancemap.vert"));
+  prgBuildInstanceMap_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/gen_heightmap.frag"));
+  prgBuildInstanceMap_.link();
+
+  prgAssignInstanceIds_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/assign_instances.vert"));
+  prgAssignInstanceIds_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/empty.frag"));
+  prgAssignInstanceIds_.attach(tfUpdateLabels_);
+  prgAssignInstanceIds_.link();
+
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
@@ -196,6 +221,9 @@ void Viewport::initVertexBuffers() {
 
   vao_heightmap_points_.setVertexAttribute(0, bufHeightMapPoints_, 2, AttributeType::FLOAT, false, sizeof(glow::vec2),
                                            nullptr);
+
+  vao_instancemap_points_.setVertexAttribute(0, bufInstanceMapPoints_, 2, AttributeType::FLOAT, false,
+                                             sizeof(glow::vec2), nullptr);
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
@@ -343,18 +371,6 @@ void Viewport::updateHeightmap() {
   uint32_t width = tileSize_ / groundResolution_;
   uint32_t height = tileSize_ / groundResolution_;
 
-  std::vector<glow::vec2> indexes(width * height);
-  for (uint32_t x = 0; x < width; ++x) {
-    for (uint32_t y = 0; y < height; ++y) {
-      indexes[x + y * width] = vec2(float(x + 0.5f) / width, float(y + 0.5f) / height);
-    }
-  }
-
-  //  std::cout << "w x h: " << width << " x " << height << std::endl;
-
-  //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
-  bufHeightMapPoints_.assign(indexes);
-
   if (fbMinimumHeightMap_.width() != width || fbMinimumHeightMap_.height() != height) {
     fbMinimumHeightMap_.resize(width, height);
     texMinimumHeightMap_.resize(width, height);
@@ -365,13 +381,24 @@ void Viewport::updateHeightmap() {
                                RenderbufferFormat::DEPTH_STENCIL);
     fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texTempHeightMap_);
     fbMinimumHeightMap_.attach(FramebufferAttachment::DEPTH_STENCIL, depthbuffer);
+
+    std::vector<glow::vec2> indexes(width * height);
+    for (uint32_t x = 0; x < width; ++x) {
+      for (uint32_t y = 0; y < height; ++y) {
+        indexes[x + y * width] = vec2(float(x + 0.5f) / width, float(y + 0.5f) / height);
+      }
+    }
+
+    //  std::cout << "w x h: " << width << " x " << height << std::endl;
+
+    //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
+    bufHeightMapPoints_.assign(indexes);
   }
 
   fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texTempHeightMap_);
 
   GLint vp[4];
   glGetIntegerv(GL_VIEWPORT, vp);
-
   glPointSize(1.0f);
 
   glViewport(0, 0, fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height());
@@ -638,21 +665,11 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<float>("tileSize", tileSize_));
     prgDrawPoints_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
     prgDrawPoints_.setUniform(GlUniform<int32_t>("heightMap", 1));
-
-    //    float planeThreshold = planeThreshold_;
-    //    prgDrawPoints_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
-    //    prgDrawPoints_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
-    //    if (planeDimension_ == 0) planeThreshold += tilePos_.x;
-    //    if (planeDimension_ == 1) planeThreshold += tilePos_.y;
-    //    if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
-    //
-    //    prgDrawPoints_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
-    //    prgDrawPoints_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
-
     prgDrawPoints_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
     prgDrawPoints_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
     prgDrawPoints_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
     prgDrawPoints_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
+    prgDrawPoints_.setUniform(GlUniform<bool>("drawInstances", drawingOption_["draw instances"]));
     //    prgDrawPoints_.setUniform(GlUniform<bool>("carAsBase", drawingOption_["carAsBase"]));
     Eigen::Matrix4f plane_pose = Eigen::Matrix4f::Identity();
     plane_pose(0, 3) = tilePos_.x;
@@ -696,23 +713,6 @@ void Viewport::paintGL() {
     ScopedBinder<GlVertexArray> vao_binder(vao_no_points_);
 
     prgDrawPlane_.setUniform(mvp_);
-
-    //    prgDrawPlane_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
-    //    if (points_.size() > singleScanIdx_)
-    //      prgDrawPlane_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[singleScanIdx_]->pose));
-
-    //    float planeThreshold = planeThreshold_;
-    //    prgDrawPlane_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
-    //    prgDrawPlane_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
-    //    if (planeDimension_ == 0) planeThreshold += tilePos_.x;
-    //    if (planeDimension_ == 1) planeThreshold += tilePos_.y;
-    //    if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
-    //    prgDrawPlane_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
-    //    prgDrawPlane_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
-    //    prgDrawPlane_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
-    //    prgDrawPlane_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
-    //    prgDrawPlane_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
-    //    prgDrawPlane_.setUniform(GlUniform<float>("tileSize", tileSize_));
 
     prgDrawPlane_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
     prgDrawPlane_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
@@ -772,6 +772,22 @@ void Viewport::paintGL() {
     glDrawArrays(GL_POINTS, 0, bufHeightMapPoints_.size());
 
     texMinimumHeightMap_.release();
+  }
+
+  if (drawingOption_["draw instancemap"]) {
+    ScopedBinder<GlProgram> program_binder(prgDrawHeightmap_);
+    ScopedBinder<GlVertexArray> vao_binder(vao_instancemap_points_);
+    glActiveTexture(GL_TEXTURE0);
+    texInstanceMap_.bind();
+
+    prgDrawHeightmap_.setUniform(mvp_);
+    prgDrawHeightmap_.setUniform(GlUniform<float>("ground_resolution", 0.1f));
+    prgDrawHeightmap_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+    prgDrawHeightmap_.setUniform(GlUniform<float>("tileSize", tileSize_));
+
+    glDrawArrays(GL_POINTS, 0, bufInstanceMapPoints_.size());
+
+    texInstanceMap_.release();
   }
 
   glDisable(GL_DEPTH_TEST);
@@ -1491,4 +1507,230 @@ void Viewport::setCameraByName(const std::string& name) {
   if (cameras_.find(name) == cameras_.end()) return;
 
   setCamera(cameras_[name]);
+}
+
+void Viewport::initializeInstanceLables() {
+  std::cout << "initializing instances..." << std::flush;
+  // 1. (gpu) fill 2d grid with class-wise points. (ignore points with already assigned instance id. > 0)
+  generateInstanceMap(10);
+
+  startUniqueId_ = 1;
+  // 2. (cpu) flood fill of connected components. (keep only segments that do not touch tile boundary)
+  startUniqueId_ += floodfill(startUniqueId_);
+  // 3. (gpu) assign each point to its id.
+  //  assignPoints(10);
+  // 4. compute bounding boxes?
+
+  std::cout << "finished." << std::endl;
+}
+
+void Viewport::generateInstanceMap(uint32_t label) {
+  // generate height map.
+  if (points_.size() == 0) return;
+
+  uint32_t width = std::ceil((tileSize_ + 2 * tileBoundary_) / 0.1);
+  uint32_t height = std::ceil((tileSize_ + 2 * tileBoundary_) / 0.1);
+
+  //  std::cout << "w x h: " << width << " x " << height << std::endl;
+
+  //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
+
+  if (fbInstanceMap_.width() != width || fbInstanceMap_.height() != height) {
+    fbInstanceMap_.resize(width, height);
+    texInstanceMap_.resize(width, height);
+
+    // update also depth buffer.
+    GlRenderbuffer depthbuffer(fbInstanceMap_.width(), fbInstanceMap_.height(), RenderbufferFormat::DEPTH_STENCIL);
+    fbInstanceMap_.attach(FramebufferAttachment::COLOR0, texInstanceMap_);
+    fbInstanceMap_.attach(FramebufferAttachment::DEPTH_STENCIL, depthbuffer);
+
+    std::vector<glow::vec2> indexes(width * height);
+    for (uint32_t x = 0; x < width; ++x) {
+      for (uint32_t y = 0; y < height; ++y) {
+        indexes[x + y * width] = vec2(float(x + 0.5f) / width, float(y + 0.5f) / height);
+      }
+    }
+
+    //  std::cout << "w x h: " << width << " x " << height << std::endl;
+
+    //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
+    bufInstanceMapPoints_.assign(indexes);
+  }
+
+  fbInstanceMap_.attach(FramebufferAttachment::COLOR0, texInstanceMap_);
+
+  GLint vp[4];
+  GLfloat cc[4];
+  glGetIntegerv(GL_VIEWPORT, vp);
+  glGetFloatv(GL_COLOR_CLEAR_VALUE, cc);
+
+  glPointSize(1.0f);
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  glViewport(0, 0, texInstanceMap_.width(), texInstanceMap_.height());
+
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LESS);
+
+  fbInstanceMap_.bind();
+  prgBuildInstanceMap_.bind();
+  vao_points_.bind();
+
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  prgBuildInstanceMap_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+  prgBuildInstanceMap_.setUniform(GlUniform<float>("tileSize", tileSize_));
+  prgBuildInstanceMap_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[0]->pose));
+  prgBuildInstanceMap_.setUniform(GlUniform<uint32_t>("label", label));
+  prgBuildInstanceMap_.setUniform(GlUniform<float>("tileBoundary", tileBoundary_));
+
+  glDrawArrays(GL_POINTS, 0, bufPoints_.size());
+
+  prgBuildInstanceMap_.release();
+  vao_points_.release();
+  fbInstanceMap_.release();
+
+  glViewport(vp[0], vp[1], vp[2], vp[3]);
+  // restore settings.
+  glClearColor(cc[0], cc[1], cc[2], cc[3]);
+  glDepthFunc(GL_LEQUAL);
+
+  glow::_CheckGlError(__FILE__, __LINE__);
+}
+
+uint32_t Viewport::floodfill(uint32_t startUniqueId) {
+  std::vector<float> instanceMap;
+  texInstanceMap_.download(instanceMap);
+  uint32_t nonzeros = 0;
+  for (float value : instanceMap)
+    if (value > 0.5f) nonzeros += 1;
+  std::cout << "instancemap: nonzeros = " << nonzeros << " from " << instanceMap.size() << std::endl;
+
+  uint32_t width = texInstanceMap_.width();
+  uint32_t height = texInstanceMap_.height();
+
+  std::vector<bool> visited(instanceMap.size());
+  std::vector<vec3> instanceIdMap;
+  std::fill(visited.begin(), visited.end(), false);
+
+  std::vector<vec2> tooSmallSegments;
+
+  std::vector<vec2> segment_indexes;
+  std::deque<int32_t> queue;
+
+  uint32_t numSegments = 0;
+
+  for (uint32_t i = 0; i < instanceMap.size(); ++i) {
+    if (visited[i]) continue;
+    if (instanceMap[i] < 0.5f) continue;
+
+    queue.push_back(i);
+
+    while (!queue.empty()) {
+      int32_t qidx = queue.front();
+      queue.pop_front();
+
+      if (visited[qidx]) continue;
+      visited[qidx] = true;
+
+      // inspect neighboring grid indexes.
+      int32_t j = qidx / width;
+      int32_t i = qidx - j * width;
+
+      segment_indexes.push_back(vec2(i, j));
+
+      for (int32_t ni = -1; ni <= 1; ni += 2) {
+        if (i + ni >= int32_t(width) || i + ni < 0) continue;
+        int32_t nidx = (i + ni) + j * width;
+        if (instanceMap[nidx] < 0.5f || visited[nidx]) continue;
+        queue.push_back(nidx);
+      }
+
+      for (int32_t nj = -1; nj <= 1; nj += 2) {
+        if (j + nj >= int32_t(height) || j + nj < 0) continue;
+        int32_t nidx = i + (j + nj) * width;
+        if (instanceMap[nidx] < 0.5f || visited[nidx]) continue;
+        queue.push_back(nidx);
+      }
+    }
+
+    if (segment_indexes.size() > 5) {
+      // check if boundary cells are inside segment_indexes
+      for (vec2 coords : segment_indexes) {
+        instanceIdMap.push_back(vec3(coords.x, coords.y, startUniqueId));
+        instanceMap[coords.x + coords.y * width] = startUniqueId;
+      }
+
+      std::cout << "found segment with " << segment_indexes.size() << "cells." << std::endl;
+    } else {
+      for (vec2 coords : segment_indexes) {
+        tooSmallSegments.push_back(vec2(coords.x, coords.y));
+      }
+    }
+
+    startUniqueId += 1;
+
+    ++numSegments;
+    segment_indexes.clear();
+  }
+
+  for (vec2 coords : tooSmallSegments) {
+    bool found = false;
+    for (int32_t radius = 1; radius < 10; ++radius) {
+      for (int32_t x = -radius; x <= radius; ++x) {
+        // TODO: check neighbors.
+      }
+      if (found) break;
+    }
+  }
+
+  //  texInstanceMap_.assign(PixelFormat::R, PixelType::FLOAT, &instanceIdMap[0]);
+  // assign clamps values to [0,1]
+
+  // TODO: call program that takes vec3 (x,y,value) and sets texture accordingly.
+
+  return numSegments;
+}
+
+void Viewport::assignPoints(uint32_t label) {
+  // generate height map.
+  if (points_.size() == 0) return;
+  if (labels_.size() == 0) return;
+
+  ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
+  ScopedBinder<GlProgram> programBinder(prgAssignInstanceIds_);
+  ScopedBinder<GlTransformFeedback> feedbackBinder(tfUpdateLabels_);
+
+  prgAssignInstanceIds_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+  prgAssignInstanceIds_.setUniform(GlUniform<float>("tileSize", tileSize_));
+  prgAssignInstanceIds_.setUniform(GlUniform<uint32_t>("label", label));
+  prgAssignInstanceIds_.setUniform(GlUniform<float>("tileBoundary", tileBoundary_));
+
+  glActiveTexture(GL_TEXTURE0);
+  texInstanceMap_.bind();
+
+  glEnable(GL_RASTERIZER_DISCARD);
+
+  uint32_t count = 0;
+  uint32_t max_size = bufUpdatedLabels_.size();
+  uint32_t buffer_start = 0;
+  uint32_t buffer_size = bufLabels_.size();
+
+  while (count * max_size < buffer_size) {
+    uint32_t size = std::min<uint32_t>(max_size, buffer_size - count * max_size);
+
+    tfUpdateLabels_.begin(TransformFeedbackMode::POINTS);
+    glDrawArrays(GL_POINTS, buffer_start + count * max_size, size);
+    tfUpdateLabels_.end();
+
+    bufUpdatedLabels_.copyTo(0, size, bufLabels_, buffer_start + count * max_size);
+
+    count++;
+  }
+
+  glDisable(GL_RASTERIZER_DISCARD);
+
+  glActiveTexture(GL_TEXTURE0);
+  texInstanceMap_.release();
+
+  glow::_CheckGlError(__FILE__, __LINE__);
 }
