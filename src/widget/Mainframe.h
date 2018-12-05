@@ -100,8 +100,11 @@ class Mainframe : public QMainWindow {
   QTimer mSaveTimer_;
   QLabel lblNumPoints_;
   QLabel lblOverwrite_;
+  QLabel lblTime_;
   QProgressBar progressLabeled_;
   QWidget* info_;
+  QTimer mLabelTimer_;
+  QTime timeTileStarted_;
 };
 
 #endif /* MAINFRAME_H_ */

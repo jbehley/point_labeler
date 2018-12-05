@@ -119,12 +119,25 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   });
 
   connect(&mSaveTimer_, SIGNAL(timeout()), this, SLOT(save()));
+
+  connect(&mLabelTimer_, &QTimer::timeout, [this]() {
+    int32_t ms = timeTileStarted_.elapsed();
+    int32_t hours = int32_t(ms / (60 * 60 * 1000));
+    int32_t minutes = (ms - hours * 60 * 60 * 1000) / (60 * 1000);
+    int32_t seconds = (ms - hours * 60 * 60 * 1000 - minutes * 60 * 1000) / (1000);
+    QString timeString = QString("%1:%2:%3")
+                             .arg(int32_t(hours), 2, 10, QChar('0'))
+                             .arg(int32_t(minutes), 2, 10, QChar('0'))
+                             .arg(int32_t(seconds), 2, 10, QChar('0'));
+    lblTime_.setText(timeString);
+  });
   // ------------------------------------------
   // Removal with plane in coordinate directions
   // ------------------------------------------
 
   // Checkbox for removal of points in x, y or z-direction
-  //  connect(ui.chkPlaneRemoval, &QCheckBox::toggled, [this](bool value) { ui.mViewportXYZ->setPlaneRemoval(value); });
+  //  connect(ui.chkPlaneRemoval, &QCheckBox::toggled, [this](bool value) { ui.mViewportXYZ->setPlaneRemoval(value);
+  //  });
   //
   //  connect(ui.sldPlaneThreshold, &QSlider::valueChanged, [this]() {
   //    int32_t dim = (ui.rdoPlaneX->isChecked()) ? 0 : (ui.rdoPlaneY->isChecked() ? 1 : 2);
@@ -286,10 +299,14 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   progressLabeled_.setMinimumWidth(75);
   progressLabeled_.setMaximumWidth(75);
   lblOverwrite_.setText(" OVERWRITE ");
+  lblTime_.setText("00:00:00");
+  lblTime_.setAlignment(Qt::AlignCenter);
+  lblTime_.setMinimumWidth(75);
 
   ui.statusbar->addPermanentWidget(&lblOverwrite_);
   ui.statusbar->addPermanentWidget(&lblNumPoints_);
   ui.statusbar->addPermanentWidget(&progressLabeled_);
+  ui.statusbar->addPermanentWidget(&lblTime_);
 
   info_ = new QWidget(this, Qt::FramelessWindowHint);
   info_->setAutoFillBackground(true);
@@ -578,6 +595,8 @@ void Mainframe::labelBtnReleased(QWidget* w) {
 void Mainframe::unsavedChanges() { mChangesSinceLastSave = true; }
 
 void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
+  mLabelTimer_.stop();
+
   if (readerFuture_.valid()) readerFuture_.wait();
 
   if (mChangesSinceLastSave) {
@@ -675,6 +694,9 @@ void Mainframe::updateScans() {
   ui.spinRangeBegin->setMaximum(indexes_.size() - 1);
   ui.spinRangeEnd->setValue(indexes_.size() - 1);
   ui.spinRangeEnd->setMaximum(indexes_.size() - 1);
+
+  timeTileStarted_.start();
+  mLabelTimer_.start(1000);
 }
 
 void Mainframe::forward() {
