@@ -690,10 +690,20 @@ void Mainframe::updateScans() {
   lblNumPoints_.setText(dotted_number + " ");
   progressLabeled_.setValue(100.0f * ui.mViewportXYZ->labeledPointCount() / ui.mViewportXYZ->loadedPointCount());
 
-  ui.spinRangeBegin->setValue(0);
+  ui.spinRangeBegin->setValue(std::min<int32_t>(ui.spinRangeBegin->value(), indexes_.size() - 1));
   ui.spinRangeBegin->setMaximum(indexes_.size() - 1);
-  ui.spinRangeEnd->setValue(indexes_.size() - 1);
+  ui.spinRangeEnd->setValue(std::min<int32_t>(ui.spinRangeEnd->value(), indexes_.size() - 1));
   ui.spinRangeEnd->setMaximum(indexes_.size() - 1);
+
+  uint32_t start_idx = 0;
+  for (uint32_t i = 1; i < indexes_.size(); ++i) {
+    if (indexes_[i - 1] + 1 != indexes_[i]) {
+      std::cout << "Found loop from " << start_idx << " to " << i - 1 << std::endl;
+      start_idx = i;
+    }
+  }
+
+  if (indexes_.size() > 0) std::cout << "Found loop from " << start_idx << " to " << indexes_.size() - 1 << std::endl;
 
   timeTileStarted_.start();
   mLabelTimer_.start(1000);

@@ -322,6 +322,11 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
       ++count;
     }
 
+    // ensure that empty indexes get the beginning from before.
+    for (uint32_t i = 0; i < scanInfos_.size(); ++i) {
+      if (scanInfos_[i].size == 0 && i > 0) scanInfos_[i].start = scanInfos_[i - 1].start;
+    }
+
     std::cout << "copied " << scanInfos_.size() << " scans with " << numCopiedPoints << " points" << std::endl;
     if (numCopiedPoints == bufPoints_.capacity()) {
       QMessageBox::warning(this, "Increase number of scans.",
@@ -333,6 +338,9 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   glow::_CheckGlError(__FILE__, __LINE__);
 
   updateLabels();
+
+  scanRangeBegin_ = std::min<int32_t>(scanRangeBegin_, scanInfos_.size() - 1);
+  scanRangeEnd_ = std::min<int32_t>(scanRangeEnd_, scanInfos_.size() - 1);
   updateGL();
 }
 
@@ -677,8 +685,9 @@ void Viewport::paintGL() {
       glDrawArrays(GL_POINTS, scanInfos_[singleScanIdx_].start, scanInfos_[singleScanIdx_].size);
     else if (showScanRange) {
       uint32_t start = scanInfos_[scanRangeBegin_].start;
-      uint32_t end = scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size;
-      glDrawArrays(GL_POINTS, start, end);
+      uint32_t count =
+          scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size - scanInfos_[scanRangeBegin_].start;
+      glDrawArrays(GL_POINTS, start, count);
     } else
       glDrawArrays(GL_POINTS, 0, bufPoints_.size());
 
@@ -1125,6 +1134,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   //  Stopwatch::tic();
 
   bool showSingleScan = drawingOption_["single scan"];
+  bool showScanRange = drawingOption_["show scan range"];
 
   ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
   ScopedBinder<GlProgram> programBinder(prgUpdateLabels_);
@@ -1199,6 +1209,9 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   if (showSingleScan) {
     buffer_start = scanInfos_[singleScanIdx_].start;
     buffer_size = scanInfos_[singleScanIdx_].size;
+  } else if (showScanRange) {
+    buffer_start = scanInfos_[scanRangeBegin_].start;
+    buffer_size = scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size - scanInfos_[scanRangeBegin_].start;
   }
 
   while (count * max_size < buffer_size) {
