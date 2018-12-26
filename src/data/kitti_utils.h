@@ -1,9 +1,10 @@
 #ifndef INCLUDE_CORE_KITTI_UTILS_H_
 #define INCLUDE_CORE_KITTI_UTILS_H_
 
-#include <string>
-#include <map>
 #include <eigen3/Eigen/Dense>
+#include <map>
+#include <string>
+#include <vector>
 
 /** \brief parse calibration file given in KITTI file format
  *  \author behley
@@ -84,7 +85,7 @@ void saveStats(const std::vector<errors>& err, const std::string& dir);
  *      where all files are written.
  **/
 bool eval(const std::string& gt_dir, const std::string& result_dir);
-}
-}
+}  // namespace Odometry
+}  // namespace KITTI
 
 #endif /* INCLUDE_CORE_KITTI_UTILS_H_ */
