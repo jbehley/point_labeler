@@ -286,9 +286,13 @@ class Viewport : public QGLWidget {
   uint32_t numTriangles_{0};
 
   glow::GlProgram prgBuildInstanceMap_;
+  glow::GlProgram prgGenInstanceIdMap_;
   glow::GlProgram prgAssignInstanceIds_;
   glow::GlFramebuffer fbInstanceMap_;
   glow::GlTexture texInstanceMap_;
+  glow::GlTexture texInstanceIdMap_;
+  glow::GlBuffer<glow::vec3> bufInstanceIds_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlVertexArray vao_bufInstanceIds_;
 
   uint32_t singleScanIdx_{0};
 
@@ -318,6 +322,8 @@ class Viewport : public QGLWidget {
   uint32_t scanRangeBegin_{0}, scanRangeEnd_{100};
 
   CameraProjection projectionMode_{CameraProjection::perspective};
+
+  float instanceMapGroundResolution_{0.1};
 };
 
 #endif /* POINTVIEW_H_ */

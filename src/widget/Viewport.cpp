@@ -33,7 +33,8 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       texTempHeightMap_(100, 100, TextureFormat::R_FLOAT),
       texTriangles_(3 * 100, 1, TextureFormat::RGB),
       fbInstanceMap_(100, 100),
-      texInstanceMap_(100, 100, TextureFormat::R_FLOAT) {
+      texInstanceMap_(100, 100, TextureFormat::R_FLOAT),
+      texInstanceIdMap_(100, 100, TextureFormat::R_FLOAT) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
   //  setMouseTracking(true);
@@ -200,6 +201,10 @@ void Viewport::initPrograms() {
   prgAssignInstanceIds_.attach(tfUpdateLabels_);
   prgAssignInstanceIds_.link();
 
+  prgGenInstanceIdMap_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/gen_instanceIdMap.vert"));
+  prgGenInstanceIdMap_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/gen_heightmap.frag"));
+  prgGenInstanceIdMap_.link();
+
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
@@ -224,6 +229,8 @@ void Viewport::initVertexBuffers() {
 
   vao_instancemap_points_.setVertexAttribute(0, bufInstanceMapPoints_, 2, AttributeType::FLOAT, false,
                                              sizeof(glow::vec2), nullptr);
+
+  vao_bufInstanceIds_.setVertexAttribute(0, bufInstanceIds_, 3, AttributeType::FLOAT, false, sizeof(vec2), nullptr);
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
@@ -781,13 +788,29 @@ void Viewport::paintGL() {
     texInstanceMap_.bind();
 
     prgDrawHeightmap_.setUniform(mvp_);
-    prgDrawHeightmap_.setUniform(GlUniform<float>("ground_resolution", 0.1f));
+    prgDrawHeightmap_.setUniform(GlUniform<float>("ground_resolution", instanceMapGroundResolution_));
     prgDrawHeightmap_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
     prgDrawHeightmap_.setUniform(GlUniform<float>("tileSize", tileSize_));
 
     glDrawArrays(GL_POINTS, 0, bufInstanceMapPoints_.size());
 
     texInstanceMap_.release();
+  }
+
+  if (drawingOption_["draw instances"]) {
+    ScopedBinder<GlProgram> program_binder(prgDrawHeightmap_);
+    ScopedBinder<GlVertexArray> vao_binder(vao_instancemap_points_);
+    glActiveTexture(GL_TEXTURE0);
+    texInstanceIdMap_.bind();
+
+    prgDrawHeightmap_.setUniform(mvp_);
+    prgDrawHeightmap_.setUniform(GlUniform<float>("ground_resolution", instanceMapGroundResolution_));
+    prgDrawHeightmap_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+    prgDrawHeightmap_.setUniform(GlUniform<float>("tileSize", tileSize_));
+
+    glDrawArrays(GL_POINTS, 0, bufInstanceMapPoints_.size());
+
+    texInstanceIdMap_.release();
   }
 
   glDisable(GL_DEPTH_TEST);
@@ -1528,8 +1551,8 @@ void Viewport::generateInstanceMap(uint32_t label) {
   // generate height map.
   if (points_.size() == 0) return;
 
-  uint32_t width = std::ceil((tileSize_ + 2 * tileBoundary_) / 0.1);
-  uint32_t height = std::ceil((tileSize_ + 2 * tileBoundary_) / 0.1);
+  uint32_t width = std::ceil((tileSize_ + tileBoundary_) / instanceMapGroundResolution_);
+  uint32_t height = std::ceil((tileSize_ + tileBoundary_) / instanceMapGroundResolution_);
 
   //  std::cout << "w x h: " << width << " x " << height << std::endl;
 
@@ -1538,6 +1561,7 @@ void Viewport::generateInstanceMap(uint32_t label) {
   if (fbInstanceMap_.width() != width || fbInstanceMap_.height() != height) {
     fbInstanceMap_.resize(width, height);
     texInstanceMap_.resize(width, height);
+    texInstanceIdMap_.resize(width, height);
 
     // update also depth buffer.
     GlRenderbuffer depthbuffer(fbInstanceMap_.width(), fbInstanceMap_.height(), RenderbufferFormat::DEPTH_STENCIL);
@@ -1555,6 +1579,7 @@ void Viewport::generateInstanceMap(uint32_t label) {
 
     //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
     bufInstanceMapPoints_.assign(indexes);
+    bufInstanceIds_.resize(indexes.size());
   }
 
   fbInstanceMap_.attach(FramebufferAttachment::COLOR0, texInstanceMap_);
@@ -1568,7 +1593,7 @@ void Viewport::generateInstanceMap(uint32_t label) {
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
   glViewport(0, 0, texInstanceMap_.width(), texInstanceMap_.height());
 
-  glEnable(GL_DEPTH_TEST);
+  glDisable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
 
   fbInstanceMap_.bind();
@@ -1593,6 +1618,7 @@ void Viewport::generateInstanceMap(uint32_t label) {
   // restore settings.
   glClearColor(cc[0], cc[1], cc[2], cc[3]);
   glDepthFunc(GL_LEQUAL);
+  glEnable(GL_DEPTH_TEST);
 
   glow::_CheckGlError(__FILE__, __LINE__);
 }
@@ -1660,7 +1686,7 @@ uint32_t Viewport::floodfill(uint32_t startUniqueId) {
         instanceMap[coords.x + coords.y * width] = startUniqueId;
       }
 
-      std::cout << "found segment with " << segment_indexes.size() << "cells." << std::endl;
+      std::cout << "found segment with " << segment_indexes.size() << " cells." << std::endl;
     } else {
       for (vec2 coords : segment_indexes) {
         tooSmallSegments.push_back(vec2(coords.x, coords.y));
@@ -1687,6 +1713,40 @@ uint32_t Viewport::floodfill(uint32_t startUniqueId) {
   // assign clamps values to [0,1]
 
   // TODO: call program that takes vec3 (x,y,value) and sets texture accordingly.
+  bufInstanceIds_.assign(instanceIdMap);
+  fbInstanceMap_.attach(FramebufferAttachment::COLOR0, texInstanceIdMap_);
+
+  GLint vp[4];
+  GLfloat cc[4];
+  glGetIntegerv(GL_VIEWPORT, vp);
+  glGetFloatv(GL_COLOR_CLEAR_VALUE, cc);
+
+  glPointSize(1.0f);
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  glViewport(0, 0, texInstanceIdMap_.width(), texInstanceIdMap_.height());
+
+  glDisable(GL_DEPTH_TEST);
+
+  fbInstanceMap_.bind();
+  prgGenInstanceIdMap_.bind();
+  vao_bufInstanceIds_.bind();
+
+  prgGenInstanceIdMap_.setUniform(GlUniform<float>("tex_width", texInstanceIdMap_.width()));
+  prgGenInstanceIdMap_.setUniform(GlUniform<float>("tex_height", texInstanceIdMap_.height()));
+
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glDrawArrays(GL_POINTS, 0, bufInstanceIds_.size());
+
+  fbInstanceMap_.release();
+  prgGenInstanceIdMap_.release();
+  vao_bufInstanceIds_.release();
+
+  glViewport(vp[0], vp[1], vp[2], vp[3]);
+  // restore settings.
+  glClearColor(cc[0], cc[1], cc[2], cc[3]);
+  glDepthFunc(GL_LEQUAL);
+  glEnable(GL_DEPTH_TEST);
 
   return numSegments;
 }

@@ -26,7 +26,7 @@ void main()
   vec2 v = in_vertex.xy - tilePos;
 
   
-  gl_Position = vec4(2.0 * v / (tileSize + 2.0 * tileBoundary), 0, 1);
+  gl_Position = vec4(2.0 * v / (tileSize + tileBoundary), 0, 1);
   
   
   if(in_label != label || in_instance > uint(0)) gl_Position = vec4(-10, -10, -10, 1);  // ignore all other labels
