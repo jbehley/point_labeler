@@ -26,6 +26,7 @@
 #include <glow/GlFramebuffer.h>
 #include <glow/GlProgram.h>
 #include <glow/GlRenderbuffer.h>
+#include <glow/GlSampler.h>
 #include <glow/GlShaderCache.h>
 #include <glow/GlTexture.h>
 #include <glow/GlVertexArray.h>
@@ -324,6 +325,7 @@ class Viewport : public QGLWidget {
   CameraProjection projectionMode_{CameraProjection::perspective};
 
   float instanceMapGroundResolution_{0.1};
+  glow::GlSampler nnSampler_;
 };
 
 #endif /* POINTVIEW_H_ */

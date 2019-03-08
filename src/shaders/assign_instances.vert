@@ -21,8 +21,9 @@ void main()
   
   vec2 v = in_vertex.xy - tilePos;
 
-  uint id = uint(texture(instanceIdMap, v / (tileSize + 2.0 * tileBoundary) + 0.5).r);
+  vec4(2.0 * v / (tileSize + tileBoundary), 0, 1);
+  uint id = uint(texture(instanceIdMap, v / (tileSize + tileBoundary) + vec2(0.5)).r);
   
   out_label = in_instance_label;
-  if(in_label == label && id > uint(0)) out_label = (id << 16)  + in_label;
+  if(in_label == label && id > uint(0) && instance_id == uint(0)) out_label = (id << 16)  + in_label;
 }

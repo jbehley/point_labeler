@@ -105,6 +105,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   texInstanceMap_.setMinifyingOperation(TexMinOp::NEAREST);
   texInstanceMap_.setMagnifyingOperation(TexMagOp::NEAREST);
 
+  texInstanceIdMap_.setMinifyingOperation(TexMinOp::NEAREST);
+  texInstanceIdMap_.setMagnifyingOperation(TexMagOp::NEAREST);
+
   fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texMinimumHeightMap_);
   GlRenderbuffer depthbuffer(fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height(),
                              RenderbufferFormat::DEPTH_STENCIL);
@@ -115,6 +118,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   cameras_["Default"] = std::make_shared<RoSeCamera>();
   cameras_["CAD"] = std::make_shared<CADCamera>();
   mCamera = cameras_["Default"];
+
+  nnSampler_.setMinifyingOperation(TexMinOp::NEAREST);
+  nnSampler_.setMagnifyingOperation(TexMagOp::NEAREST);
 
   glow::_CheckGlError(__FILE__, __LINE__);
 }
@@ -1541,7 +1547,7 @@ void Viewport::initializeInstanceLables() {
   // 2. (cpu) flood fill of connected components. (keep only segments that do not touch tile boundary)
   startUniqueId_ += floodfill(startUniqueId_);
   // 3. (gpu) assign each point to its id.
-  //  assignPoints(10);
+  assignPoints(10);
   // 4. compute bounding boxes?
 
   std::cout << "finished." << std::endl;
@@ -1629,7 +1635,7 @@ uint32_t Viewport::floodfill(uint32_t startUniqueId) {
   uint32_t nonzeros = 0;
   for (float value : instanceMap)
     if (value > 0.5f) nonzeros += 1;
-  std::cout << "instancemap: nonzeros = " << nonzeros << " from " << instanceMap.size() << std::endl;
+  //  std::cout << "instancemap: nonzeros = " << nonzeros << " from " << instanceMap.size() << std::endl;
 
   uint32_t width = texInstanceMap_.width();
   uint32_t height = texInstanceMap_.height();
@@ -1638,18 +1644,18 @@ uint32_t Viewport::floodfill(uint32_t startUniqueId) {
   std::vector<vec3> instanceIdMap;
   std::fill(visited.begin(), visited.end(), false);
 
-  std::vector<vec2> tooSmallSegments;
+  std::vector<std::vector<vec2>> tooSmallSegments;
 
   std::vector<vec2> segment_indexes;
   std::deque<int32_t> queue;
 
   uint32_t numSegments = 0;
 
-  for (uint32_t i = 0; i < instanceMap.size(); ++i) {
-    if (visited[i]) continue;
-    if (instanceMap[i] < 0.5f) continue;
+  for (uint32_t c = 0; c < instanceMap.size(); ++c) {
+    if (visited[c]) continue;
+    if (instanceMap[c] < 0.5f) continue;
 
-    queue.push_back(i);
+    queue.push_back(c);
 
     while (!queue.empty()) {
       int32_t qidx = queue.front();
@@ -1683,13 +1689,15 @@ uint32_t Viewport::floodfill(uint32_t startUniqueId) {
       // check if boundary cells are inside segment_indexes
       for (vec2 coords : segment_indexes) {
         instanceIdMap.push_back(vec3(coords.x, coords.y, startUniqueId));
+        if (instanceMap[coords.x + coords.y * width] < 0.5) {
+          std::cout << "Inconsistency: unoccupied grid cell in segment?" << std::endl;
+        }
         instanceMap[coords.x + coords.y * width] = startUniqueId;
       }
-
-      std::cout << "found segment with " << segment_indexes.size() << " cells." << std::endl;
     } else {
+      tooSmallSegments.push_back(segment_indexes);
       for (vec2 coords : segment_indexes) {
-        tooSmallSegments.push_back(vec2(coords.x, coords.y));
+        instanceMap[coords.x + coords.y * width] = 0;
       }
     }
 
@@ -1699,54 +1707,74 @@ uint32_t Viewport::floodfill(uint32_t startUniqueId) {
     segment_indexes.clear();
   }
 
-  for (vec2 coords : tooSmallSegments) {
-    bool found = false;
-    for (int32_t radius = 1; radius < 10; ++radius) {
+  int32_t radius = 10;
+  for (const std::vector<vec2>& segment : tooSmallSegments) {
+    // find closest segment in instance map
+    int32_t closest_id = 0;
+    float closest_distance = 0.0f;
+
+    for (const vec2& coords : segment) {
       for (int32_t x = -radius; x <= radius; ++x) {
-        // TODO: check neighbors.
+        for (int32_t y = -radius; y <= radius; ++y) {
+          int32_t id = instanceMap[coords.x + x + (coords.y + y) * width];
+          float distance = std::abs(x) + std::abs(y);
+          if (id > 0 && (closest_id == 0 || (distance < closest_distance))) {
+            closest_id = id;
+            closest_distance = distance;
+          }
+        }
       }
-      if (found) break;
+    }
+
+    // ... and assign it to closest segment.
+    if (closest_id > 0) {
+      for (vec2 coords : segment) {
+        instanceIdMap.push_back(vec3(coords.x, coords.y, closest_id));
+        instanceMap[coords.x + coords.y * width] = closest_id;
+      }
     }
   }
 
   //  texInstanceMap_.assign(PixelFormat::R, PixelType::FLOAT, &instanceIdMap[0]);
-  // assign clamps values to [0,1]
+  // assign clamps does not clamp with PIXELType FLOat
 
-  // TODO: call program that takes vec3 (x,y,value) and sets texture accordingly.
-  bufInstanceIds_.assign(instanceIdMap);
-  fbInstanceMap_.attach(FramebufferAttachment::COLOR0, texInstanceIdMap_);
+  // TODO: call program that takes vec3 (x,y,value) and sets texture accordingly. (Why?)
+  //  bufInstanceIds_.assign(instanceIdMap);
+  //  fbInstanceMap_.attach(FramebufferAttachment::COLOR0, texInstanceIdMap_);
+  //
+  //  GLint vp[4];
+  //  GLfloat cc[4];
+  //  glGetIntegerv(GL_VIEWPORT, vp);
+  //  glGetFloatv(GL_COLOR_CLEAR_VALUE, cc);
+  //
+  //  glPointSize(1.0f);
+  //  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  //  glViewport(0, 0, texInstanceIdMap_.width(), texInstanceIdMap_.height());
+  //
+  //  glDisable(GL_DEPTH_TEST);
+  //
+  //  fbInstanceMap_.bind();
+  //  prgGenInstanceIdMap_.bind();
+  //  vao_bufInstanceIds_.bind();
+  //
+  //  prgGenInstanceIdMap_.setUniform(GlUniform<float>("tex_width", texInstanceIdMap_.width()));
+  //  prgGenInstanceIdMap_.setUniform(GlUniform<float>("tex_height", texInstanceIdMap_.height()));
+  //
+  //  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  //
+  //  glDrawArrays(GL_POINTS, 0, bufInstanceIds_.size());
+  //
+  //  fbInstanceMap_.release();
+  //  prgGenInstanceIdMap_.release();
+  //  vao_bufInstanceIds_.release();
+  //
+  //  glViewport(vp[0], vp[1], vp[2], vp[3]);
+  //  // restore settings.
+  //  glClearColor(cc[0], cc[1], cc[2], cc[3]);
+  //  glDepthFunc(GL_LEQUAL);
+  //  glEnable(GL_DEPTH_TEST);
 
-  GLint vp[4];
-  GLfloat cc[4];
-  glGetIntegerv(GL_VIEWPORT, vp);
-  glGetFloatv(GL_COLOR_CLEAR_VALUE, cc);
-
-  glPointSize(1.0f);
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-  glViewport(0, 0, texInstanceIdMap_.width(), texInstanceIdMap_.height());
-
-  glDisable(GL_DEPTH_TEST);
-
-  fbInstanceMap_.bind();
-  prgGenInstanceIdMap_.bind();
-  vao_bufInstanceIds_.bind();
-
-  prgGenInstanceIdMap_.setUniform(GlUniform<float>("tex_width", texInstanceIdMap_.width()));
-  prgGenInstanceIdMap_.setUniform(GlUniform<float>("tex_height", texInstanceIdMap_.height()));
-
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-  glDrawArrays(GL_POINTS, 0, bufInstanceIds_.size());
-
-  fbInstanceMap_.release();
-  prgGenInstanceIdMap_.release();
-  vao_bufInstanceIds_.release();
-
-  glViewport(vp[0], vp[1], vp[2], vp[3]);
-  // restore settings.
-  glClearColor(cc[0], cc[1], cc[2], cc[3]);
-  glDepthFunc(GL_LEQUAL);
-  glEnable(GL_DEPTH_TEST);
+  texInstanceIdMap_.assign(PixelFormat::R, PixelType::FLOAT, &instanceMap[0]);
 
   return numSegments;
 }
@@ -1766,7 +1794,8 @@ void Viewport::assignPoints(uint32_t label) {
   prgAssignInstanceIds_.setUniform(GlUniform<float>("tileBoundary", tileBoundary_));
 
   glActiveTexture(GL_TEXTURE0);
-  texInstanceMap_.bind();
+  nnSampler_.bind(0);
+  texInstanceIdMap_.bind();
 
   glEnable(GL_RASTERIZER_DISCARD);
 
@@ -1790,7 +1819,8 @@ void Viewport::assignPoints(uint32_t label) {
   glDisable(GL_RASTERIZER_DISCARD);
 
   glActiveTexture(GL_TEXTURE0);
-  texInstanceMap_.release();
+  texInstanceIdMap_.release();
+  nnSampler_.release(0);
 
   glow::_CheckGlError(__FILE__, __LINE__);
 }
