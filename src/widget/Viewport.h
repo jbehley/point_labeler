@@ -289,9 +289,13 @@ class Viewport : public QGLWidget {
   glow::GlProgram prgBuildInstanceMap_;
   glow::GlProgram prgGenInstanceIdMap_;
   glow::GlProgram prgAssignInstanceIds_;
+  glow::GlProgram prgComputeCovarianceMatrix_;
+
   glow::GlFramebuffer fbInstanceMap_;
+  glow::GlFramebuffer fbCovariances_;
   glow::GlTexture texInstanceMap_;
   glow::GlTexture texInstanceIdMap_;
+  glow::GlTexture texCovariances_;
   glow::GlBuffer<glow::vec3> bufInstanceIds_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlVertexArray vao_bufInstanceIds_;
 
