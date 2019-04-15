@@ -33,8 +33,10 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       texTempHeightMap_(100, 100, TextureFormat::R_FLOAT),
       texTriangles_(3 * 100, 1, TextureFormat::RGB),
       fbInstanceMap_(100, 100),
+      fbCovariances_(100, 100),
       texInstanceMap_(100, 100, TextureFormat::R_FLOAT),
-      texInstanceIdMap_(100, 100, TextureFormat::R_FLOAT) {
+      texInstanceIdMap_(100, 100, TextureFormat::R_FLOAT),
+      texCovariances_(100, 100, TextureFormat::R_FLOAT) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
   //  setMouseTracking(true);

@@ -33,6 +33,20 @@ uniform bool drawInstances;
 
 out vec4 color;
 
+vec3 colormap(float v)
+{
+    const vec3 interval_colors[] = vec3[](vec3(0.001462, 0.000466, 0.013866), 
+                                    vec3(0.316654, 0.07169, 0.48538), 
+                                    vec3(0.716387, 0.214982, 0.47529),
+                                    vec3(0.9867, 0.535582, 0.38221),
+                                    vec3(0.987053, 0.991438, 0.749504));
+
+    int idx = int(min(v * 5, 4.0));
+    float alpha = v * 5 - idx * 5;
+    
+    return mix(interval_colors[max(0, idx-1)], interval_colors[idx], alpha);
+}
+
 void main()
 {
   // lower 16 bits correspond to the label,
@@ -86,6 +100,7 @@ void main()
       hsv.b = max(hsv.b, 0.8);
       
       color = vec4(hsv2rgb(vec3(1, 1, r) * hsv), 1.0);
+     // color = vec4(colormap(in_remission), 1.0);
     }
   }
   else 
