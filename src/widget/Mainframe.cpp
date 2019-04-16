@@ -217,6 +217,15 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.chkDrawInstances, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instances", value); });
 
+  connect(ui.sldGamma, &QSlider::valueChanged, [this](int32_t value) {
+    float gamma = float(value) / 10.0f;
+    ui.lblGammaValue->setText(QString::number(gamma));
+    ui.mViewportXYZ->setGammaCorrection(gamma);
+  });
+
+  connect(ui.cmbColormap, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+          [this](int32_t idx) { ui.mViewportXYZ->setRemissionColorMap(idx); });
+
   /** load labels and colors **/
   std::map<uint32_t, glow::GlColor> label_colors;
 
@@ -263,6 +272,9 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     img.save("screenshot.png");
     QApplication::clipboard()->setImage(img);
   });
+  //
+    ui.mViewportXYZ->resize(1000, 800);
+    ui.mViewportXYZ->update();
 }
 
 Mainframe::~Mainframe() {}

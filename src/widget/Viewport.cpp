@@ -666,6 +666,9 @@ void Viewport::paintGL() {
   bool showSingleScan = drawingOption_["single scan"];
   bool showScanRange = drawingOption_["show scan range"];
 
+  prgDrawPoints_.setUniform(GlUniform<int32_t>("colormap", remissionColormap_));
+  prgDrawPoints_.setUniform(GlUniform<float>("gamma", gammaCorrection_));
+
   if (points_.size() > 0) {
     glPointSize(pointSize_);
 
@@ -1736,45 +1739,6 @@ uint32_t Viewport::floodfill(uint32_t startUniqueId) {
       }
     }
   }
-
-  //  texInstanceMap_.assign(PixelFormat::R, PixelType::FLOAT, &instanceIdMap[0]);
-  // assign clamps does not clamp with PIXELType FLOat
-
-  // TODO: call program that takes vec3 (x,y,value) and sets texture accordingly. (Why?)
-  //  bufInstanceIds_.assign(instanceIdMap);
-  //  fbInstanceMap_.attach(FramebufferAttachment::COLOR0, texInstanceIdMap_);
-  //
-  //  GLint vp[4];
-  //  GLfloat cc[4];
-  //  glGetIntegerv(GL_VIEWPORT, vp);
-  //  glGetFloatv(GL_COLOR_CLEAR_VALUE, cc);
-  //
-  //  glPointSize(1.0f);
-  //  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-  //  glViewport(0, 0, texInstanceIdMap_.width(), texInstanceIdMap_.height());
-  //
-  //  glDisable(GL_DEPTH_TEST);
-  //
-  //  fbInstanceMap_.bind();
-  //  prgGenInstanceIdMap_.bind();
-  //  vao_bufInstanceIds_.bind();
-  //
-  //  prgGenInstanceIdMap_.setUniform(GlUniform<float>("tex_width", texInstanceIdMap_.width()));
-  //  prgGenInstanceIdMap_.setUniform(GlUniform<float>("tex_height", texInstanceIdMap_.height()));
-  //
-  //  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  //
-  //  glDrawArrays(GL_POINTS, 0, bufInstanceIds_.size());
-  //
-  //  fbInstanceMap_.release();
-  //  prgGenInstanceIdMap_.release();
-  //  vao_bufInstanceIds_.release();
-  //
-  //  glViewport(vp[0], vp[1], vp[2], vp[3]);
-  //  // restore settings.
-  //  glClearColor(cc[0], cc[1], cc[2], cc[3]);
-  //  glDepthFunc(GL_LEQUAL);
-  //  glEnable(GL_DEPTH_TEST);
 
   texInstanceIdMap_.assign(PixelFormat::R, PixelType::FLOAT, &instanceMap[0]);
 

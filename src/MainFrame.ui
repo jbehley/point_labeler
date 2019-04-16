@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1048</width>
-    <height>822</height>
+    <width>1347</width>
+    <height>968</height>
    </rect>
   </property>
   <property name="focusPolicy">
@@ -121,8 +121,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1048</width>
-     <height>26</height>
+     <width>1347</width>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -206,8 +206,8 @@
   <widget class="QDockWidget" name="dockWidget">
    <property name="minimumSize">
     <size>
-     <width>290</width>
-     <height>485</height>
+     <width>320</width>
+     <height>882</height>
     </size>
    </property>
    <property name="maximumSize">
@@ -289,7 +289,7 @@
            <property name="minimumSize">
             <size>
              <width>250</width>
-             <height>221</height>
+             <height>617</height>
             </size>
            </property>
            <property name="floating">
@@ -308,16 +308,22 @@
             <layout class="QVBoxLayout" name="verticalLayout_8">
              <item>
               <widget class="QToolBox" name="toolBox">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="currentIndex">
-                <number>0</number>
+                <number>1</number>
                </property>
                <widget class="QWidget" name="page_2">
                 <property name="geometry">
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>219</width>
-                  <height>695</height>
+                  <width>249</width>
+                  <height>707</height>
                  </rect>
                 </property>
                 <attribute name="label">
@@ -995,8 +1001,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>168</width>
-                  <height>157</height>
+                  <width>262</width>
+                  <height>505</height>
                  </rect>
                 </property>
                 <attribute name="label">
@@ -1053,6 +1059,124 @@
                      <property name="maximum">
                       <number>1000</number>
                      </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                  <widget class="QSlider" name="horizontalSlider">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <layout class="QHBoxLayout" name="horizontalLayout_2">
+                   <property name="leftMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>5</number>
+                   </property>
+                   <item>
+                    <widget class="QLabel" name="label">
+                     <property name="minimumSize">
+                      <size>
+                       <width>75</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>gamma</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QSlider" name="sldGamma">
+                     <property name="maximum">
+                      <number>50</number>
+                     </property>
+                     <property name="pageStep">
+                      <number>10</number>
+                     </property>
+                     <property name="value">
+                      <number>10</number>
+                     </property>
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="lblGammaValue">
+                     <property name="text">
+                      <string>1.0</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                  <layout class="QHBoxLayout" name="horizontalLayout_3">
+                   <property name="leftMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>5</number>
+                   </property>
+                   <item>
+                    <widget class="QLabel" name="label_3">
+                     <property name="minimumSize">
+                      <size>
+                       <width>75</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>Colormap</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QComboBox" name="cmbColormap">
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <item>
+                      <property name="text">
+                       <string>Grayvalue</string>
+                      </property>
+                     </item>
+                     <item>
+                      <property name="text">
+                       <string>Magma</string>
+                      </property>
+                     </item>
+                     <item>
+                      <property name="text">
+                       <string>Viridis</string>
+                      </property>
+                     </item>
+                     <item>
+                      <property name="text">
+                       <string>jet</string>
+                      </property>
+                     </item>
                     </widget>
                    </item>
                   </layout>

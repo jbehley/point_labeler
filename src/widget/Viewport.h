@@ -116,6 +116,15 @@ class Viewport : public QGLWidget {
 
   void initializeInstanceLables();
 
+  void setGammaCorrection(float gamma) {
+    gammaCorrection_ = gamma;
+    updateGL();
+  }
+  void setRemissionColorMap(int32_t idx) {
+    remissionColormap_ = idx;
+    updateGL();
+  }
+
  signals:
   void labelingChanged();
 
@@ -330,6 +339,9 @@ class Viewport : public QGLWidget {
 
   float instanceMapGroundResolution_{0.1};
   glow::GlSampler nnSampler_;
+
+  float gammaCorrection_{1.0};
+  uint32_t remissionColormap_{0};
 };
 
 #endif /* POINTVIEW_H_ */

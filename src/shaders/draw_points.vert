@@ -30,10 +30,13 @@ uniform float tileSize;
 
 uniform bool drawInstances;
 
+uniform int colormap;
+uniform float gamma;
+
 
 out vec4 color;
 
-vec3 colormap(float v)
+vec3 magma(float v)
 {
     const vec3 interval_colors[] = vec3[](vec3(0.001462, 0.000466, 0.013866), 
                                     vec3(0.316654, 0.07169, 0.48538), 
@@ -41,11 +44,46 @@ vec3 colormap(float v)
                                     vec3(0.9867, 0.535582, 0.38221),
                                     vec3(0.987053, 0.991438, 0.749504));
 
-    int idx = int(min(v * 5, 4.0));
-    float alpha = v * 5 - idx * 5;
+    int idx = int(min(v * 4, 3.0));
+    float alpha = v * 4 - idx;
     
     return mix(interval_colors[max(0, idx-1)], interval_colors[idx], alpha);
 }
+
+
+vec3 viridis(float v)
+{
+    const vec3 interval_colors[] = vec3[](vec3(0.267004, 0.004874, 0.329415), 
+                                    vec3(0.229739, 0.322361, 0.545706), 
+                                    vec3(0.127568, 0.566949, 0.550556),
+                                    vec3(0.369214, 0.788888, 0.382914),
+                                    vec3(0.993248, 0.906157, 0.143936));
+
+    int idx = int(min(v * 4, 3.0));
+    float alpha = v * 4 - idx;
+    
+    return mix(interval_colors[max(0, idx-1)], interval_colors[idx], alpha);
+}
+
+vec3 jet(float v)
+{
+    const vec3 interval_colors[] = vec3[](vec3(0.0, 0.0, 0.5),
+		vec3(0.0, 0.0, 0.945632798573975),
+		vec3(0.0, 0.3, 1.0),
+		vec3(0.0, 0.692156862745098, 1.0),
+		vec3(0.16129032258064513, 1.0, 0.8064516129032259),
+		vec3(0.4901960784313725, 1.0, 0.4775458570524984),
+		vec3(0.8064516129032256, 1.0, 0.16129032258064513),
+		vec3(1.0, 0.7705156136528688, 0.0),
+		vec3(1.0, 0.40740740740740755, 0.0),
+        vec3(0.9456327985739753, 0.029774872912127992, 0.0));
+
+    int idx = int(min(v * 9, 9.0));
+    float alpha = v * 9 - idx;
+    
+    return mix(interval_colors[max(0, idx-1)], interval_colors[idx], alpha);
+}
+
 
 void main()
 {
@@ -92,15 +130,42 @@ void main()
       color = vec4(hsv2rgb(vec3(1, 1, r) * hsv), 1.0);
     }
     else
-    {
+    {      
       in_remission = clamp(in_remission, 0.0, 1.0);
-      float r = in_remission * 0.25 + 0.75; // ensure r in [0.75, 1.0]
-      if(label == uint(0)) r = in_remission * 0.7 + 0.3; // r in [0.3, 1.0]
-      vec3 hsv = rgb2hsv(in_color.rgb);
-      hsv.b = max(hsv.b, 0.8);
+      if(label != uint(0))
+      {
+	      
+	      float r = in_remission * 0.25 + 0.75; // ensure r in [0.75, 1.0]
+	      if(label == uint(0)) r = in_remission * 0.7 + 0.3; // r in [0.3, 1.0]
+	      vec3 hsv = rgb2hsv(in_color.rgb);
+	      hsv.b = max(hsv.b, 0.8);
+	      
+	      color = vec4(hsv2rgb(vec3(1, 1, r) * hsv), 1.0);
+      }
+      else
+      {
+        if(gamma > 0.0) in_remission = pow(in_remission, 1.0/gamma);
       
-      color = vec4(hsv2rgb(vec3(1, 1, r) * hsv), 1.0);
-     // color = vec4(colormap(in_remission), 1.0);
+
+        if(colormap == 1)
+        {
+          color = vec4(magma(in_remission), 1.0);
+        }
+        else if(colormap == 2)
+        {
+          color = vec4(viridis(in_remission), 1.0);
+        }
+        else if(colormap == 3)
+        {
+          color = vec4(jet(in_remission), 1.0);
+        }
+        else
+        {
+          float r = in_remission * 0.7 + 0.3; // r in [0.3, 1.0]
+          color = vec4(hsv2rgb(vec3(1, 1, r) * rgb2hsv(vec3(0.5, 0.5, 0.5))), 1.0);
+        }
+         
+      }
     }
   }
   else 
