@@ -1,7 +1,7 @@
 #version 330 core
 
 layout (location = 0) in vec4 in_vertex;
-layout (location = 1) in uint in_instance_label;
+//layout (location = 1) in uint in_instance_label;
 
 uniform sampler2D instanceIdMap;
 uniform vec2  tilePos;
