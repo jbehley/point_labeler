@@ -9,9 +9,9 @@
   -- ear cutting and use updateLabels shader for polygon labeling.
   -- use texture for representation of triangulated polygon.  
   
-[ ] Segment-based labeling: use grid-based segmentation to find segments, which can be selected for labeling.  
+[-] Segment-based labeling: use grid-based segmentation to find segments, which can be selected for labeling.  
 [x] Filter labels by category. Have category "Last used" that includes all lately used labels.  
-[ ] Use color from images to colorize points.  
+[-] Use color from images to colorize points.  
 [ ] Draw oultine (2d) of brush for better control of labeling with brush.  
 [x] moving/static labeling (bit in labels?)  
 [x] save on quit.  
@@ -23,12 +23,14 @@
 [x] center camera on loaded scans after loading.  
 [ ] read scans incrementally. interupt reading if tile changes instead of waiting for finishing reading.  
   -- also have a proper progress indicator.  
+  
+
 
 
 ## Future work
 
 [x] Only load points inside the tile into the GlBuffer. (Transform Feedback)
-[ ] do projections only once (avoid the matrixmultiply?)
+[-] do projections only once (avoid the matrixmultiply?)
 
 
 ## Future work

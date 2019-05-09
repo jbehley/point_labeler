@@ -211,11 +211,11 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     ui.mViewportXYZ->setCameraProjection(Viewport::CameraProjection::orthographic);
   });
 
-  connect(ui.btnInitalizeInstances, &QPushButton::released, [this]() { ui.mViewportXYZ->initializeInstanceLables(); });
-  connect(ui.chkDrawInstanceMap, &QCheckBox::toggled,
-          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instancemap", value); });
-  connect(ui.chkDrawInstances, &QCheckBox::toggled,
-          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instances", value); });
+//  connect(ui.btnInitalizeInstances, &QPushButton::released, [this]() { ui.mViewportXYZ->initializeInstanceLables(); });
+  //  connect(ui.chkDrawInstanceMap, &QCheckBox::toggled,
+  //          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instancemap", value); });
+  //  connect(ui.chkDrawInstances, &QCheckBox::toggled,
+  //          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instances", value); });
 
   connect(ui.sldGamma, &QSlider::valueChanged, [this](int32_t value) {
     float gamma = float(value) / 10.0f;

@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1347</width>
-    <height>968</height>
+    <width>1570</width>
+    <height>1162</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="focusPolicy">
    <enum>Qt::WheelFocus</enum>
@@ -121,7 +127,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1347</width>
+     <width>1570</width>
      <height>27</height>
     </rect>
    </property>
@@ -206,16 +212,22 @@
    <addaction name="separator"/>
   </widget>
   <widget class="QDockWidget" name="dockWidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
    <property name="minimumSize">
     <size>
-     <width>320</width>
-     <height>896</height>
+     <width>328</width>
+     <height>1046</height>
     </size>
    </property>
    <property name="maximumSize">
     <size>
      <width>1000</width>
-     <height>1000</height>
+     <height>16000</height>
     </size>
    </property>
    <property name="features">
@@ -231,6 +243,12 @@
     <number>1</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents">
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
     <layout class="QVBoxLayout" name="verticalLayout_5">
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_6">
@@ -249,21 +267,33 @@
        <item>
         <widget class="TileSelectorWidget" name="wgtTileSelector" native="true">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+          <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
          <property name="minimumSize">
           <size>
-           <width>150</width>
-           <height>150</height>
+           <width>300</width>
+           <height>300</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
            <width>800</width>
-           <height>800</height>
+           <height>802</height>
+          </size>
+         </property>
+         <property name="sizeIncrement">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="baseSize">
+          <size>
+           <width>200</width>
+           <height>200</height>
           </size>
          </property>
         </widget>
@@ -272,6 +302,12 @@
      </item>
      <item>
       <widget class="QTabWidget" name="tabWidget">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+         <horstretch>0</horstretch>
+         <verstretch>2</verstretch>
+        </sizepolicy>
+       </property>
        <property name="tabPosition">
         <enum>QTabWidget::South</enum>
        </property>
@@ -335,8 +371,8 @@
                 <property name="geometry">
                  <rect>
                   <x>0</x>
-                  <y>-176</y>
-                  <width>249</width>
+                  <y>0</y>
+                  <width>257</width>
                   <height>707</height>
                  </rect>
                 </property>
@@ -1015,8 +1051,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>262</width>
-                  <height>505</height>
+                  <width>270</width>
+                  <height>674</height>
                  </rect>
                 </property>
                 <attribute name="label">

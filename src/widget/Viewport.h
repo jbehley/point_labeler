@@ -254,7 +254,7 @@ class Viewport : public QGLWidget {
   glow::GlVertexArray vao_triangles_;
   glow::GlVertexArray vao_temp_points_;
   glow::GlVertexArray vao_heightmap_points_;
-  glow::GlVertexArray vao_instancemap_points_;
+
 
   glow::GlProgram prgDrawPose_;
   glow::GlProgram prgDrawPoints_;
@@ -295,19 +295,6 @@ class Viewport : public QGLWidget {
   glow::GlBuffer<glow::vec2> bufTriangles_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   uint32_t numTriangles_{0};
 
-  glow::GlProgram prgBuildInstanceMap_;
-  glow::GlProgram prgGenInstanceIdMap_;
-  glow::GlProgram prgAssignInstanceIds_;
-  glow::GlProgram prgComputeCovarianceMatrix_;
-
-  glow::GlFramebuffer fbInstanceMap_;
-  glow::GlFramebuffer fbCovariances_;
-  glow::GlTexture texInstanceMap_;
-  glow::GlTexture texInstanceIdMap_;
-  glow::GlTexture texCovariances_;
-  glow::GlBuffer<glow::vec3> bufInstanceIds_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
-  glow::GlVertexArray vao_bufInstanceIds_;
-
   uint32_t singleScanIdx_{0};
 
   glow::vec2 tilePos_;
@@ -337,7 +324,6 @@ class Viewport : public QGLWidget {
 
   CameraProjection projectionMode_{CameraProjection::perspective};
 
-  float instanceMapGroundResolution_{0.1};
   glow::GlSampler nnSampler_;
 
   float gammaCorrection_{1.0};
