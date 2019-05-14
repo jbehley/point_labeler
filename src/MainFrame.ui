@@ -1052,7 +1052,7 @@
                   <x>0</x>
                   <y>0</y>
                   <width>270</width>
-                  <height>674</height>
+                  <height>561</height>
                  </rect>
                 </property>
                 <attribute name="label">
@@ -1313,21 +1313,21 @@
             <number>5</number>
            </property>
            <item>
-            <widget class="QToolButton" name="toolButton">
+            <widget class="QToolButton" name="btnAddPoints">
              <property name="text">
               <string>Add</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QToolButton" name="toolButton_2">
+            <widget class="QToolButton" name="btnSplitPoints">
              <property name="text">
               <string>Split</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QToolButton" name="toolButton_3">
+            <widget class="QToolButton" name="btnDeletePoints">
              <property name="text">
               <string>Del</string>
              </property>
