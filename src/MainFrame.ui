@@ -1051,8 +1051,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>270</width>
-                  <height>561</height>
+                  <width>207</width>
+                  <height>312</height>
                  </rect>
                 </property>
                 <attribute name="label">
@@ -1317,6 +1317,9 @@
              <property name="text">
               <string>Add</string>
              </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
             </widget>
            </item>
            <item>
@@ -1324,12 +1327,18 @@
              <property name="text">
               <string>Split</string>
              </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
             </widget>
            </item>
            <item>
             <widget class="QToolButton" name="btnDeletePoints">
              <property name="text">
               <string>Del</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
              </property>
             </widget>
            </item>

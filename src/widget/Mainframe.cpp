@@ -211,7 +211,8 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     ui.mViewportXYZ->setCameraProjection(Viewport::CameraProjection::orthographic);
   });
 
-//  connect(ui.btnInitalizeInstances, &QPushButton::released, [this]() { ui.mViewportXYZ->initializeInstanceLables(); });
+  //  connect(ui.btnInitalizeInstances, &QPushButton::released, [this]() { ui.mViewportXYZ->initializeInstanceLables();
+  //  });
   //  connect(ui.chkDrawInstanceMap, &QCheckBox::toggled,
   //          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instancemap", value); });
   //  connect(ui.chkDrawInstances, &QCheckBox::toggled,
@@ -255,6 +256,11 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   progressLabeled_.setMaximumWidth(75);
   lblOverwrite_.setText(" OVERWRITE ");
 
+  lblLabelingMode_.setText(" POINTS ");
+  lblLabelingMode_.setAlignment(Qt::AlignCenter | Qt::AlignVCenter);
+  lblLabelingMode_.setMinimumWidth(100);
+
+  ui.statusbar->addPermanentWidget(&lblLabelingMode_);
   ui.statusbar->addPermanentWidget(&lblOverwrite_);
   ui.statusbar->addPermanentWidget(&lblNumPoints_);
   ui.statusbar->addPermanentWidget(&progressLabeled_);
@@ -273,8 +279,8 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     QApplication::clipboard()->setImage(img);
   });
   //
-    ui.mViewportXYZ->resize(1000, 800);
-    ui.mViewportXYZ->update();
+
+  resize(width(), height());
 }
 
 Mainframe::~Mainframe() {}

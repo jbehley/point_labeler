@@ -1136,15 +1136,12 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("heightMap", 1));
   prgUpdateLabels_.setUniform(GlUniform<bool>("removeLabel", remove));
 
-  //  float planeThreshold = planeThreshold_;
-  //  prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
-  //  prgUpdateLabels_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
-  //  if (planeDimension_ == 0) planeThreshold += tilePos_.x;
-  //  if (planeDimension_ == 1) planeThreshold += tilePos_.y;
-  //  if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
-  //  prgUpdateLabels_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
-  //  prgUpdateLabels_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
-  //  prgUpdateLabels_.setUniform(GlUniform<bool>("carAsBase", drawingOption_["carAsBase"]));
+  // set instance specific stuff.
+  prgUpdateLabels_.setUniform(GlUniform<bool>("labelInstances", labelInstances_));
+  prgUpdateLabels_.setUniform(GlUniform<int32_t>("instanceLabelingMode", instanceLabelingMode_));
+  prgUpdateLabels_.setUniform(GlUniform<uint32_t>("selectedInstanceId", selectedInstanceId_));
+  prgUpdateLabels_.setUniform(GlUniform<uint32_t>("selectedInstanceLabel", selectedInstanceLabel_));
+  prgUpdateLabels_.setUniform(GlUniform<uint32_t>("newInstanceId", newInstanceId_));
 
   prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
   prgUpdateLabels_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));

@@ -98,6 +98,7 @@ class Mainframe : public QMainWindow {
 
   ImageViewer* wImgWidget_;
   QTimer mSaveTimer_;
+  QLabel lblLabelingMode_;
   QLabel lblNumPoints_;
   QLabel lblOverwrite_;
   QProgressBar progressLabeled_;

@@ -114,16 +114,17 @@ class Viewport : public QGLWidget {
     updateGL();
   }
 
-  void initializeInstanceLables();
-
   void setGammaCorrection(float gamma) {
     gammaCorrection_ = gamma;
     updateGL();
   }
+
   void setRemissionColorMap(int32_t idx) {
     remissionColormap_ = idx;
     updateGL();
   }
+
+  void labelInstances(bool value);
 
  signals:
   void labelingChanged();
@@ -255,7 +256,6 @@ class Viewport : public QGLWidget {
   glow::GlVertexArray vao_temp_points_;
   glow::GlVertexArray vao_heightmap_points_;
 
-
   glow::GlProgram prgDrawPose_;
   glow::GlProgram prgDrawPoints_;
   glow::GlProgram prgUpdateLabels_;
@@ -328,6 +328,12 @@ class Viewport : public QGLWidget {
 
   float gammaCorrection_{1.0};
   uint32_t remissionColormap_{0};
+
+  bool labelInstances_{false};
+  int32_t instanceLabelingMode_{0};
+  uint32_t selectedInstanceId_{0};
+  uint32_t selectedInstanceLabel_{0};
+  uint32_t newInstanceId_{0};
 };
 
 #endif /* POINTVIEW_H_ */
