@@ -125,6 +125,7 @@ class Viewport : public QGLWidget {
   }
 
   void labelInstances(bool value);
+  void setMaximumInstanceIds(const std::map<uint32_t, uint32_t>& maxInstanceIds);
 
  signals:
   void labelingChanged();
@@ -190,10 +191,7 @@ class Viewport : public QGLWidget {
   //  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
   void labelPoints(int32_t x, int32_t y, float radius, uint32_t label, bool remove);
 
-  uint32_t startUniqueId_;
-  void generateInstanceMap(uint32_t label);
-  uint32_t floodfill(uint32_t startUniqueId);
-  void assignPoints(uint32_t label);
+  void updateBoundingBoxes();
 
   bool contextInitialized_;
   std::map<uint32_t, glow::GlColor> mLabelColors;
@@ -334,6 +332,13 @@ class Viewport : public QGLWidget {
   uint32_t selectedInstanceId_{0};
   uint32_t selectedInstanceLabel_{0};
   uint32_t newInstanceId_{0};
+
+  std::map<uint32_t, uint32_t> maxInstanceIds_;
+
+  glow::GlFramebuffer fboBoundingBox_;
+  glow::GlProgram prgComputeBoundingBox_;
+  glow::GlTextureRectangle texBoxMin_;
+  glow::GlTextureRectangle texBoxMax_;
 };
 
 #endif /* POINTVIEW_H_ */

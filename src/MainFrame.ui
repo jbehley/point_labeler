@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1570</width>
-    <height>1162</height>
+    <width>1354</width>
+    <height>1154</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -127,7 +127,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1570</width>
+     <width>1354</width>
      <height>27</height>
     </rect>
    </property>
@@ -1051,8 +1051,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>207</width>
-                  <height>312</height>
+                  <width>270</width>
+                  <height>553</height>
                  </rect>
                 </property>
                 <attribute name="label">
@@ -1343,13 +1343,6 @@
             </widget>
            </item>
           </layout>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="chkDrawInstances">
-           <property name="text">
-            <string>draw instances</string>
-           </property>
-          </widget>
          </item>
          <item>
           <spacer name="verticalSpacer_5">

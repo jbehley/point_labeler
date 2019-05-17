@@ -31,7 +31,10 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       fbMinimumHeightMap_(100, 100),
       texMinimumHeightMap_(100, 100, TextureFormat::R_FLOAT),
       texTempHeightMap_(100, 100, TextureFormat::R_FLOAT),
-      texTriangles_(3 * 100, 1, TextureFormat::RGB) {
+      texTriangles_(3 * 100, 1, TextureFormat::RGB),
+      fboBoundingBox_(4096, 1024),
+      texBoxMin_(4096, 1024, TextureFormat::RGB),
+      texBoxMax_(4096, 1024, TextureFormat::RGB) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
   //  setMouseTracking(true);
@@ -845,7 +848,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
       bufTriangles_.resize(0);
       return;
     }
-  } else if (mMode == PAINT) {
+  } else if (mMode == PAINT && !labelInstances_) {
     buttonPressed = true;
     mChangeCamera = false;
     if (event->buttons() & Qt::LeftButton)
@@ -854,7 +857,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
       labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
 
     updateGL();
-  } else if (mMode == POLYGON) {
+  } else if (mMode == POLYGON || labelInstances_) {
     if (event->buttons() & Qt::LeftButton) {
       if (polygonPoints_.size() == 100) {
         polygonPoints_.back().x = event->x();
@@ -918,6 +921,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         bufTriangles_.assign(tris_verts);
 
         labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
+        if (labelInstances_) updateBoundingBoxes();
       }
 
       polygonPoints_.clear();
@@ -946,7 +950,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
 
       return;
     }
-  } else if (mMode == PAINT) {
+  } else if (mMode == PAINT && !labelInstances_) {
     buttonPressed = false;
 
     if (event->buttons() & Qt::LeftButton)
@@ -955,7 +959,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
       labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
 
     updateGL();
-  } else if (mMode == POLYGON) {
+  } else if (mMode == POLYGON || labelInstances_) {
     if (polygonPoints_.size() > 0) {
       polygonPoints_.back().x = event->x();
       polygonPoints_.back().y = event->y();
@@ -976,7 +980,7 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
                             resolveKeyboardModifier(event->modifiers()))) {
       return;
     }
-  } else if (mMode == PAINT) {
+  } else if (mMode == PAINT && !labelInstances_) {
     if (buttonPressed) {
       if (event->buttons() & Qt::LeftButton)
         labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
@@ -984,7 +988,7 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
         labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
     }
     updateGL();
-  } else if (mMode == POLYGON) {
+  } else if (mMode == POLYGON || labelInstances_) {
     if (polygonPoints_.size() > 0) {
       polygonPoints_.back().x = event->x();
       polygonPoints_.back().y = event->y();
@@ -1403,7 +1407,6 @@ void Viewport::setPlaneRemovalNormal(bool value) {
   updateGL();
 }
 
-const double PI = std::acos(-1);
 void Viewport::setPlaneRemovalNormalParams(float threshold, float A1, float A2, float A3, float direction) {
   planeThresholdNormal_ = threshold;
   Eigen::Vector4f unit_vect(1.0, 0, 0, 0);
@@ -1412,7 +1415,7 @@ void Viewport::setPlaneRemovalNormalParams(float threshold, float A1, float A2, 
   //  auto rotZ = glow::glRotateZ(A3 * PI / 180);
 
   //  auto normal_vect = rotX * rotY * rotZ * unit_vect;
-
+  const double PI = std::acos(-1);
   float theta = A1 * PI / 180;
   float phi = A2 * PI / 180;
 
@@ -1476,4 +1479,20 @@ void Viewport::setCameraByName(const std::string& name) {
   if (cameras_.find(name) == cameras_.end()) return;
 
   setCamera(cameras_[name]);
+}
+
+void Viewport::setMaximumInstanceIds(const std::map<uint32_t, uint32_t>& maxInstanceIds) {
+  maxInstanceIds_ = maxInstanceIds;
+}
+
+void Viewport::updateBoundingBoxes() {
+  ScopedBinder<GlFramebuffer> fboBinder(fboBoundingBox_);
+  ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
+  ScopedBinder<GlProgram> prgBinder(prgComputeBoundingBox_);
+
+  // TODO:
+  //  1. determine min & max for bounding boxes per instance id and store this in texBoxMin, texBoxMax, ...
+  //      Distinguish between moving and non-moving bounding boxes. Moving is only computed for the current time step.
+  // Problem: there is only depth value possible.
+  //  2. update maximumInstanceId according to this.
 }
