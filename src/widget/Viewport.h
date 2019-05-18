@@ -126,6 +126,8 @@ class Viewport : public QGLWidget {
 
   void labelInstances(bool value);
   void setMaximumInstanceIds(const std::map<uint32_t, uint32_t>& maxInstanceIds);
+  std::map<uint32_t, uint32_t> getMaximumInstanceIds() const;
+  void setInstanceLabelingMode(int32_t value);
 
  signals:
   void labelingChanged();
@@ -269,6 +271,7 @@ class Viewport : public QGLWidget {
   glow::GlTexture texTempHeightMap_;
   glow::GlProgram prgMinimumHeightMap_;
   glow::GlProgram prgAverageHeightMap_;
+  glow::GlProgram prgDrawBoundingBoxes_;
 
   int32_t pointSize_{1};
 
@@ -328,17 +331,21 @@ class Viewport : public QGLWidget {
   uint32_t remissionColormap_{0};
 
   bool labelInstances_{false};
-  int32_t instanceLabelingMode_{0};
+  bool instanceSelected_{false};
+  int32_t instanceLabelingMode_{-1};
   uint32_t selectedInstanceId_{0};
   uint32_t selectedInstanceLabel_{0};
   uint32_t newInstanceId_{0};
 
   std::map<uint32_t, uint32_t> maxInstanceIds_;
 
-  glow::GlFramebuffer fboBoundingBox_;
-  glow::GlProgram prgComputeBoundingBox_;
-  glow::GlTextureRectangle texBoxMin_;
-  glow::GlTextureRectangle texBoxMax_;
+  glow::GlBuffer<glow::vec4> bufBboxPositionsYaw_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<glow::vec4> bufBboxSizeIds_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlVertexArray vao_bboxes_;
+  //  glow::GlFramebuffer fboBoundingBox_;
+  //  glow::GlProgram prgComputeBoundingBox_;
+  //  glow::GlTextureRectangle texBoxMinX_, texBoxMinY_, texBoxMinZ_;
+  //  glow::GlTextureRectangle texBoxMaxX_, texBoxMaxY_, texBoxMaxZ_;
 };
 
 #endif /* POINTVIEW_H_ */

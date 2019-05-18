@@ -116,7 +116,7 @@ void main()
         //     3 -- create instance for given class. (TODO)
     
         bool consistent_label = (label == selectedInstanceLabel);
-        bool consistent_instanceId = (instanceLabelingMode != 2 || (instance == selectedInstanceId);
+        bool consistent_instanceId = (instanceLabelingMode != 2 || (instance == selectedInstanceId));
     
         if(consistent_label && consistent_instanceId)
         {
@@ -136,7 +136,10 @@ void main()
                 {
                     out_label = (newInstanceId << 16) | label;
                 }
-                else if(instanceLabelingMode == 2 && ) // remove points
+                else if(instanceLabelingMode == 2) // remove points
+                {
+                   out_label = (newInstanceId << 16) | label;
+                }
                 
                 break;
               }

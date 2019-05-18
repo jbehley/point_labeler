@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1354</width>
-    <height>1154</height>
+    <height>1114</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -128,7 +128,7 @@
      <x>0</x>
      <y>0</y>
      <width>1354</width>
-     <height>27</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -274,8 +274,8 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>300</width>
-           <height>300</height>
+           <width>100</width>
+           <height>100</height>
           </size>
          </property>
          <property name="maximumSize">
@@ -326,8 +326,8 @@
           <widget class="QDockWidget" name="dockWidget_3">
            <property name="minimumSize">
             <size>
-             <width>250</width>
-             <height>631</height>
+             <width>0</width>
+             <height>439</height>
             </size>
            </property>
            <property name="floating">
@@ -372,8 +372,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>257</width>
-                  <height>707</height>
+                  <width>276</width>
+                  <height>774</height>
                  </rect>
                 </property>
                 <attribute name="label">
@@ -1051,8 +1051,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>270</width>
-                  <height>553</height>
+                  <width>276</width>
+                  <height>574</height>
                  </rect>
                 </property>
                 <attribute name="label">

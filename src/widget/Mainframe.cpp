@@ -227,6 +227,43 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.cmbColormap, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
           [this](int32_t idx) { ui.mViewportXYZ->setRemissionColorMap(idx); });
 
+  connect(ui.tabWidget, &QTabWidget::currentChanged, [this](int32_t idx) {
+    if (idx == 1) {
+      ui.mViewportXYZ->labelInstances(true);
+      lblLabelingMode_.setText(" INSTANCES ");
+    } else {
+      ui.mViewportXYZ->labelInstances(false);
+      lblLabelingMode_.setText(" POINTS ");
+    }
+  });
+
+  connect(ui.btnAddPoints, &QToolButton::clicked, [this](bool checked) {
+    ui.btnDeletePoints->setChecked(false);
+    ui.btnSplitPoints->setChecked(false);
+    if (checked)
+      ui.mViewportXYZ->setInstanceLabelingMode(0);
+    else
+      ui.mViewportXYZ->setInstanceLabelingMode(-1);
+  });
+
+  connect(ui.btnDeletePoints, &QToolButton::clicked, [this](bool checked) {
+    ui.btnAddPoints->setChecked(false);
+    ui.btnSplitPoints->setChecked(false);
+    if (checked)
+      ui.mViewportXYZ->setInstanceLabelingMode(2);
+    else
+      ui.mViewportXYZ->setInstanceLabelingMode(-1);
+  });
+
+  connect(ui.btnSplitPoints, &QToolButton::clicked, [this](bool checked) {
+    ui.btnDeletePoints->setChecked(false);
+    ui.btnAddPoints->setChecked(false);
+    if (checked)
+      ui.mViewportXYZ->setInstanceLabelingMode(1);
+    else
+      ui.mViewportXYZ->setInstanceLabelingMode(-1);
+  });
+
   /** load labels and colors **/
   std::map<uint32_t, glow::GlColor> label_colors;
 
@@ -288,8 +325,9 @@ Mainframe::~Mainframe() {}
 void Mainframe::closeEvent(QCloseEvent* event) {
   if (mChangesSinceLastSave) {
     int32_t ret =
-        QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
-                                                              "Do you want to save your changes?"),
+        QMessageBox::warning(this, tr("Unsaved changes."),
+                             tr("The annotation has been modified.\n"
+                                "Do you want to save your changes?"),
                              QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
     if (ret == QMessageBox::Save) {
       save();
@@ -309,8 +347,9 @@ void Mainframe::open() {
 
   if (mChangesSinceLastSave) {
     int32_t ret =
-        QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
-                                                              "Do you want to save your changes?"),
+        QMessageBox::warning(this, tr("Unsaved changes."),
+                             tr("The annotation has been modified.\n"
+                                "Do you want to save your changes?"),
                              QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
     if (ret == QMessageBox::Save) {
       save();
@@ -558,8 +597,9 @@ void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   if (readerFuture_.valid()) readerFuture_.wait();
 
   if (mChangesSinceLastSave) {
-    int32_t ret = QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
-                                                                        "Do you want to save your changes?"),
+    int32_t ret = QMessageBox::warning(this, tr("Unsaved changes."),
+                                       tr("The annotation has been modified.\n"
+                                          "Do you want to save your changes?"),
                                        QMessageBox::Save | QMessageBox::Discard, QMessageBox::Save);
     if (ret == QMessageBox::Save) save();
   }
