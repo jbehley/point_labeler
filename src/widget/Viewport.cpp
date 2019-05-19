@@ -1526,6 +1526,8 @@ void Viewport::setInstanceLabelingMode(int32_t value) {
 }
 
 void Viewport::updateBoundingBoxes() {
+  if (bufLabels_.size() == 0) return;
+
   glow::GlBuffer<vec4> bufReadPoints{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
   glow::GlBuffer<uint32_t> bufReadLabels{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
   glow::GlBuffer<vec2> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};

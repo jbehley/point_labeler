@@ -228,7 +228,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
           [this](int32_t idx) { ui.mViewportXYZ->setRemissionColorMap(idx); });
 
   connect(ui.tabWidget, &QTabWidget::currentChanged, [this](int32_t idx) {
-    if (idx == 1) {
+    if (idx == 2) {
       ui.mViewportXYZ->labelInstances(true);
       lblLabelingMode_.setText(" INSTANCES ");
     } else {
