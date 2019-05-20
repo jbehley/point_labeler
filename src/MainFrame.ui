@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>929</width>
-    <height>606</height>
+    <width>1197</width>
+    <height>845</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -37,7 +37,7 @@
         <property name="minimumSize">
          <size>
           <width>640</width>
-          <height>480</height>
+          <height>400</height>
          </size>
         </property>
         <property name="focusPolicy">
@@ -127,8 +127,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>929</width>
-     <height>20</height>
+     <width>1197</width>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -228,7 +228,7 @@
        <property name="minimumSize">
         <size>
          <width>100</width>
-         <height>100</height>
+         <height>150</height>
         </size>
        </property>
        <property name="maximumSize">
@@ -256,17 +256,20 @@
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
          <horstretch>0</horstretch>
-         <verstretch>4</verstretch>
+         <verstretch>2</verstretch>
         </sizepolicy>
        </property>
        <property name="minimumSize">
         <size>
-         <width>250</width>
+         <width>300</width>
          <height>0</height>
         </size>
        </property>
        <property name="tabPosition">
         <enum>QTabWidget::South</enum>
+       </property>
+       <property name="tabShape">
+        <enum>QTabWidget::Rounded</enum>
        </property>
        <property name="currentIndex">
         <number>1</number>
@@ -519,9 +522,9 @@
             <property name="geometry">
              <rect>
               <x>0</x>
-              <y>-65</y>
-              <width>216</width>
-              <height>602</height>
+              <y>0</y>
+              <width>263</width>
+              <height>713</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_6">

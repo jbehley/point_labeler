@@ -195,6 +195,10 @@ class Viewport : public QGLWidget {
 
   void updateBoundingBoxes();
 
+  void updateInstanceSelectionMap();
+
+  uint32_t getClickedInstanceId(float x, float y);
+
   bool contextInitialized_;
   std::map<uint32_t, glow::GlColor> mLabelColors;
 
@@ -338,14 +342,21 @@ class Viewport : public QGLWidget {
   uint32_t newInstanceId_{0};
 
   std::map<uint32_t, uint32_t> maxInstanceIds_;
+  struct BoundingBox {
+   public:
+    glow::vec4 position_yaw;
+    glow::vec4 size_id;
+  };
+  std::vector<std::vector<BoundingBox>> bboxes_;  // TODO: compute once only on update.
 
   glow::GlBuffer<glow::vec4> bufBboxPositionsYaw_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<glow::vec4> bufBboxSizeIds_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlVertexArray vao_bboxes_;
-  //  glow::GlFramebuffer fboBoundingBox_;
-  //  glow::GlProgram prgComputeBoundingBox_;
-  //  glow::GlTextureRectangle texBoxMinX_, texBoxMinY_, texBoxMinZ_;
-  //  glow::GlTextureRectangle texBoxMaxX_, texBoxMaxY_, texBoxMaxZ_;
+
+  glow::GlFramebuffer fboOffscreen_;
+  glow::GlTexture texOffscreen_;
+  std::vector<float> offscreenContent_;
+  glow::GlProgram prgDrawBoundingBoxesId_;
 };
 
 #endif /* POINTVIEW_H_ */

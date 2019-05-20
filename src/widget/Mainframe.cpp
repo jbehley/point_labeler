@@ -315,9 +315,6 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     img.save("screenshot.png");
     QApplication::clipboard()->setImage(img);
   });
-  //
-
-  resize(width(), height());
 }
 
 Mainframe::~Mainframe() {}
@@ -325,9 +322,8 @@ Mainframe::~Mainframe() {}
 void Mainframe::closeEvent(QCloseEvent* event) {
   if (mChangesSinceLastSave) {
     int32_t ret =
-        QMessageBox::warning(this, tr("Unsaved changes."),
-                             tr("The annotation has been modified.\n"
-                                "Do you want to save your changes?"),
+        QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+                                                              "Do you want to save your changes?"),
                              QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
     if (ret == QMessageBox::Save) {
       save();
@@ -347,9 +343,8 @@ void Mainframe::open() {
 
   if (mChangesSinceLastSave) {
     int32_t ret =
-        QMessageBox::warning(this, tr("Unsaved changes."),
-                             tr("The annotation has been modified.\n"
-                                "Do you want to save your changes?"),
+        QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+                                                              "Do you want to save your changes?"),
                              QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
     if (ret == QMessageBox::Save) {
       save();
@@ -597,9 +592,8 @@ void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   if (readerFuture_.valid()) readerFuture_.wait();
 
   if (mChangesSinceLastSave) {
-    int32_t ret = QMessageBox::warning(this, tr("Unsaved changes."),
-                                       tr("The annotation has been modified.\n"
-                                          "Do you want to save your changes?"),
+    int32_t ret = QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+                                                                        "Do you want to save your changes?"),
                                        QMessageBox::Save | QMessageBox::Discard, QMessageBox::Save);
     if (ret == QMessageBox::Save) save();
   }

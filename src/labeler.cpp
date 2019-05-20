@@ -6,6 +6,7 @@ int main(int argc, char** argv) {
 
   Mainframe frame;
   frame.show();
+  frame.resize(1200, 900);
 
   return app.exec();
 }

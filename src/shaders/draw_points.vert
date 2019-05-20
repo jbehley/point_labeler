@@ -119,18 +119,7 @@ void main()
   
   if(useRemission)
   { 
-    if(drawInstances && instance > uint(0))
-    {
-      in_remission = clamp(in_remission, 0.0, 1.0);
-      float r = in_remission * 0.25 + 0.75; // ensure r in [0.75, 1.0]
-      if(label == uint(0)) r = in_remission * 0.7 + 0.3; // r in [0.3, 1.0]
-      vec3 hsv = vec3(fract(float(instance) / float(5)), 1.0, 1.0);
-      hsv.b = max(hsv.b, 0.8);
-      
-      color = vec4(hsv2rgb(vec3(1, 1, r) * hsv), 1.0);
-    }
-    else
-    {      
+        
       in_remission = clamp(in_remission, 0.0, 1.0);
       if(label != uint(0))
       {
@@ -166,7 +155,7 @@ void main()
         }
          
       }
-    }
+    
   }
   else 
   {

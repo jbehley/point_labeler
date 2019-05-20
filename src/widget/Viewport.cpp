@@ -31,11 +31,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       fbMinimumHeightMap_(100, 100),
       texMinimumHeightMap_(100, 100, TextureFormat::R_FLOAT),
       texTempHeightMap_(100, 100, TextureFormat::R_FLOAT),
-      texTriangles_(3 * 100, 1, TextureFormat::RGB)
-//      fboBoundingBox_(4096, 1024),
-//      texBoxMin_(4096, 1024, TextureFormat::RGB),
-//      texBoxMax_(4096, 1024, TextureFormat::RGB)
-{
+      texTriangles_(3 * 100, 1, TextureFormat::RGB),
+      fboOffscreen_(100, 100),
+      texOffscreen_(100, 100, TextureFormat::R_FLOAT) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
   //  setMouseTracking(true);
@@ -197,6 +195,13 @@ void Viewport::initPrograms() {
   prgDrawBoundingBoxes_.attach(
       glow::GlShader::fromCache(glow::ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgDrawBoundingBoxes_.link();
+
+  prgDrawBoundingBoxesId_.attach(glow::GlShader::fromCache(glow::ShaderType::VERTEX_SHADER, "shaders/draw_bbox.vert"));
+  prgDrawBoundingBoxesId_.attach(
+      glow::GlShader::fromCache(glow::ShaderType::GEOMETRY_SHADER, "shaders/draw_bbox_id.geom"));
+  prgDrawBoundingBoxesId_.attach(
+      glow::GlShader::fromCache(glow::ShaderType::FRAGMENT_SHADER, "shaders/draw_bbox_id.frag"));
+  prgDrawBoundingBoxesId_.link();
 
   glow::_CheckGlError(__FILE__, __LINE__);
 }
@@ -624,6 +629,16 @@ void Viewport::resizeGL(int w, int h) {
     else
       projection_ = glOrthographic(-fov * aspect, fov * aspect, -fov, fov, 0.1, 2000.0f);
   }
+
+  // update selection rendering.
+  fboOffscreen_.resize(width(), height());
+  texOffscreen_.resize(width(), height());
+
+  fboOffscreen_.attach(FramebufferAttachment::COLOR0, texOffscreen_);
+  GlRenderbuffer rb(width(), height(), RenderbufferFormat::DEPTH_STENCIL);
+  fboOffscreen_.attach(FramebufferAttachment::DEPTH_STENCIL, rb);
+
+  updateInstanceSelectionMap();
 }
 
 void Viewport::paintGL() {
@@ -710,7 +725,6 @@ void Viewport::paintGL() {
   }
 
   if (labelInstances_) {
-    vao_bboxes_.bind();
     prgDrawBoundingBoxes_.bind();
     prgDrawBoundingBoxes_.setUniform(glow::GlUniform<Eigen::Matrix4f>("mvp", mvp_));
     //    prgDrawBoundingBoxes_.setUniform(glow::GlUniform<glow::vec3>("in_color", glow::vec3(1, 0, 0)));
@@ -718,6 +732,8 @@ void Viewport::paintGL() {
     vao_bboxes_.bind();
     glDrawArrays(GL_POINTS, 0, bufBboxPositionsYaw_.size());
     vao_bboxes_.release();
+
+    prgDrawBoundingBoxes_.release();
   }
 
   if (planeRemovalNormal_ && drawingOption_["show plane"]) {
@@ -825,6 +841,43 @@ void Viewport::paintGL() {
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
+void Viewport::updateInstanceSelectionMap() {
+  view_ = mCamera->matrix();
+  mvp_ = projection_ * view_ * conversion_;
+
+  // store viewport, and clear color:
+  GLfloat cc[4];
+  GLint vp[4];
+
+  glGetIntegerv(GL_VIEWPORT, vp);
+  glGetFloatv(GL_COLOR_CLEAR_VALUE, cc);
+
+  fboOffscreen_.bind();
+  prgDrawBoundingBoxesId_.bind();
+  glClearColor(0, 0, 0, 0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  prgDrawBoundingBoxesId_.setUniform(glow::GlUniform<Eigen::Matrix4f>("mvp", mvp_));
+  //    prgDrawBoundingBoxes_.setUniform(glow::GlUniform<glow::vec3>("in_color", glow::vec3(1, 0, 0)));
+
+  vao_bboxes_.bind();
+  glDrawArrays(GL_POINTS, 0, bufBboxPositionsYaw_.size());
+  vao_bboxes_.release();
+
+  prgDrawBoundingBoxesId_.release();
+  fboOffscreen_.release();
+  glViewport(vp[0], vp[1], vp[2], vp[3]);
+  glClearColor(cc[0], cc[1], cc[2], cc[3]);
+  CheckGlError();
+
+  texOffscreen_.download(offscreenContent_);
+}
+
+uint32_t Viewport::getClickedInstanceId(float x, float y) {
+  if (x < 0 || y < 0 || x >= texOffscreen_.width() || y >= texOffscreen_.height()) return 0;
+  return offscreenContent_[x + (texOffscreen_.height() - y) * texOffscreen_.width()];
+}
+
 std::ostream& operator<<(std::ostream& os, const vec2& v) {
   os << "(" << v.x << ", " << v.y << ")";
   return os;
@@ -870,6 +923,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
       polygonPoints_.clear();  // start over again.#
       bufPolygonPoints_.assign(polygonPoints_);
       bufTriangles_.resize(0);
+
       return;
     }
   } else if (mMode == PAINT && !labelInstances_) {
@@ -881,7 +935,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
       labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
 
     updateGL();
-  } else if (mMode == POLYGON || labelInstances_) {
+  } else if (mMode == POLYGON || (labelInstances_ && instanceSelected_)) {
     if (event->buttons() & Qt::LeftButton) {
       if (polygonPoints_.size() == 100) {
         polygonPoints_.back().x = event->x();
@@ -972,6 +1026,8 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
       // timer_.stop();
       updateGL();  // get the last action.
 
+      updateInstanceSelectionMap();
+
       return;
     }
   } else if (mMode == PAINT && !labelInstances_) {
@@ -983,7 +1039,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
       labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
 
     updateGL();
-  } else if (mMode == POLYGON || labelInstances_) {
+  } else if (mMode == POLYGON || (labelInstances_ && instanceSelected_)) {
     if (polygonPoints_.size() > 0) {
       polygonPoints_.back().x = event->x();
       polygonPoints_.back().y = event->y();
@@ -992,6 +1048,8 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
     }
 
     repaint();
+  } else if (labelInstances_ && !instanceSelected_) {
+    std::cout << "clicked on " << getClickedInstanceId(event->x(), event->y()) << std::endl;
   }
 
   event->accept();
@@ -1511,7 +1569,10 @@ void Viewport::setCameraByName(const std::string& name) {
 
 void Viewport::labelInstances(bool value) {
   labelInstances_ = value;
-  if (labelInstances_) updateBoundingBoxes();
+  if (labelInstances_) {
+    updateBoundingBoxes();
+    updateInstanceSelectionMap();
+  }
 }
 
 void Viewport::setMaximumInstanceIds(const std::map<uint32_t, uint32_t>& maxInstanceIds) {
@@ -1527,7 +1588,7 @@ void Viewport::setInstanceLabelingMode(int32_t value) {
 
 void Viewport::updateBoundingBoxes() {
   if (points_.size() == 0) return;
-  std::cout << "updating bounding boxes..." << std::flush;
+  std::cout << "updating bounding boxes. " << std::flush;
 
   glow::GlBuffer<vec4> bufReadPoints{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
   glow::GlBuffer<uint32_t> bufReadLabels{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
@@ -1585,9 +1646,9 @@ void Viewport::updateBoundingBoxes() {
           bboxes[labels[i]].min.y = std::min(points[i].y, bboxes[labels[i]].min.y);
           bboxes[labels[i]].min.z = std::min(points[i].z, bboxes[labels[i]].min.z);
 
-          bboxes[labels[i]].max.x = std::min(points[i].x, bboxes[labels[i]].max.x);
-          bboxes[labels[i]].max.y = std::min(points[i].y, bboxes[labels[i]].max.y);
-          bboxes[labels[i]].max.z = std::min(points[i].z, bboxes[labels[i]].max.z);
+          bboxes[labels[i]].max.x = std::max(points[i].x, bboxes[labels[i]].max.x);
+          bboxes[labels[i]].max.y = std::max(points[i].y, bboxes[labels[i]].max.y);
+          bboxes[labels[i]].max.z = std::max(points[i].z, bboxes[labels[i]].max.z);
         }
       }
     }
@@ -1619,9 +1680,14 @@ void Viewport::updateBoundingBoxes() {
     position_yaw.push_back(pos_yaw);
     size_id.push_back(s_id);
   }
+
+  std::cout << position_yaw.size() << " bounding boxes" << std::flush;
+
   bufBboxPositionsYaw_.assign(position_yaw);
   bufBboxSizeIds_.assign(size_id);
 
   glow::_CheckGlError(__FILE__, __LINE__);
   std::cout << "finished." << std::endl;
+
+  updateGL();
 }
