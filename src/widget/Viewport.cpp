@@ -1510,7 +1510,7 @@ void Viewport::setCameraByName(const std::string& name) {
 }
 
 void Viewport::labelInstances(bool value) {
-  labelInstances_ = true;
+  labelInstances_ = value;
   if (labelInstances_) updateBoundingBoxes();
 }
 
@@ -1526,7 +1526,8 @@ void Viewport::setInstanceLabelingMode(int32_t value) {
 }
 
 void Viewport::updateBoundingBoxes() {
-  if (bufLabels_.size() == 0) return;
+  if (points_.size() == 0) return;
+  std::cout << "updating bounding boxes..." << std::flush;
 
   glow::GlBuffer<vec4> bufReadPoints{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
   glow::GlBuffer<uint32_t> bufReadLabels{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
@@ -1548,9 +1549,17 @@ void Viewport::updateBoundingBoxes() {
   struct BBoxValues {
     vec4 min, max;
   };
+
   std::map<uint32_t, BBoxValues> bboxes;
 
+  std::cout << "Collecting min/max: [" << std::flush;
+  float progress = 0.1;
   while (count * max_size < bufLabels_.size()) {
+    if (count * max_size > progress * bufLabels_.size()) {
+      std::cout << "=" << std::flush;
+      progress += 0.1;
+    }
+
     uint32_t size = std::min<uint32_t>(max_size, buffer_size - count * max_size);
 
     bufLabels_.copyTo(count * max_size, size, bufReadLabels, 0);
@@ -1582,7 +1591,10 @@ void Viewport::updateBoundingBoxes() {
         }
       }
     }
+    count++;
   }
+
+  std::cout << "]" << std::flush;
 
   std::vector<vec4> position_yaw;
   std::vector<vec4> size_id;
@@ -1611,4 +1623,5 @@ void Viewport::updateBoundingBoxes() {
   bufBboxSizeIds_.assign(size_id);
 
   glow::_CheckGlError(__FILE__, __LINE__);
+  std::cout << "finished." << std::endl;
 }
