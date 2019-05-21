@@ -64,7 +64,7 @@ class KittiReader {
 
   const std::vector<Eigen::Vector2f>& getTileTrajectory() const { return trajectory_; }
 
-  std::map<uint32_t, uint32_t> getMaxInstanceId() const { return maxInstanceIds_; }
+  std::map<uint32_t, uint32_t> getMaxInstanceIds() const { return maxInstanceIds_; }
 
   void updateMetaInformation(const std::map<uint32_t, uint32_t>& maxInstanceIds);
 

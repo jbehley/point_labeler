@@ -366,6 +366,8 @@ void Mainframe::open() {
 
     reader_.initialize(retValue);
 
+    ui.mViewportXYZ->setMaximumInstanceIds(reader_.getMaxInstanceIds());
+
     //    ui.sldTimeline->setMaximum(reader_.count());
     ui.btnBackward->setEnabled(false);
     ui.btnForward->setEnabled(false);
@@ -400,6 +402,7 @@ void Mainframe::save() {
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
   reader_.update(indexes_, labels_);
+  reader_.updateMetaInformation(ui.mViewportXYZ->getMaximumInstanceIds());
 
   progressLabeled_.setValue(100.0f * ui.mViewportXYZ->labeledPointCount() / ui.mViewportXYZ->loadedPointCount());
 

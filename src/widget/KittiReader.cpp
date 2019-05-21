@@ -172,7 +172,9 @@ void KittiReader::initialize(const QString& directory) {
   std::cout << "#tiles  = " << tileCount << std::endl;
 
   // meta information for faster loading.
-  if (!base_dir_.exists("instances.txt")) {
+  if (base_dir_.exists("instances.txt")) {
+    std::cout << "Reading instances.txt" << std::flush;
+
     std::ifstream in(base_dir_.filePath("instances.txt").toStdString());
 
     while (in.good()) {
@@ -188,7 +190,9 @@ void KittiReader::initialize(const QString& directory) {
     }
 
     in.close();
+    std::cout << "finished." << std::endl;
   } else {
+    std::cout << "Generating intances.txt" << std::flush;
     // get the counts from the label files.
     for (const std::string& filename : label_filenames_) {
       std::vector<uint32_t> labels;
