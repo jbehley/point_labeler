@@ -1,10 +1,11 @@
 #version 330 core
 
-in float instance_id;
+flat in uint instance_id;
+flat in uint label_id;
 
-layout (location = 0) out float out_color;
+layout (location = 0) out vec2 out_color;
 
 void main()
 {
-  out_color = instance_id;
+  out_color = vec2(instance_id, label_id);
 }

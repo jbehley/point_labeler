@@ -20,7 +20,8 @@ uniform bool use_custom_color;
 uniform vec4 in_color;
 
 out vec4 color;
-out float instance_id;
+flat out uint instance_id;
+flat out uint label_id;
 
 
 void main()
@@ -37,8 +38,10 @@ void main()
       color = vec4(hsv2rgb(hsv), 1.0);
     }
     
-    instance_id = gs_in[0].id;
+    instance_id = (gs_in[0].id >> 16);
+    label_id = gs_in[0].id & uint(0xFFFF);
     
+        
     mat4 pose = mat4(1.0f);
     
 

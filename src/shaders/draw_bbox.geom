@@ -18,9 +18,6 @@ in BBOX
 uniform bool use_custom_color;
 uniform vec3 in_color;
 
-uniform uint selectedInstanceLabel;
-uniform uint selectedInstanceId;
-
 out vec4 color;
 
 

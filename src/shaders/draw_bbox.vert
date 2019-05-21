@@ -2,6 +2,7 @@
 
 layout (location = 0) in vec4  in_position_yaw;
 layout (location = 1) in vec4  in_size_id;
+layout (location = 2) in uint  in_instance_label;
 
 out BBOX 
 {
@@ -21,5 +22,5 @@ void main()
                      -sin(yaw), cos(yaw), 0, 0, // second column
                      0, 0, 1, 0,                // third column
                      0, 0, 0, 1);               // fourth column
-  vs_out.id = uint(in_size_id.w);
+  vs_out.id = in_instance_label;
 }

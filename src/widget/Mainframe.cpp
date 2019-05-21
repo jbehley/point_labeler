@@ -939,7 +939,7 @@ void Mainframe::keyReleaseEvent(QKeyEvent* event) {
       return;
 
     case Qt::Key_Space:
-      ui.btnSelectInstance->toggle();
+      if (!ui.btnSelectInstance->isChecked()) ui.btnSelectInstance->click();
       return;
 
     default:

@@ -202,6 +202,8 @@ class Viewport : public QGLWidget {
 
   uint32_t getClickedInstanceId(float x, float y);
 
+  void abortPolygonSelection();
+
   bool contextInitialized_;
   std::map<uint32_t, glow::GlColor> mLabelColors;
 
@@ -279,6 +281,7 @@ class Viewport : public QGLWidget {
   glow::GlProgram prgMinimumHeightMap_;
   glow::GlProgram prgAverageHeightMap_;
   glow::GlProgram prgDrawBoundingBoxes_;
+  glow::GlProgram prgDrawSelectedBoundingBox_;
 
   int32_t pointSize_{1};
 
@@ -350,6 +353,7 @@ class Viewport : public QGLWidget {
    public:
     glow::vec4 position_yaw;
     glow::vec4 size_id;
+    uint32_t instance_label;
   };
 
   std::map<uint32_t, BoundingBox> bboxes_static_;
@@ -357,6 +361,7 @@ class Viewport : public QGLWidget {
 
   glow::GlBuffer<glow::vec4> bufBboxPositionsYaw_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<glow::vec4> bufBboxSizeIds_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<uint32_t> bufBboxInstanceLabels_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlVertexArray vao_bboxes_;
 
   glow::GlFramebuffer fboOffscreen_;
