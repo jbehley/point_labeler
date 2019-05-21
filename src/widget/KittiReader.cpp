@@ -173,12 +173,15 @@ void KittiReader::initialize(const QString& directory) {
 
   // meta information for faster loading.
   if (base_dir_.exists("instances.txt")) {
-    std::cout << "Reading instances.txt" << std::flush;
+    std::cout << "Reading instances.txt..." << std::flush;
 
     std::ifstream in(base_dir_.filePath("instances.txt").toStdString());
 
     while (in.good()) {
       std::string line;
+      std::getline(in, line);
+      if (line.size() == 0) break;
+
       std::vector<std::string> tokens = rv::split(line, ":");
       if (tokens.size() != 2) {
         throw std::runtime_error("Invalid instance meta information found!");
@@ -187,6 +190,8 @@ void KittiReader::initialize(const QString& directory) {
       uint32_t label = boost::lexical_cast<uint32_t>(tokens[0]);
       uint32_t maxInstanceId = boost::lexical_cast<uint32_t>(tokens[1]);
       maxInstanceIds_[label] = maxInstanceId;
+
+      in.peek();
     }
 
     in.close();
@@ -216,7 +221,7 @@ void KittiReader::initialize(const QString& directory) {
 void KittiReader::updateMetaInformation(const std::map<uint32_t, uint32_t>& maxInstanceIds) {
   std::ofstream out(base_dir_.filePath("instances.txt").toStdString().c_str());
   for (auto it = maxInstanceIds.begin(); it != maxInstanceIds.end(); ++it) {
-    out << it->first << ":" << it->second;
+    out << it->first << ":" << it->second << std::endl;
   }
   out.close();
 }

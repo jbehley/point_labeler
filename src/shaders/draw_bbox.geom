@@ -18,6 +18,9 @@ in BBOX
 uniform bool use_custom_color;
 uniform vec3 in_color;
 
+uniform uint selectedInstanceLabel;
+uniform uint selectedInstanceId;
+
 out vec4 color;
 
 
@@ -33,7 +36,7 @@ void main()
     {
       vec3 hsv = vec3(fract(float(gs_in[0].id) / float(20)), 1.0, 1.0);
       color = vec4(hsv2rgb(hsv), 1.0);
-    } 
+    }
     
     mat4 pose = mat4(1.0f);
     

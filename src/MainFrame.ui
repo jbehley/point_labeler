@@ -1218,7 +1218,20 @@
             <number>5</number>
            </property>
            <item>
+            <widget class="QToolButton" name="btnSelectInstance">
+             <property name="text">
+              <string>Select</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QToolButton" name="btnAddPoints">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="text">
               <string>Add</string>
              </property>
@@ -1229,6 +1242,9 @@
            </item>
            <item>
             <widget class="QToolButton" name="btnSplitPoints">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="text">
               <string>Split</string>
              </property>
@@ -1239,6 +1255,9 @@
            </item>
            <item>
             <widget class="QToolButton" name="btnDeletePoints">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="text">
               <string>Del</string>
              </property>

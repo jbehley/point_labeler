@@ -115,6 +115,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   nnSampler_.setMinifyingOperation(TexMinOp::NEAREST);
   nnSampler_.setMagnifyingOperation(TexMagOp::NEAREST);
 
+  texOffscreen_.setMagnifyingOperation(TexMagOp::NEAREST);
+  texOffscreen_.setMinifyingOperation(TexMinOp::NEAREST);
+
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
@@ -573,7 +576,11 @@ void Viewport::setGroundThreshold(float value) {
 void Viewport::setScanIndex(uint32_t idx) {
   singleScanIdx_ = idx;
   // bounding boxes of moving class must be updated
-  if (labelInstances_) updateBoundingBoxes();
+  if (labelInstances_) {
+    fillBoundingBoxBuffers();
+    updateInstanceSelectionMap();  // re-render selection map.
+  }
+
   updateGL();
 }
 
@@ -727,6 +734,8 @@ void Viewport::paintGL() {
   if (labelInstances_) {
     prgDrawBoundingBoxes_.bind();
     prgDrawBoundingBoxes_.setUniform(glow::GlUniform<Eigen::Matrix4f>("mvp", mvp_));
+    prgDrawBoundingBoxes_.setUniform(GlUniform<uint32_t>("selectedInstanceId", selectedInstanceId_));
+    prgDrawBoundingBoxes_.setUniform(GlUniform<uint32_t>("selectedInstanceLabel", selectedInstanceLabel_));
     //    prgDrawBoundingBoxes_.setUniform(glow::GlUniform<glow::vec3>("in_color", glow::vec3(1, 0, 0)));
 
     vao_bboxes_.bind();
@@ -851,6 +860,11 @@ void Viewport::updateInstanceSelectionMap() {
 
   glGetIntegerv(GL_VIEWPORT, vp);
   glGetFloatv(GL_COLOR_CLEAR_VALUE, cc);
+  glDisable(GL_LINE_SMOOTH);
+  //  glDisable(GL_POINT_SMOOTH);
+  //  glDisable(GL_MULTISAMPLE);
+  glDisable(GL_POLYGON_SMOOTH);
+  glDisable(GL_BLEND);
 
   fboOffscreen_.bind();
   prgDrawBoundingBoxesId_.bind();
@@ -871,6 +885,11 @@ void Viewport::updateInstanceSelectionMap() {
   CheckGlError();
 
   texOffscreen_.download(offscreenContent_);
+
+  glEnable(GL_LINE_SMOOTH);
+  //    glDisable(GL_POINT_SMOOTH);
+  //    glDisable(GL_MULTISAMPLE);
+  //    glDisable(GL_BLEND);
 }
 
 uint32_t Viewport::getClickedInstanceId(float x, float y) {
@@ -999,7 +1018,11 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
         bufTriangles_.assign(tris_verts);
 
         labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
-        if (labelInstances_) updateBoundingBoxes();
+        if (labelInstances_) {
+          updateBoundingBoxes();
+          fillBoundingBoxBuffers();
+          updateInstanceSelectionMap();
+        }
       }
 
       polygonPoints_.clear();
@@ -1048,8 +1071,13 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
     }
 
     repaint();
-  } else if (labelInstances_ && !instanceSelected_) {
-    std::cout << "clicked on " << getClickedInstanceId(event->x(), event->y()) << std::endl;
+  } else if (labelInstances_ && instanceSelectionMode_) {
+    uint32_t instance_label = getClickedInstanceId(event->x(), event->y());
+    std::cout << "clicked on " << instance_label << std::endl;
+
+    emit instanceSelected(instance_label);
+
+    updateGL();
   }
 
   event->accept();
@@ -1586,6 +1614,8 @@ void Viewport::setInstanceLabelingMode(int32_t value) {
   instanceSelected_ = false;
 }
 
+void Viewport::setInstanceSelectionMode(bool value) { instanceSelectionMode_ = value; }
+
 void Viewport::updateBoundingBoxes() {
   if (points_.size() == 0) return;
   std::cout << "updating bounding boxes. " << std::flush;
@@ -1607,11 +1637,9 @@ void Viewport::updateBoundingBoxes() {
   uint32_t buffer_size = bufLabels_.size();
 
   labeledCount_ = 0;
-  struct BBoxValues {
-    vec4 min, max;
-  };
 
-  std::map<uint32_t, BBoxValues> bboxes;
+  bboxes_static_.clear();
+  bboxes_moving_.clear();
 
   std::cout << "Collecting min/max: [" << std::flush;
   float progress = 0.1;
@@ -1635,20 +1663,44 @@ void Viewport::updateBoundingBoxes() {
       // store only info for real instances.
       uint32_t instanceId = ((labels[i] >> 16) & uint32_t(0xFFFF));
       uint32_t label = (labels[i] & uint32_t(0xFFFF));
-      if (label > 200 && uint32_t(indexes[i].x) != singleScanIdx_) continue;  // moving stuff.
+      uint32_t t = uint32_t(indexes[i].x);
+      bool is_moving = (label > 200);
       maxInstanceIds_[label] = std::max(maxInstanceIds_[label], instanceId);
 
       if (instanceId > 0) {
-        if (bboxes.find(labels[i]) == bboxes.end()) {
-          bboxes[labels[i]].min = bboxes[labels[i]].max = points[i];
-        } else {
-          bboxes[labels[i]].min.x = std::min(points[i].x, bboxes[labels[i]].min.x);
-          bboxes[labels[i]].min.y = std::min(points[i].y, bboxes[labels[i]].min.y);
-          bboxes[labels[i]].min.z = std::min(points[i].z, bboxes[labels[i]].min.z);
+        if (is_moving) {
+          if (bboxes_moving_.find(labels[i]) == bboxes_moving_.end())
+            bboxes_moving_[labels[i]] = std::map<uint32_t, BoundingBox>();
 
-          bboxes[labels[i]].max.x = std::max(points[i].x, bboxes[labels[i]].max.x);
-          bboxes[labels[i]].max.y = std::max(points[i].y, bboxes[labels[i]].max.y);
-          bboxes[labels[i]].max.z = std::max(points[i].z, bboxes[labels[i]].max.z);
+          if (bboxes_moving_[labels[i]].find(t) == bboxes_moving_[labels[i]].end()) {
+            bboxes_moving_[labels[i]][t] = BoundingBox();
+            bboxes_moving_[labels[i]][t].position_yaw = bboxes_moving_[labels[i]][t].size_id = points[i];
+          } else {
+            bboxes_moving_[labels[i]][t].position_yaw.x =
+                std::min(points[i].x, bboxes_moving_[labels[i]][t].position_yaw.x);
+            bboxes_moving_[labels[i]][t].position_yaw.y =
+                std::min(points[i].y, bboxes_moving_[labels[i]][t].position_yaw.y);
+            bboxes_moving_[labels[i]][t].position_yaw.z =
+                std::min(points[i].z, bboxes_moving_[labels[i]][t].position_yaw.z);
+
+            bboxes_moving_[labels[i]][t].size_id.x = std::max(points[i].x, bboxes_moving_[labels[i]][t].size_id.x);
+            bboxes_moving_[labels[i]][t].size_id.y = std::max(points[i].y, bboxes_moving_[labels[i]][t].size_id.y);
+            bboxes_moving_[labels[i]][t].size_id.z = std::max(points[i].z, bboxes_moving_[labels[i]][t].size_id.z);
+          }
+
+        } else {
+          if (bboxes_static_.find(labels[i]) == bboxes_static_.end()) {
+            bboxes_static_[labels[i]] = BoundingBox();
+            bboxes_static_[labels[i]].position_yaw = bboxes_static_[labels[i]].size_id = points[i];
+          } else {
+            bboxes_static_[labels[i]].position_yaw.x = std::min(points[i].x, bboxes_static_[labels[i]].position_yaw.x);
+            bboxes_static_[labels[i]].position_yaw.y = std::min(points[i].y, bboxes_static_[labels[i]].position_yaw.y);
+            bboxes_static_[labels[i]].position_yaw.z = std::min(points[i].z, bboxes_static_[labels[i]].position_yaw.z);
+
+            bboxes_static_[labels[i]].size_id.x = std::max(points[i].x, bboxes_static_[labels[i]].size_id.x);
+            bboxes_static_[labels[i]].size_id.y = std::max(points[i].y, bboxes_static_[labels[i]].size_id.y);
+            bboxes_static_[labels[i]].size_id.z = std::max(points[i].z, bboxes_static_[labels[i]].size_id.z);
+          }
         }
       }
     }
@@ -1659,35 +1711,74 @@ void Viewport::updateBoundingBoxes() {
 
   std::vector<vec4> position_yaw;
   std::vector<vec4> size_id;
+  id2idx_.clear();
 
-  // compute bounding boxes and fill buffer.
-  for (auto it = bboxes.begin(); it != bboxes.end(); ++it) {
-    Eigen::Vector3f minimum(it->second.min.x, it->second.min.y, it->second.min.z);
-    Eigen::Vector3f maximum(it->second.max.x, it->second.max.y, it->second.max.z);
+  // compute bounding boxes from temp information.
+  for (auto it = bboxes_static_.begin(); it != bboxes_static_.end(); ++it) {
+    Eigen::Vector3f minimum(it->second.position_yaw.x, it->second.position_yaw.y, it->second.position_yaw.z);
+    Eigen::Vector3f maximum(it->second.size_id.x, it->second.size_id.y, it->second.size_id.z);
     Eigen::Vector3f size = (maximum - minimum);
     Eigen::Vector3f mid = (minimum + 0.5 * size);
-    vec4 pos_yaw, s_id;
 
-    pos_yaw.x = mid.x();
-    pos_yaw.y = mid.y();
-    pos_yaw.z = mid.z();
-    pos_yaw.w = 0.0f;
-    s_id.x = size.x();
-    s_id.y = size.y();
-    s_id.z = size.z();
-    s_id.w = it->first;
-
-    position_yaw.push_back(pos_yaw);
-    size_id.push_back(s_id);
+    it->second.position_yaw.x = mid.x();
+    it->second.position_yaw.y = mid.y();
+    it->second.position_yaw.z = mid.z();
+    it->second.position_yaw.w = 0.0f;
+    it->second.size_id.x = size.x();
+    it->second.size_id.y = size.y();
+    it->second.size_id.z = size.z();
+    it->second.size_id.w = it->first;
   }
 
-  std::cout << position_yaw.size() << " bounding boxes" << std::flush;
+  // for each labeled instance:
+  for (auto iit = bboxes_moving_.begin(); iit != bboxes_moving_.end(); ++iit) {
+    // for each timestep:
+    for (auto it = iit->second.begin(); it != iit->second.end(); ++it) {
+      Eigen::Vector3f minimum(it->second.position_yaw.x, it->second.position_yaw.y, it->second.position_yaw.z);
+      Eigen::Vector3f maximum(it->second.size_id.x, it->second.size_id.y, it->second.size_id.z);
+      Eigen::Vector3f size = (maximum - minimum);
+      Eigen::Vector3f mid = (minimum + 0.5 * size);
+
+      it->second.position_yaw.x = mid.x();
+      it->second.position_yaw.y = mid.y();
+      it->second.position_yaw.z = mid.z();
+      it->second.position_yaw.w = 0.0f;
+      it->second.size_id.x = size.x();
+      it->second.size_id.y = size.y();
+      it->second.size_id.z = size.z();
+      it->second.size_id.w = iit->first;
+    }
+  }
+
+  // ... and fill buffer.
+  fillBoundingBoxBuffers();
+  std::cout << "finished." << std::endl;
+
+  updateGL();
+}
+
+void Viewport::fillBoundingBoxBuffers() {
+  id2idx_.clear();
+
+  std::vector<vec4> position_yaw;
+  std::vector<vec4> size_id;
+
+  for (auto it = bboxes_static_.begin(); it != bboxes_static_.end(); ++it) {
+    id2idx_[it->first] = position_yaw.size();
+    position_yaw.push_back(it->second.position_yaw);
+    size_id.push_back(it->second.size_id);
+  }
+
+  for (auto it = bboxes_moving_.begin(); it != bboxes_moving_.end(); ++it) {
+    if (it->second.find(singleScanIdx_) != it->second.end()) {
+      id2idx_[it->first] = position_yaw.size();
+      position_yaw.push_back(it->second.find(singleScanIdx_)->second.position_yaw);
+      size_id.push_back(it->second.find(singleScanIdx_)->second.size_id);
+    }
+  }
 
   bufBboxPositionsYaw_.assign(position_yaw);
   bufBboxSizeIds_.assign(size_id);
 
   glow::_CheckGlError(__FILE__, __LINE__);
-  std::cout << "finished." << std::endl;
-
-  updateGL();
 }

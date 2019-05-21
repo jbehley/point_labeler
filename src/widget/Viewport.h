@@ -127,10 +127,12 @@ class Viewport : public QGLWidget {
   void labelInstances(bool value);
   void setMaximumInstanceIds(const std::map<uint32_t, uint32_t>& maxInstanceIds);
   std::map<uint32_t, uint32_t> getMaximumInstanceIds() const;
+  void setInstanceSelectionMode(bool value);
   void setInstanceLabelingMode(int32_t value);
 
  signals:
   void labelingChanged();
+  void instanceSelected(uint32_t value);
 
  public slots:
   /** \brief set axis fixed **/
@@ -194,6 +196,7 @@ class Viewport : public QGLWidget {
   void labelPoints(int32_t x, int32_t y, float radius, uint32_t label, bool remove);
 
   void updateBoundingBoxes();
+  void fillBoundingBoxBuffers();
 
   void updateInstanceSelectionMap();
 
@@ -335,6 +338,7 @@ class Viewport : public QGLWidget {
   uint32_t remissionColormap_{0};
 
   bool labelInstances_{false};
+  bool instanceSelectionMode_{false};
   bool instanceSelected_{false};
   int32_t instanceLabelingMode_{-1};
   uint32_t selectedInstanceId_{0};
@@ -347,7 +351,9 @@ class Viewport : public QGLWidget {
     glow::vec4 position_yaw;
     glow::vec4 size_id;
   };
-  std::vector<std::vector<BoundingBox>> bboxes_;  // TODO: compute once only on update.
+
+  std::map<uint32_t, BoundingBox> bboxes_static_;
+  std::map<uint32_t, std::map<uint32_t, BoundingBox>> bboxes_moving_;  // (instanceid & label) -> (time -> bounding box)
 
   glow::GlBuffer<glow::vec4> bufBboxPositionsYaw_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
   glow::GlBuffer<glow::vec4> bufBboxSizeIds_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
@@ -357,6 +363,8 @@ class Viewport : public QGLWidget {
   glow::GlTexture texOffscreen_;
   std::vector<float> offscreenContent_;
   glow::GlProgram prgDrawBoundingBoxesId_;
+
+  std::map<uint32_t, uint32_t> id2idx_;
 };
 
 #endif /* POINTVIEW_H_ */

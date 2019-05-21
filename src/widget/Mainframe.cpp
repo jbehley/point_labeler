@@ -237,6 +237,27 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     }
   });
 
+  connect(ui.btnSelectInstance, &QToolButton::clicked, [this](bool checked) {
+    ui.mViewportXYZ->setInstanceSelectionMode(checked);
+
+  });
+
+  connect(ui.mViewportXYZ, &Viewport::instanceSelected, [this](uint32_t value) {
+
+    ui.btnSelectInstance->setChecked(false);
+
+    ui.btnDeletePoints->setEnabled(false);
+    ui.btnSplitPoints->setEnabled(false);
+    ui.btnAddPoints->setEnabled(false);
+
+    if (value > 0) {
+      ui.btnDeletePoints->setEnabled(true);
+      ui.btnSplitPoints->setEnabled(true);
+      ui.btnAddPoints->setEnabled(true);
+    }
+
+  });
+
   connect(ui.btnAddPoints, &QToolButton::clicked, [this](bool checked) {
     ui.btnDeletePoints->setChecked(false);
     ui.btnSplitPoints->setChecked(false);
@@ -880,6 +901,7 @@ void Mainframe::keyPressEvent(QKeyEvent* event) {
     case Qt::Key_R:
       ui.chkRemoveGround->toggle();
       return;
+
     default:
       if (!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyPressEvent(event);
       return;
@@ -915,6 +937,11 @@ void Mainframe::keyReleaseEvent(QKeyEvent* event) {
     case Qt::Key_Q:
       ui.spinGroundThreshold->setValue(value - step);
       return;
+
+    case Qt::Key_Space:
+      ui.btnSelectInstance->toggle();
+      return;
+
     default:
       if (!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyReleaseEvent(event);
       return;

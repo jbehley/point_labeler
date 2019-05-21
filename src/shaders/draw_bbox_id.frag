@@ -2,7 +2,7 @@
 
 in float instance_id;
 
-out float out_color;
+layout (location = 0) out float out_color;
 
 void main()
 {
