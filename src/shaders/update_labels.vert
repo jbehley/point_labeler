@@ -138,7 +138,7 @@ void main()
                 }
                 else if(instanceLabelingMode == 2) // remove points
                 {
-                   out_label = (newInstanceId << 16) | label;
+                   out_label = label;
                 }
                 
                 break;

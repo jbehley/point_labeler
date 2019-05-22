@@ -72,8 +72,15 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.spinGroundThreshold, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
           [this](double value) { ui.mViewportXYZ->setGroundThreshold(value); });
 
-  connect(ui.chkShowSingleScan, &QCheckBox::toggled,
-          [this](bool value) { ui.mViewportXYZ->setDrawingOption("single scan", value); });
+  connect(ui.chkShowSingleScan, &QCheckBox::toggled, [this](bool value) {
+    ui.mViewportXYZ->setDrawingOption("single scan", value);
+    ui.chkShowSingleScan_instance->setChecked(value);
+  });
+
+  connect(ui.chkShowSingleScan_instance, &QCheckBox::toggled, [this](bool value) {
+    ui.mViewportXYZ->setDrawingOption("single scan", value);
+    ui.chkShowSingleScan->setChecked(value);
+  });
 
   connect(ui.wgtTileSelector, &TileSelectorWidget::tileSelected, [this](int32_t i, int32_t j) { setTileIndex(i, j); });
 
@@ -261,28 +268,22 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.btnAddPoints, &QToolButton::clicked, [this](bool checked) {
     ui.btnDeletePoints->setChecked(false);
     ui.btnSplitPoints->setChecked(false);
-    if (checked)
-      ui.mViewportXYZ->setInstanceLabelingMode(0);
-    else
-      ui.mViewportXYZ->setInstanceLabelingMode(-1);
+    ui.btnAddPoints->setChecked(true);
+    ui.mViewportXYZ->setInstanceLabelingMode(0);
   });
 
   connect(ui.btnDeletePoints, &QToolButton::clicked, [this](bool checked) {
     ui.btnAddPoints->setChecked(false);
     ui.btnSplitPoints->setChecked(false);
-    if (checked)
-      ui.mViewportXYZ->setInstanceLabelingMode(2);
-    else
-      ui.mViewportXYZ->setInstanceLabelingMode(-1);
+    ui.btnDeletePoints->setChecked(true);
+    ui.mViewportXYZ->setInstanceLabelingMode(2);
   });
 
   connect(ui.btnSplitPoints, &QToolButton::clicked, [this](bool checked) {
     ui.btnDeletePoints->setChecked(false);
     ui.btnAddPoints->setChecked(false);
-    if (checked)
-      ui.mViewportXYZ->setInstanceLabelingMode(1);
-    else
-      ui.mViewportXYZ->setInstanceLabelingMode(-1);
+    ui.btnSplitPoints->setChecked(true);
+    ui.mViewportXYZ->setInstanceLabelingMode(1);
   });
 
   /** load labels and colors **/

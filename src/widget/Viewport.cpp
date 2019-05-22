@@ -379,6 +379,9 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
   glow::_CheckGlError(__FILE__, __LINE__);
 
   updateLabels();
+
+  if (labelInstances_) updateBoundingBoxes();
+
   updateGL();
 }
 
@@ -852,14 +855,17 @@ void Viewport::paintGL() {
   // Important: QPainter is apparently not working with OpenGL Core Profile < Qt5.9!!!!
   //  http://blog.qt.io/blog/2017/01/27/opengl-core-profile-context-support-qpainter/
   //  QPainter painter(this); // << does not work with OpenGL Core Profile.
-  if (mMode == POLYGON) {
+  if (mMode == POLYGON || (labelInstances_ && instanceSelected_)) {
     ScopedBinder<GlProgram> program_binder(prgPolygonPoints_);
 
     vao_polygon_points_.bind();
 
+    uint32_t label = mCurrentLabel;
+    if (labelInstances_ && instanceSelected_) label = selectedInstanceLabel_;
+
     prgPolygonPoints_.setUniform(GlUniform<int32_t>("width", width()));
     prgPolygonPoints_.setUniform(GlUniform<int32_t>("height", height()));
-    prgPolygonPoints_.setUniform(GlUniform<uint32_t>("label", mCurrentLabel));
+    prgPolygonPoints_.setUniform(GlUniform<uint32_t>("label", label));
 
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.bind();
@@ -990,92 +996,169 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
 
       return;
     }
-  } else if (mMode == PAINT && !labelInstances_) {
-    buttonPressed = true;
-    mChangeCamera = false;
-    if (event->buttons() & Qt::LeftButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
-    else if (event->buttons() & Qt::RightButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
+  }
 
-    updateGL();
-  } else if (mMode == POLYGON || (labelInstances_ && instanceSelected_)) {
-    if (event->buttons() & Qt::LeftButton) {
-      if (polygonPoints_.size() == 100) {
-        polygonPoints_.back().x = event->x();
-        polygonPoints_.back().y = event->y();
-      } else {
-        polygonPoints_.push_back(vec2(event->x(), event->y()));
-      }
-
-    } else if (event->buttons() & Qt::RightButton) {
-      if (polygonPoints_.size() > 2) {
-        // finish polygon and label points.
-
-        // 1. determine winding: https://blog.element84.com/polygon-winding-post.html
-
-        std::vector<vec2> points = polygonPoints_;
-        for (uint32_t i = 0; i < points.size(); ++i) {
-          points[i].y = height() - points[i].y;  // flip y.
+  if (labelInstances_) {
+    if (instanceSelected_) {
+      if (event->buttons() & Qt::LeftButton) {
+        if (polygonPoints_.size() == 100) {
+          polygonPoints_.back().x = event->x();
+          polygonPoints_.back().y = event->y();
+        } else {
+          polygonPoints_.push_back(vec2(event->x(), event->y()));
         }
 
-        float winding = 0.0f;
+      } else if (event->buttons() & Qt::RightButton) {
+        if (polygonPoints_.size() > 2) {
+          // finish polygon and label points.
 
-        // important: take also last edge into account!
-        for (uint32_t i = 0; i < points.size(); ++i) {
-          const auto& p = points[(i + 1) % points.size()];
-          const auto& q = points[i];
+          // 1. determine winding: https://blog.element84.com/polygon-winding-post.html
 
-          winding += (p.x - q.x) * (q.y + p.y);
-        }
+          std::vector<vec2> points = polygonPoints_;
+          for (uint32_t i = 0; i < points.size(); ++i) {
+            points[i].y = height() - points[i].y;  // flip y.
+          }
 
-        // invert  order if CW order.
-        if (winding > 0) std::reverse(points.begin(), points.end());
+          float winding = 0.0f;
 
-        //        if (winding > 0) std::cout << "winding: CW" << std::endl;
-        //        else std::cout << "winding: CCW" << std::endl;
+          // important: take also last edge into account!
+          for (uint32_t i = 0; i < points.size(); ++i) {
+            const auto& p = points[(i + 1) % points.size()];
+            const auto& q = points[i];
 
-        std::vector<Triangle> triangles;
-        std::vector<glow::vec2> tris_verts;
+            winding += (p.x - q.x) * (q.y + p.y);
+          }
 
-        triangulate(points, triangles);
+          // invert  order if CW order.
+          if (winding > 0) std::reverse(points.begin(), points.end());
 
-        //        std::cout << "#triangles: " << triangles.size() << std::endl;
+          //        if (winding > 0) std::cout << "winding: CW" << std::endl;
+          //        else std::cout << "winding: CCW" << std::endl;
 
-        std::vector<vec3> texContent(3 * 100);
-        for (uint32_t i = 0; i < triangles.size(); ++i) {
-          auto t = triangles[i];
-          texContent[3 * i + 0] = vec3(t.i.x / width(), (height() - t.i.y) / height(), 0);
-          texContent[3 * i + 1] = vec3(t.j.x / width(), (height() - t.j.y) / height(), 0);
-          texContent[3 * i + 2] = vec3(t.k.x / width(), (height() - t.k.y) / height(), 0);
+          std::vector<Triangle> triangles;
+          std::vector<glow::vec2> tris_verts;
 
-          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
-          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
-          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
-          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
-          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
-          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
-        }
+          triangulate(points, triangles);
 
-        numTriangles_ = triangles.size();
-        // note: colors are in range [0,1] for FLOAT!
-        texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
-        bufTriangles_.assign(tris_verts);
+          //        std::cout << "#triangles: " << triangles.size() << std::endl;
 
-        labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
-        if (labelInstances_) {
+          std::vector<vec3> texContent(3 * 100);
+          for (uint32_t i = 0; i < triangles.size(); ++i) {
+            auto t = triangles[i];
+            texContent[3 * i + 0] = vec3(t.i.x / width(), (height() - t.i.y) / height(), 0);
+            texContent[3 * i + 1] = vec3(t.j.x / width(), (height() - t.j.y) / height(), 0);
+            texContent[3 * i + 2] = vec3(t.k.x / width(), (height() - t.k.y) / height(), 0);
+
+            tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+            tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+            tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+            tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+            tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+            tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+          }
+
+          numTriangles_ = triangles.size();
+          // note: colors are in range [0,1] for FLOAT!
+          texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
+          bufTriangles_.assign(tris_verts);
+
+          labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
+
           updateBoundingBoxes();
           fillBoundingBoxBuffers();
           updateInstanceSelectionMap();
         }
+
+        polygonPoints_.clear();
       }
 
-      polygonPoints_.clear();
+      bufPolygonPoints_.assign(polygonPoints_);
+
+      repaint();
     }
+  } else {
+    if (mMode == PAINT) {
+      buttonPressed = true;
+      mChangeCamera = false;
+      if (event->buttons() & Qt::LeftButton)
+        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
+      else if (event->buttons() & Qt::RightButton)
+        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
 
-    bufPolygonPoints_.assign(polygonPoints_);
+      updateGL();
+    } else if (mMode == POLYGON) {
+      if (event->buttons() & Qt::LeftButton) {
+        if (polygonPoints_.size() == 100) {
+          polygonPoints_.back().x = event->x();
+          polygonPoints_.back().y = event->y();
+        } else {
+          polygonPoints_.push_back(vec2(event->x(), event->y()));
+        }
 
-    repaint();
+      } else if (event->buttons() & Qt::RightButton) {
+        if (polygonPoints_.size() > 2) {
+          // finish polygon and label points.
+
+          // 1. determine winding: https://blog.element84.com/polygon-winding-post.html
+
+          std::vector<vec2> points = polygonPoints_;
+          for (uint32_t i = 0; i < points.size(); ++i) {
+            points[i].y = height() - points[i].y;  // flip y.
+          }
+
+          float winding = 0.0f;
+
+          // important: take also last edge into account!
+          for (uint32_t i = 0; i < points.size(); ++i) {
+            const auto& p = points[(i + 1) % points.size()];
+            const auto& q = points[i];
+
+            winding += (p.x - q.x) * (q.y + p.y);
+          }
+
+          // invert  order if CW order.
+          if (winding > 0) std::reverse(points.begin(), points.end());
+
+          //        if (winding > 0) std::cout << "winding: CW" << std::endl;
+          //        else std::cout << "winding: CCW" << std::endl;
+
+          std::vector<Triangle> triangles;
+          std::vector<glow::vec2> tris_verts;
+
+          triangulate(points, triangles);
+
+          //        std::cout << "#triangles: " << triangles.size() << std::endl;
+
+          std::vector<vec3> texContent(3 * 100);
+          for (uint32_t i = 0; i < triangles.size(); ++i) {
+            auto t = triangles[i];
+            texContent[3 * i + 0] = vec3(t.i.x / width(), (height() - t.i.y) / height(), 0);
+            texContent[3 * i + 1] = vec3(t.j.x / width(), (height() - t.j.y) / height(), 0);
+            texContent[3 * i + 2] = vec3(t.k.x / width(), (height() - t.k.y) / height(), 0);
+
+            tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+            tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+            tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+            tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+            tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+            tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+          }
+
+          numTriangles_ = triangles.size();
+          // note: colors are in range [0,1] for FLOAT!
+          texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
+          bufTriangles_.assign(tris_verts);
+
+          labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
+        }
+
+        polygonPoints_.clear();
+      }
+
+      bufPolygonPoints_.assign(polygonPoints_);
+
+      repaint();
+    }
   }
 
   event->accept();
@@ -1098,41 +1181,59 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
 
       return;
     }
-  } else if (mMode == PAINT && !labelInstances_) {
-    buttonPressed = false;
+  } else {
+    if (labelInstances_) {
+      if (instanceSelectionMode_) {
+        uint32_t instance_label = getClickedInstanceId(event->x(), event->y());
 
-    if (event->buttons() & Qt::LeftButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
-    else if (event->buttons() & Qt::RightButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
+        emit instanceSelected(instance_label);
 
-    updateGL();
-  } else if (mMode == POLYGON || (labelInstances_ && instanceSelected_)) {
-    if (polygonPoints_.size() > 0) {
-      polygonPoints_.back().x = event->x();
-      polygonPoints_.back().y = event->y();
+        instanceSelectionMode_ = false;
 
-      bufPolygonPoints_.assign(polygonPoints_);
+        instanceSelected_ = false;
+        selectedInstanceId_ = 0;
+        selectedInstanceLabel_ = 0;
+
+        if (instance_label > 0) {
+          instanceSelected_ = true;
+          selectedInstanceId_ = (instance_label >> 16);
+          selectedInstanceLabel_ = (instance_label & uint32_t(0xFFFF));
+        }
+
+        updateGL();
+      } else {
+        if (instanceSelected_) {
+          if (polygonPoints_.size() > 0) {
+            polygonPoints_.back().x = event->x();
+            polygonPoints_.back().y = event->y();
+
+            bufPolygonPoints_.assign(polygonPoints_);
+          }
+
+          repaint();
+        }
+      }
+    } else {
+      if (mMode == PAINT) {
+        buttonPressed = false;
+
+        if (event->buttons() & Qt::LeftButton)
+          labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
+        else if (event->buttons() & Qt::RightButton)
+          labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
+
+        updateGL();
+      } else if (mMode == POLYGON) {
+        if (polygonPoints_.size() > 0) {
+          polygonPoints_.back().x = event->x();
+          polygonPoints_.back().y = event->y();
+
+          bufPolygonPoints_.assign(polygonPoints_);
+        }
+
+        repaint();
+      }
     }
-
-    repaint();
-  } else if (labelInstances_ && instanceSelectionMode_) {
-    uint32_t instance_label = getClickedInstanceId(event->x(), event->y());
-
-    emit instanceSelected(instance_label);
-
-    instanceLabelingMode_ = false;
-    instanceSelected_ = false;
-    selectedInstanceId_ = 0;
-    selectedInstanceLabel_ = 0;
-
-    if (instance_label > 0) {
-      instanceSelected_ = true;
-      selectedInstanceId_ = (instance_label >> 16);
-      selectedInstanceLabel_ = (instance_label & uint32_t(0xFFFF));
-    }
-
-    updateGL();
   }
 
   event->accept();
@@ -1145,22 +1246,29 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
                             resolveKeyboardModifier(event->modifiers()))) {
       return;
     }
-  } else if (mMode == PAINT && !labelInstances_) {
-    if (buttonPressed) {
-      if (event->buttons() & Qt::LeftButton)
-        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
-      else
-        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
+  }
+
+  if (labelInstances_) {
+    if (instanceSelected_ && !instanceSelectionMode_) {
+      if (polygonPoints_.size() > 0) {
+        polygonPoints_.back().x = event->x();
+        polygonPoints_.back().y = event->y();
+
+        bufPolygonPoints_.assign(polygonPoints_);
+
+        repaint();
+      }
     }
-    updateGL();
-  } else if (mMode == POLYGON || labelInstances_) {
-    if (polygonPoints_.size() > 0) {
-      polygonPoints_.back().x = event->x();
-      polygonPoints_.back().y = event->y();
-
-      bufPolygonPoints_.assign(polygonPoints_);
-
-      repaint();
+  } else {
+    if (mMode == PAINT) {
+      if (buttonPressed) {
+        if (event->buttons() & Qt::LeftButton)
+          labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
+        else
+          labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
+      }
+      updateGL();
+    } else if (mMode == POLYGON) {
     }
   }
 
@@ -1311,10 +1419,12 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 
   // set instance specific stuff.
   prgUpdateLabels_.setUniform(GlUniform<bool>("labelInstances", labelInstances_));
-  prgUpdateLabels_.setUniform(GlUniform<int32_t>("instanceLabelingMode", instanceLabelingMode_));
-  prgUpdateLabels_.setUniform(GlUniform<uint32_t>("selectedInstanceId", selectedInstanceId_));
-  prgUpdateLabels_.setUniform(GlUniform<uint32_t>("selectedInstanceLabel", selectedInstanceLabel_));
-  prgUpdateLabels_.setUniform(GlUniform<uint32_t>("newInstanceId", maxInstanceIds_[selectedInstanceLabel_] + 1));
+  if (labelInstances_) {
+    prgUpdateLabels_.setUniform(GlUniform<int32_t>("instanceLabelingMode", instanceLabelingMode_));
+    prgUpdateLabels_.setUniform(GlUniform<uint32_t>("selectedInstanceId", selectedInstanceId_));
+    prgUpdateLabels_.setUniform(GlUniform<uint32_t>("selectedInstanceLabel", selectedInstanceLabel_));
+    prgUpdateLabels_.setUniform(GlUniform<uint32_t>("newInstanceId", maxInstanceIds_[selectedInstanceLabel_] + 1));
+  }
 
   prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
   prgUpdateLabels_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
@@ -1336,7 +1446,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(mvp_);
 
   if (mMode == Viewport::PAINT) prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 0));
-  if (mMode == Viewport::POLYGON) {
+  if (mMode == Viewport::POLYGON || labelInstances_) {
     prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 1));
     prgUpdateLabels_.setUniform(GlUniform<int32_t>("numTriangles", numTriangles_));
   }
@@ -1656,6 +1766,8 @@ void Viewport::labelInstances(bool value) {
     updateBoundingBoxes();
     updateInstanceSelectionMap();
   }
+
+  updateGL();
 }
 
 void Viewport::setMaximumInstanceIds(const std::map<uint32_t, uint32_t>& maxInstanceIds) {
@@ -1666,16 +1778,20 @@ std::map<uint32_t, uint32_t> Viewport::getMaximumInstanceIds() const { return ma
 
 void Viewport::setInstanceLabelingMode(int32_t value) {
   instanceLabelingMode_ = value;
-  instanceSelected_ = false;
+  abortPolygonSelection();
+
+  updateGL();
 }
 
 void Viewport::setInstanceSelectionMode(bool value) {
   instanceSelectionMode_ = value;
-  instanceSelected_ = false;
-  selectedInstanceId_ = 0;
-  selectedInstanceLabel_ = 0;
+  if (instanceSelectionMode_) {
+    instanceSelected_ = false;
+    selectedInstanceId_ = 0;
+    selectedInstanceLabel_ = 0;
 
-  abortPolygonSelection();
+    abortPolygonSelection();
+  }
 }
 
 void Viewport::updateBoundingBoxes() {

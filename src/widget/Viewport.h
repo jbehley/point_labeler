@@ -343,7 +343,7 @@ class Viewport : public QGLWidget {
   bool labelInstances_{false};
   bool instanceSelectionMode_{false};
   bool instanceSelected_{false};
-  int32_t instanceLabelingMode_{-1};
+  int32_t instanceLabelingMode_{0};
   uint32_t selectedInstanceId_{0};
   uint32_t selectedInstanceLabel_{0};
   uint32_t newInstanceId_{0};
