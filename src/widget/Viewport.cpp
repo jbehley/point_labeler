@@ -370,7 +370,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
     // ensure that empty indexes get the beginning from before.
     for (uint32_t i = 0; i < scanInfos_.size(); ++i) {
-      if (scanInfos_[i].size == 0 && i > 0) scanInfos_[i].start = scanInfos_[i - 1].start;
+      if (scanInfos_[i].size == 0 && i > 0) scanInfos_[i].start = scanInfos_[i - 1].start + scanInfos_[i - 1].size;
     }
 
     std::cout << "copied " << scanInfos_.size() << " scans with " << numCopiedPoints << " points" << std::endl;
