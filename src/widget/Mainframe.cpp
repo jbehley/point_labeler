@@ -19,6 +19,23 @@
 
 using namespace glow;
 
+// see https://stackoverflow.com/a/24349347
+template <class T>
+class Blocker {
+  T* blocked;
+  bool previous;
+
+ public:
+  Blocker(T* blocked) : blocked(blocked), previous(blocked->blockSignals(true)) {}
+  ~Blocker() { blocked->blockSignals(previous); }
+  T* operator->() { return blocked; }
+};
+
+template <class T>
+inline Blocker<T> whileBlocking(T* blocked) {
+  return Blocker<T>(blocked);
+}
+
 Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   ui.setupUi(this);
 
@@ -284,6 +301,33 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     ui.btnAddPoints->setChecked(false);
     ui.btnSplitPoints->setChecked(true);
     ui.mViewportXYZ->setInstanceLabelingMode(1);
+  });
+
+  connect(ui.chkDrawInstances, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instances", value); });
+
+  connect(ui.cmbLoop_instances, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+          [this](int32_t idx) { ui.cmbLoops->setCurrentIndex(idx); });
+
+  connect(ui.cmbLoops, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this](int32_t idx) {
+    if (idx == 0) {
+      ui.mViewportXYZ->setDrawingOption("show scan range", false);
+
+      whileBlocking(ui.spinRangeBegin)->setValue(0);
+      whileBlocking(ui.spinRangeEnd)->setValue(ui.spinRangeEnd->maximum());
+      whileBlocking(ui.chkShowSingleScan)->setChecked(false);
+
+    } else {
+      if (idx - 1 < int32_t(loopRanges_.size())) {
+        ui.mViewportXYZ->setScanRange(loopRanges_[idx - 1].start, loopRanges_[idx - 1].end);
+        whileBlocking(ui.mViewportXYZ)->setDrawingOption("show scan range", true);
+        whileBlocking(ui.chkShowSingleScan)->setChecked(true);
+        whileBlocking(ui.spinRangeBegin)->setValue(loopRanges_[idx - 1].start);
+        whileBlocking(ui.spinRangeEnd)->setValue(loopRanges_[idx - 1].end);
+      }
+    }
+
+    whileBlocking(ui.cmbLoop_instances)->setCurrentIndex(idx);
   });
 
   /** load labels and colors **/
@@ -707,10 +751,63 @@ void Mainframe::updateScans() {
   lblNumPoints_.setText(dotted_number + " ");
   progressLabeled_.setValue(100.0f * ui.mViewportXYZ->labeledPointCount() / ui.mViewportXYZ->loadedPointCount());
 
-  ui.spinRangeBegin->setValue(0);
-  ui.spinRangeBegin->setMaximum(indexes_.size() - 1);
-  ui.spinRangeEnd->setValue(indexes_.size() - 1);
-  ui.spinRangeEnd->setMaximum(indexes_.size() - 1);
+  {
+    // update scan range selection and loop selection.
+
+    ui.chkShowScanRange->setChecked(false);
+    ui.mViewportXYZ->setDrawingOption("show scan range", false);
+    ui.mViewportXYZ->setScanRange(0, indexes_.size() - 1);  // ensure valid values.
+
+    ui.spinRangeBegin->setMaximum(indexes_.size() - 1);
+    ui.spinRangeEnd->setMaximum(indexes_.size() - 1);
+
+    whileBlocking(ui.spinRangeBegin)->setValue(0);
+    whileBlocking(ui.spinRangeEnd)->setValue(indexes_.size() - 1);
+
+    const std::vector<uint32_t>& sorted_indexes = indexes_;
+
+    loopRanges_.clear();
+
+    uint32_t lastLoopEnd = 0;
+    for (uint32_t i = 1; i < sorted_indexes.size(); ++i) {
+      // note: difference of at most min_loop_difference scans is considered to be inside the same loop.
+      uint32_t min_loop_difference = 10;
+      if (sorted_indexes[i] - sorted_indexes[i - 1] > min_loop_difference) {
+        std::cout << sorted_indexes[i] << " -- " << sorted_indexes[i - 1] << std::endl;
+        ScanRange range;
+        range.start = lastLoopEnd;
+        range.end = i - 1;
+        lastLoopEnd = i;
+        loopRanges_.push_back(range);
+      }
+    }
+
+    if (lastLoopEnd > 0) {
+      ScanRange range;
+      range.start = lastLoopEnd;
+      range.end = indexes_.size() - 1;
+      loopRanges_.push_back(range);
+    }
+
+    ui.cmbLoop_instances->blockSignals(true);
+    ui.cmbLoops->blockSignals(true);
+
+    ui.cmbLoops->clear();
+    ui.cmbLoop_instances->clear();
+
+    ui.cmbLoop_instances->insertItem(0, "all loops");
+    ui.cmbLoops->addItem("all loops");
+    for (auto range : loopRanges_) {
+      ui.cmbLoop_instances->addItem(QString::number(range.start) + QString(" - ") + QString::number(range.end));
+      ui.cmbLoops->addItem(QString::number(range.start) + QString(" - ") + QString::number(range.end));
+    }
+
+    ui.cmbLoop_instances->setCurrentIndex(0);
+    ui.cmbLoops->setCurrentIndex(0);
+
+    ui.cmbLoops->blockSignals(false);
+    ui.cmbLoop_instances->blockSignals(false);
+  }
 }
 
 void Mainframe::forward() {

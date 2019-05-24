@@ -40,6 +40,10 @@ void main()
 
     
     vec4 size = gs_in[0].size;
+    // ensure a minimum size of the drawn bounding boxes.
+    size.x = max(size.x, 0.2);
+    size.y = max(size.y, 0.2);
+    size.z = max(size.z, 0.2);
     
     // 3 --- 2  7 --- 6
     // |     |  |     |

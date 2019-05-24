@@ -248,6 +248,7 @@ void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexe
   uint32_t scansRead = 0;
 
   indexes = tiles_[tileIdxToOffset(i, j)].indexes;
+  std::sort(indexes.begin(), indexes.end());
   for (uint32_t t : indexes) {
     indexesAfter.push_back(t);
     if (pointsCache_.find(t) == pointsCache_.end()) {

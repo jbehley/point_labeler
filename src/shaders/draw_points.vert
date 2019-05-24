@@ -28,10 +28,13 @@ uniform mat4 plane_pose;
 uniform vec2 tilePos;
 uniform float tileSize;
 
-uniform bool drawInstances;
 
 uniform int colormap;
 uniform float gamma;
+
+uniform bool drawInstances;
+uniform uint selectedInstanceId;
+uniform uint selectedInstanceLabel;
 
 
 out vec4 color;
@@ -111,6 +114,11 @@ void main()
     
     visible = visible && (planeDirectionNormal * (scalar_product - planeThresholdNormal) < 0);
   }
+  
+  // draw instances?
+  visible = visible && (!drawInstances || (label == selectedInstanceLabel &&  instance == selectedInstanceId && selectedInstanceLabel > uint(0))); 
+  
+  
 
   
   // if(!visible || range < minRange || range > maxRange) gl_Position = vec4(-10, -10, -10, 1);

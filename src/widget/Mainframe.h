@@ -71,8 +71,6 @@ class Mainframe : public QMainWindow {
   void keyPressEvent(QKeyEvent* event);
   void keyReleaseEvent(QKeyEvent* event);
 
-
-
  protected slots:
   void unsavedChanges();
 
@@ -103,6 +101,11 @@ class Mainframe : public QMainWindow {
   QLabel lblOverwrite_;
   QProgressBar progressLabeled_;
   QWidget* info_;
+
+  struct ScanRange {
+    uint32_t start, end;
+  };
+  std::vector<ScanRange> loopRanges_;
 };
 
 #endif /* MAINFRAME_H_ */

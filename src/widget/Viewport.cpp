@@ -368,6 +368,11 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
       ++count;
     }
 
+    // ensure that empty indexes get the beginning from before.
+    for (uint32_t i = 0; i < scanInfos_.size(); ++i) {
+      if (scanInfos_[i].size == 0 && i > 0) scanInfos_[i].start = scanInfos_[i - 1].start;
+    }
+
     std::cout << "copied " << scanInfos_.size() << " scans with " << numCopiedPoints << " points" << std::endl;
     if (numCopiedPoints == bufPoints_.capacity()) {
       QMessageBox::warning(this, "Increase number of scans.",
@@ -380,7 +385,12 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
   updateLabels();
 
-  if (labelInstances_) updateBoundingBoxes();
+  if (labelInstances_) {
+    updateBoundingBoxes();
+
+    fillBoundingBoxBuffers();
+    updateInstanceSelectionMap();  // re-render selection map.
+  }
 
   updateGL();
 }
@@ -709,7 +719,8 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
     prgDrawPoints_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
     prgDrawPoints_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
-    prgDrawPoints_.setUniform(GlUniform<bool>("drawInstances", drawingOption_["draw instances"]));
+    prgDrawPoints_.setUniform(GlUniform<bool>("drawInstances", false));
+
     //    prgDrawPoints_.setUniform(GlUniform<bool>("carAsBase", drawingOption_["carAsBase"]));
     Eigen::Matrix4f plane_pose = Eigen::Matrix4f::Identity();
     plane_pose(0, 3) = tilePos_.x;
@@ -738,6 +749,27 @@ void Viewport::paintGL() {
       glDrawArrays(GL_POINTS, start, end);
     } else
       glDrawArrays(GL_POINTS, 0, bufPoints_.size());
+
+    if (drawingOption_["draw instances"]) {
+      // draw points of specific instance larger.
+      glPointSize(pointSize_ + 2);
+
+      prgDrawPoints_.setUniform(GlUniform<bool>("drawInstances", true));
+
+      prgDrawPoints_.setUniform(GlUniform<uint32_t>("selectedInstanceId", selectedInstanceId_));
+      prgDrawPoints_.setUniform(GlUniform<uint32_t>("selectedInstanceLabel", selectedInstanceLabel_));
+
+      if (showSingleScan)
+        glDrawArrays(GL_POINTS, scanInfos_[singleScanIdx_].start, scanInfos_[singleScanIdx_].size);
+      else if (showScanRange) {
+        uint32_t start = scanInfos_[scanRangeBegin_].start;
+        uint32_t end = scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size;
+        glDrawArrays(GL_POINTS, start, end);
+      } else
+        glDrawArrays(GL_POINTS, 0, bufPoints_.size());
+
+      glPointSize(pointSize_);
+    }
 
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.release();
@@ -1928,7 +1960,7 @@ void Viewport::updateBoundingBoxes() {
 
   // ... and fill buffer.
   fillBoundingBoxBuffers();
-  std::cout << "finished." << std::endl;
+  std::cout << " finished." << std::endl;
 
   updateGL();
 }
