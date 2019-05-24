@@ -558,6 +558,13 @@ void Viewport::setOverwrite(bool value) {
 
 void Viewport::setDrawingOption(const std::string& name, bool value) {
   drawingOption_[name] = value;
+
+  // trigger update.
+  if (name == "show all moving instances") {
+    fillBoundingBoxBuffers();
+    updateInstanceSelectionMap();
+  }
+
   updateGL();
 }
 
@@ -1979,12 +1986,23 @@ void Viewport::fillBoundingBoxBuffers() {
     instance_label.push_back(it->first);
   }
 
-  for (auto it = bboxes_moving_.begin(); it != bboxes_moving_.end(); ++it) {
-    if (it->second.find(singleScanIdx_) != it->second.end()) {
-      id2idx_[it->first] = position_yaw.size();
-      position_yaw.push_back(it->second.find(singleScanIdx_)->second.position_yaw);
-      size_id.push_back(it->second.find(singleScanIdx_)->second.size_id);
-      instance_label.push_back(it->first);
+  if (drawingOption_["show all moving instances"]) {
+    for (auto it = bboxes_moving_.begin(); it != bboxes_moving_.end(); ++it) {
+      for (auto iit = it->second.begin(); iit != it->second.end(); ++iit) {
+        id2idx_[it->first] = position_yaw.size();
+        position_yaw.push_back(iit->second.position_yaw);
+        size_id.push_back(iit->second.size_id);
+        instance_label.push_back(it->first);
+      }
+    }
+  } else {
+    for (auto it = bboxes_moving_.begin(); it != bboxes_moving_.end(); ++it) {
+      if (it->second.find(singleScanIdx_) != it->second.end()) {
+        id2idx_[it->first] = position_yaw.size();
+        position_yaw.push_back(it->second.find(singleScanIdx_)->second.position_yaw);
+        size_id.push_back(it->second.find(singleScanIdx_)->second.size_id);
+        instance_label.push_back(it->first);
+      }
     }
   }
 

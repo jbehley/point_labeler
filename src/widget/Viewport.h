@@ -195,11 +195,16 @@ class Viewport : public QGLWidget {
   //  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
   void labelPoints(int32_t x, int32_t y, float radius, uint32_t label, bool remove);
 
+  /** \brief compute new bounding boxes and update maxInstanceIDs **/
   void updateBoundingBoxes();
+
+  /** \brief fill bounding box buffer with currently visible bounding boxes. **/
   void fillBoundingBoxBuffers();
 
+  /** \brief render bounding boxes to an image for selection resolution for mouse clicks. **/
   void updateInstanceSelectionMap();
 
+  /** \brief determine the clicked instance using the instance selection map. see updateInstanceSelectionMap() **/
   uint32_t getClickedInstanceId(float x, float y);
 
   void abortPolygonSelection();

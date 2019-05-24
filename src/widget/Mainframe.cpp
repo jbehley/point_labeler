@@ -306,6 +306,9 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.chkDrawInstances, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instances", value); });
 
+  connect(ui.chkShowAllMovingInstances, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("show all moving instances", value); });
+
   connect(ui.cmbLoop_instances, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
           [this](int32_t idx) { ui.cmbLoops->setCurrentIndex(idx); });
 
