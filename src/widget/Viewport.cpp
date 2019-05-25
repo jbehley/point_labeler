@@ -1308,6 +1308,14 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
       }
       updateGL();
     } else if (mMode == POLYGON) {
+      if (polygonPoints_.size() > 0) {
+        polygonPoints_.back().x = event->x();
+        polygonPoints_.back().y = event->y();
+
+        bufPolygonPoints_.assign(polygonPoints_);
+
+        repaint();
+      }
     }
   }
 
