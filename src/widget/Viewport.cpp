@@ -752,8 +752,9 @@ void Viewport::paintGL() {
       glDrawArrays(GL_POINTS, scanInfos_[singleScanIdx_].start, scanInfos_[singleScanIdx_].size);
     else if (showScanRange) {
       uint32_t start = scanInfos_[scanRangeBegin_].start;
-      uint32_t end = scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size;
-      glDrawArrays(GL_POINTS, start, end);
+      uint32_t count =
+          scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size - scanInfos_[scanRangeBegin_].start;
+      glDrawArrays(GL_POINTS, start, count);
     } else
       glDrawArrays(GL_POINTS, 0, bufPoints_.size());
 

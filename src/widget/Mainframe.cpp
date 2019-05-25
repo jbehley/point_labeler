@@ -318,13 +318,13 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
       whileBlocking(ui.spinRangeBegin)->setValue(0);
       whileBlocking(ui.spinRangeEnd)->setValue(ui.spinRangeEnd->maximum());
-      whileBlocking(ui.chkShowSingleScan)->setChecked(false);
+      whileBlocking(ui.chkShowScanRange)->setChecked(false);
 
     } else {
       if (idx - 1 < int32_t(loopRanges_.size())) {
         ui.mViewportXYZ->setScanRange(loopRanges_[idx - 1].start, loopRanges_[idx - 1].end);
         whileBlocking(ui.mViewportXYZ)->setDrawingOption("show scan range", true);
-        whileBlocking(ui.chkShowSingleScan)->setChecked(true);
+        whileBlocking(ui.chkShowScanRange)->setChecked(true);
         whileBlocking(ui.spinRangeBegin)->setValue(loopRanges_[idx - 1].start);
         whileBlocking(ui.spinRangeEnd)->setValue(loopRanges_[idx - 1].end);
       }
@@ -776,7 +776,6 @@ void Mainframe::updateScans() {
       // note: difference of at most min_loop_difference scans is considered to be inside the same loop.
       uint32_t min_loop_difference = 10;
       if (sorted_indexes[i] - sorted_indexes[i - 1] > min_loop_difference) {
-        std::cout << sorted_indexes[i] << " -- " << sorted_indexes[i - 1] << std::endl;
         ScanRange range;
         range.start = lastLoopEnd;
         range.end = i - 1;
