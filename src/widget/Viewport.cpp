@@ -770,8 +770,10 @@ void Viewport::paintGL() {
         glDrawArrays(GL_POINTS, scanInfos_[singleScanIdx_].start, scanInfos_[singleScanIdx_].size);
       else if (showScanRange) {
         uint32_t start = scanInfos_[scanRangeBegin_].start;
-        uint32_t end = scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size;
-        glDrawArrays(GL_POINTS, start, end);
+        uint32_t count =
+            scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size - scanInfos_[scanRangeBegin_].start;
+        glDrawArrays(GL_POINTS, start, count);
+
       } else
         glDrawArrays(GL_POINTS, 0, bufPoints_.size());
 
@@ -1441,6 +1443,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   //  Stopwatch::tic();
 
   bool showSingleScan = drawingOption_["single scan"];
+  bool showScanRange = drawingOption_["show scan range"];
 
   ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
   ScopedBinder<GlProgram> programBinder(prgUpdateLabels_);
@@ -1514,6 +1517,9 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   if (showSingleScan) {
     buffer_start = scanInfos_[singleScanIdx_].start;
     buffer_size = scanInfos_[singleScanIdx_].size;
+  } else if (showScanRange) {
+    buffer_start = scanInfos_[scanRangeBegin_].start;
+    buffer_size = scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size - scanInfos_[scanRangeBegin_].start;
   }
 
   while (count * max_size < buffer_size) {
