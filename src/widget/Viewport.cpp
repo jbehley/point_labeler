@@ -218,6 +218,7 @@ void Viewport::initPrograms() {
   prgDrawSelectedBoundingBox_.link();
 
   prgGetSelectedLabels_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/selected_labels.vert"));
+  prgGetSelectedLabels_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/selected_labels.geom"));
   prgGetSelectedLabels_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/empty.frag"));
   prgGetSelectedLabels_.attach(tfSelectedLabels_);
   prgGetSelectedLabels_.link();
@@ -905,13 +906,14 @@ void Viewport::paintGL() {
   // Important: QPainter is apparently not working with OpenGL Core Profile < Qt5.9!!!!
   //  http://blog.qt.io/blog/2017/01/27/opengl-core-profile-context-support-qpainter/
   //  QPainter painter(this); // << does not work with OpenGL Core Profile.
-  if (mMode == POLYGON || (labelInstances_ && instanceSelected_)) {
+  if (mMode == POLYGON || (labelInstances_ && instanceSelected_) || instanceLabelingMode_ == 3) {
     ScopedBinder<GlProgram> program_binder(prgPolygonPoints_);
 
     vao_polygon_points_.bind();
 
     uint32_t label = mCurrentLabel;
     if (labelInstances_ && instanceSelected_) label = selectedInstanceLabel_;
+    if (instanceLabelingMode_ == 3) label = 0;
 
     prgPolygonPoints_.setUniform(GlUniform<int32_t>("width", width()));
     prgPolygonPoints_.setUniform(GlUniform<int32_t>("height", height()));
@@ -1115,6 +1117,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
           if (instanceLabelingMode_ == 3)  // create instance.
           {
             std::vector<uint32_t> selected = getSelectedLabels();
+            //            std::cout << selected.size() << " points selected." << std::endl;
 
             std::map<uint32_t, uint32_t> counts;
             for (auto label : instanceableLabels_) counts[label] = 0;
@@ -1127,6 +1130,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
             uint32_t maxLabel = 0;
             uint32_t maxCount = 0;
             for (auto it = counts.begin(); it != counts.end(); ++it) {
+              //              std::cout << it->first << ": " << it->second << std::endl;
               if (it->second > maxCount) {
                 maxLabel = it->first;
                 maxCount = it->second;
@@ -1143,6 +1147,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
               fillBoundingBoxBuffers();
               updateInstanceSelectionMap();
 
+              instanceSelected_ = true;
               selectedInstanceId_ = maxInstanceIds_[selectedInstanceLabel_];
               selectedInstanceId = selectedInstanceId_;
             }
@@ -1526,6 +1531,7 @@ std::vector<uint32_t> Viewport::getSelectedLabels() {
 
   mvp_ = projection_ * mCamera->matrix() * conversion_;
   prgGetSelectedLabels_.setUniform(mvp_);
+  prgGetSelectedLabels_.setUniform(GlUniform<int32_t>("numTriangles", numTriangles_));
 
   glActiveTexture(GL_TEXTURE0);
   texTriangles_.bind();
@@ -1553,10 +1559,11 @@ std::vector<uint32_t> Viewport::getSelectedLabels() {
 
     tfSelectedLabels_.begin(TransformFeedbackMode::POINTS);
     glDrawArrays(GL_POINTS, buffer_start + count * max_size, size);
-    tfSelectedLabels_.end();
+    uint32_t num_captured = tfSelectedLabels_.end();
 
     std::vector<uint32_t> temp;
     bufSelectedLabels_.get(temp);
+    temp.resize(num_captured);
     selected.insert(selected.end(), temp.begin(), temp.end());
 
     count++;
@@ -1575,7 +1582,7 @@ std::vector<uint32_t> Viewport::getSelectedLabels() {
 
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label, bool remove) {
   if (points_.size() == 0 || labels_.size() == 0) return;
-  if (labelInstances_ && !instanceSelected_) {
+  if (labelInstances_ && !instanceSelected_ && (instanceLabelingMode_ != 3)) {
     std::cout << "no instance selected!" << std::endl;
     return;
   }

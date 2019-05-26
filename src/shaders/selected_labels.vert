@@ -31,7 +31,12 @@ uniform float planeThresholdNormal;
 uniform float planeDirectionNormal;
 uniform mat4 plane_pose;
 
-out uint out_label;
+
+out POINT
+{
+   uint label;
+   bool valid;
+} vs_out;
 
 bool insideTriangle(vec2 p, vec2 v1, vec2 v2, vec2 v3) {
   float b0 = ((v2.x - v1.x) * (v3.y - v1.y) - (v3.x - v1.x) * (v2.y - v1.y));
@@ -56,10 +61,8 @@ void main()
   
   vec4 point = mvp * vec4(in_vertex.xyz, 1.0);
   point = vec4(point.x/point.w, point.y/point.w, point.z/point.w, 1.0);
-  
-  gl_Position = vec4(-10, -10, -10, 1);
-  
-  out_label = in_label;
+
+  vs_out.valid = false;
     
   vec3 pos =  vec3(0.5f * (point.x + 1.0) * width, 0.5f * (point.y + 1.0) * height, 0.5f * (point.z + 1.0)); 
   pos.y = height - pos.y;
@@ -93,7 +96,8 @@ void main()
 
       if(insideTriangle(pos.xy, v1, v2, v3))
       {
-        gl_Position = vec4(0,0,0,1); // report label.
+        vs_out.valid = true; // report label.
+        vs_out.label = in_label;
         
         break;
       }

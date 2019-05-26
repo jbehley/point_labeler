@@ -272,6 +272,11 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     ui.btnSplitPoints->setEnabled(false);
     ui.btnAddPoints->setEnabled(false);
 
+    // update instance labeling mode.
+    if (ui.btnAddPoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(0);
+    if (ui.btnSplitPoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(1);
+    if (ui.btnDeletePoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(2);
+
     if (value > 0) {
       ui.btnDeletePoints->setEnabled(true);
       ui.btnSplitPoints->setEnabled(true);
@@ -331,13 +336,15 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   });
 
   connect(ui.btnCreateInstance, &QToolButton::clicked, [this](bool checked) {
-    ui.btnSelectInstance->setChecked(false);
-    ui.btnDeletePoints->setEnabled(false);
-    ui.btnAddPoints->setEnabled(false);
-    ui.btnSplitPoints->setEnabled(false);
+    if (checked) {
+      ui.btnSelectInstance->setChecked(false);
+      ui.btnDeletePoints->setEnabled(false);
+      ui.btnAddPoints->setEnabled(false);
+      ui.btnSplitPoints->setEnabled(false);
 
-    ui.mViewportXYZ->setInstanceSelectionMode(false);
-    ui.mViewportXYZ->setInstanceLabelingMode(3);
+      ui.mViewportXYZ->setInstanceSelectionMode(false);
+      ui.mViewportXYZ->setInstanceLabelingMode(3);
+    }
   });
 
   /** load labels and colors **/

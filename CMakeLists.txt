@@ -78,6 +78,7 @@ COMPILE_SHADERS(${VIZ_SHADER_SRC}
   src/shaders/draw_bbox_id.geom
   src/shaders/draw_bbox_id.frag
   src/shaders/selected_labels.vert
+  src/shaders/selected_labels.geom
 )
 
 add_executable(labeler 
