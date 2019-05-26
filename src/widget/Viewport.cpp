@@ -77,6 +77,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   tfFillTilePoints_.attach({"out_visible"}, bufVisible_);
   tfFillTilePoints_.attach({"out_scanindex"}, bufScanIndexes_);
 
+  bufSelectedLabels_.resize(maxPointsPerScan_);
+  tfSelectedLabels_.attach({"out_label"}, bufSelectedLabels_);
+
   initPrograms();
   initVertexBuffers();
 
@@ -213,6 +216,11 @@ void Viewport::initPrograms() {
   prgDrawSelectedBoundingBox_.attach(
       glow::GlShader::fromCache(glow::ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgDrawSelectedBoundingBox_.link();
+
+  prgGetSelectedLabels_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/selected_labels.vert"));
+  prgGetSelectedLabels_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/empty.frag"));
+  prgGetSelectedLabels_.attach(tfSelectedLabels_);
+  prgGetSelectedLabels_.link();
 
   glow::_CheckGlError(__FILE__, __LINE__);
 }
@@ -1041,7 +1049,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
   }
 
   if (labelInstances_) {
-    if (instanceSelected_) {
+    if (instanceSelected_ || (instanceLabelingMode_ == 3)) {
       if (event->buttons() & Qt::LeftButton) {
         if (polygonPoints_.size() == 100) {
           polygonPoints_.back().x = event->x();
@@ -1104,11 +1112,49 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
           texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
           bufTriangles_.assign(tris_verts);
 
-          labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
+          if (instanceLabelingMode_ == 3)  // create instance.
+          {
+            std::vector<uint32_t> selected = getSelectedLabels();
 
-          updateBoundingBoxes();
-          fillBoundingBoxBuffers();
-          updateInstanceSelectionMap();
+            std::map<uint32_t, uint32_t> counts;
+            for (auto label : instanceableLabels_) counts[label] = 0;
+
+            for (auto label : selected) {
+              if (counts.find(label) != counts.end()) counts[label] += 1;
+            }
+
+            // we first have to determine the "instanceable" label inside the selection.
+            uint32_t maxLabel = 0;
+            uint32_t maxCount = 0;
+            for (auto it = counts.begin(); it != counts.end(); ++it) {
+              if (it->second > maxCount) {
+                maxLabel = it->first;
+                maxCount = it->second;
+              }
+            }
+
+            uint32_t selectedInstanceId = 0;
+            if (maxLabel > 0) {
+              selectedInstanceLabel_ = maxLabel;
+
+              labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
+
+              updateBoundingBoxes();
+              fillBoundingBoxBuffers();
+              updateInstanceSelectionMap();
+
+              selectedInstanceId_ = maxInstanceIds_[selectedInstanceLabel_];
+              selectedInstanceId = selectedInstanceId_;
+            }
+
+            emit instanceSelected(selectedInstanceId);
+          } else {
+            labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
+
+            updateBoundingBoxes();
+            fillBoundingBoxBuffers();
+            updateInstanceSelectionMap();
+          }
         }
 
         polygonPoints_.clear();
@@ -1244,7 +1290,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
 
         updateGL();
       } else {
-        if (instanceSelected_) {
+        if (instanceSelected_ || (instanceLabelingMode_ == 3)) {
           if (polygonPoints_.size() > 0) {
             polygonPoints_.back().x = event->x();
             polygonPoints_.back().y = event->y();
@@ -1291,7 +1337,7 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
   }
 
   if (labelInstances_) {
-    if (instanceSelected_ && !instanceSelectionMode_) {
+    if ((instanceSelected_ && !instanceSelectionMode_) || (instanceLabelingMode_ == 3)) {
       if (polygonPoints_.size() > 0) {
         polygonPoints_.back().x = event->x();
         polygonPoints_.back().y = event->y();
@@ -1431,6 +1477,100 @@ void Viewport::setTileInfo(float x, float y, float tileSize) {
   std::cout << x << ", " << y << ", " << tileSize << std::endl;
   tilePos_ = vec2(x, y);
   tileSize_ = tileSize;
+}
+
+std::vector<uint32_t> Viewport::getSelectedLabels() {
+  std::vector<uint32_t> selected;
+
+  if (points_.size() == 0 || labels_.size() == 0) return selected;
+
+  //  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::flush;
+  //  Stopwatch::tic();
+
+  bool showSingleScan = drawingOption_["single scan"];
+  bool showScanRange = drawingOption_["show scan range"];
+
+  ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
+  ScopedBinder<GlProgram> programBinder(prgGetSelectedLabels_);
+  ScopedBinder<GlTransformFeedback> feedbackBinder(tfSelectedLabels_);
+
+  prgGetSelectedLabels_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
+  if (points_.size() > singleScanIdx_)
+    prgGetSelectedLabels_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[singleScanIdx_]->pose));
+
+  prgGetSelectedLabels_.setUniform(GlUniform<int32_t>("width", width()));
+  prgGetSelectedLabels_.setUniform(GlUniform<int32_t>("height", height()));
+
+  prgGetSelectedLabels_.setUniform(GlUniform<bool>("removeGround", removeGround_));
+  prgGetSelectedLabels_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
+  prgGetSelectedLabels_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+  prgGetSelectedLabels_.setUniform(GlUniform<float>("tileSize", tileSize_));
+  prgGetSelectedLabels_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
+  prgGetSelectedLabels_.setUniform(GlUniform<int32_t>("heightMap", 1));
+
+  prgGetSelectedLabels_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
+  prgGetSelectedLabels_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
+  prgGetSelectedLabels_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
+  prgGetSelectedLabels_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
+
+  Eigen::Matrix4f plane_pose = Eigen::Matrix4f::Identity();
+  plane_pose(0, 3) = tilePos_.x;
+  plane_pose(1, 3) = tilePos_.y;
+  plane_pose(2, 3) = points_[0]->pose(2, 3);
+  if (drawingOption_["carAsBase"] && points_.size() > singleScanIdx_) {
+    plane_pose = points_[singleScanIdx_]->pose;
+    //    plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
+  }
+
+  prgGetSelectedLabels_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
+
+  mvp_ = projection_ * mCamera->matrix() * conversion_;
+  prgGetSelectedLabels_.setUniform(mvp_);
+
+  glActiveTexture(GL_TEXTURE0);
+  texTriangles_.bind();
+
+  glActiveTexture(GL_TEXTURE1);
+  texMinimumHeightMap_.bind();
+
+  glEnable(GL_RASTERIZER_DISCARD);
+
+  uint32_t count = 0;
+  uint32_t max_size = bufSelectedLabels_.size();
+  uint32_t buffer_start = 0;
+  uint32_t buffer_size = bufLabels_.size();
+
+  if (showSingleScan) {
+    buffer_start = scanInfos_[singleScanIdx_].start;
+    buffer_size = scanInfos_[singleScanIdx_].size;
+  } else if (showScanRange) {
+    buffer_start = scanInfos_[scanRangeBegin_].start;
+    buffer_size = scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size - scanInfos_[scanRangeBegin_].start;
+  }
+
+  while (count * max_size < buffer_size) {
+    uint32_t size = std::min<uint32_t>(max_size, buffer_size - count * max_size);
+
+    tfSelectedLabels_.begin(TransformFeedbackMode::POINTS);
+    glDrawArrays(GL_POINTS, buffer_start + count * max_size, size);
+    tfSelectedLabels_.end();
+
+    std::vector<uint32_t> temp;
+    bufSelectedLabels_.get(temp);
+    selected.insert(selected.end(), temp.begin(), temp.end());
+
+    count++;
+  }
+
+  glDisable(GL_RASTERIZER_DISCARD);
+
+  glActiveTexture(GL_TEXTURE0);
+  texTriangles_.release();
+  glActiveTexture(GL_TEXTURE1);
+  texMinimumHeightMap_.release();
+  //  std::cout << Stopwatch::toc() << " s." << std::endl;
+
+  return selected;
 }
 
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label, bool remove) {
@@ -1813,6 +1953,8 @@ void Viewport::setCameraByName(const std::string& name) {
 
   setCamera(cameras_[name]);
 }
+
+void Viewport::setInstanceableLabels(const std::vector<uint32_t>& labels) { instanceableLabels_ = labels; }
 
 void Viewport::labelInstances(bool value) {
   labelInstances_ = value;

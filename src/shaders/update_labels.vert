@@ -113,7 +113,7 @@ void main()
         //     0 -- add points in selected region from same class, 
         //     1 -- split points in selected region from same class, 
         //     2 -- remove points from given class and instance.
-        //     3 -- create instance for given class. (TODO)
+        //     3 -- create instance for given class.
     
         bool consistent_label = (label == selectedInstanceLabel);
         bool consistent_instanceId = (instanceLabelingMode != 2 || (instance == selectedInstanceId));
@@ -139,6 +139,10 @@ void main()
                 else if(instanceLabelingMode == 2) // remove points
                 {
                    out_label = label;
+                }
+                else if(instanceLabelingMode == 3) // new instance
+                {
+                    out_label = (newInstanceId << 16) | label;
                 }
                 
                 break;

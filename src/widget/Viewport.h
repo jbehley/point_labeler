@@ -143,6 +143,7 @@ class Viewport : public QGLWidget {
   void setLabel(uint32_t label);
   void setLabelColors(const std::map<uint32_t, glow::GlColor>& colors);
   void setPointSize(int value);
+  void setInstanceableLabels(const std::vector<uint32_t>& labels);
 
   void setMode(MODE mode);
   void setFlags(int32_t flags);
@@ -208,6 +209,8 @@ class Viewport : public QGLWidget {
   uint32_t getClickedInstanceId(float x, float y);
 
   void abortPolygonSelection();
+
+  std::vector<uint32_t> getSelectedLabels();
 
   bool contextInitialized_;
   std::map<uint32_t, glow::GlColor> mLabelColors;
@@ -375,6 +378,11 @@ class Viewport : public QGLWidget {
   glow::GlProgram prgDrawBoundingBoxesId_;
 
   std::map<uint32_t, uint32_t> id2idx_;
+
+  std::vector<uint32_t> instanceableLabels_;
+  glow::GlProgram prgGetSelectedLabels_;
+  glow::GlTransformFeedback tfSelectedLabels_;
+  glow::GlBuffer<uint32_t> bufSelectedLabels_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 };
 
 #endif /* POINTVIEW_H_ */

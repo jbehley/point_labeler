@@ -102,6 +102,12 @@ void getLabels(const std::string& filename, std::vector<Label>& labels) {
       label.id_moving = n.firstChildElement("moving").text().toInt();
     }
 
+    if (!n.firstChildElement("instanceable").isNull()) {
+      if (n.firstChildElement("instanceable").text() == "true") {
+        label.instanceable = true;
+      }
+    }
+
     label.rootCategory = n.firstChildElement("root").text().toStdString();
     labels.push_back(label);
   }
