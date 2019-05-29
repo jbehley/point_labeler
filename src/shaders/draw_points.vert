@@ -35,7 +35,7 @@ uniform float gamma;
 uniform bool drawInstances;
 uniform uint selectedInstanceId;
 uniform uint selectedInstanceLabel;
-
+uniform bool hideLabeledInstances;
 
 out vec4 color;
 
@@ -117,6 +117,7 @@ void main()
   
   // draw instances?
   visible = visible && (!drawInstances || (label == selectedInstanceLabel &&  instance == selectedInstanceId && selectedInstanceLabel > uint(0))); 
+  visible = visible && (!hideLabeledInstances || (instance == 0));
   
   
 

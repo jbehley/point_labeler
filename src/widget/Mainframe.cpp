@@ -308,6 +308,9 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.chkDrawInstances, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instances", value); });
 
+  connect(ui.chkHideLabeledInstances, &QCheckBox::toggled,
+      [this](bool value) { ui.mViewportXYZ->setDrawingOption("hide labeled instances", value); });
+
   connect(ui.chkShowAllMovingInstances, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("show all moving instances", value); });
 

@@ -45,6 +45,7 @@ uniform int instanceLabelingMode;
 uniform uint selectedInstanceId;
 uniform uint selectedInstanceLabel;
 uniform uint newInstanceId;
+uniform bool hideLabeledInstances;
 
 
 out uint out_label;
@@ -103,6 +104,8 @@ void main()
     
     visible = visible && (planeDirectionNormal * (scalar_product - planeThresholdNormal) < 0);
   }
+  
+  visible = visible && (!hideLabeledInstances || (instance == 0));
 
 
   if(visible)
