@@ -377,6 +377,9 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
       ++count;
     }
 
+    // write last entry.
+    if (currentScanIndex > -1) scanInfos_[currentScanIndex] = current;
+
     // ensure that empty indexes get the beginning from before.
     for (uint32_t i = 0; i < scanInfos_.size(); ++i) {
       if (scanInfos_[i].size == 0 && i > 0) scanInfos_[i].start = scanInfos_[i - 1].start + scanInfos_[i - 1].size;
@@ -736,6 +739,8 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
     prgDrawPoints_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
     prgDrawPoints_.setUniform(GlUniform<bool>("drawInstances", false));
+
+    prgDrawPoints_.setUniform(GlUniform<bool>("hideLabeledInstances", drawingOption_["hide labeled instances"]));
 
     //    prgDrawPoints_.setUniform(GlUniform<bool>("carAsBase", drawingOption_["carAsBase"]));
     Eigen::Matrix4f plane_pose = Eigen::Matrix4f::Identity();
@@ -1614,6 +1619,7 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("heightMap", 1));
   prgUpdateLabels_.setUniform(GlUniform<bool>("removeLabel", remove));
+  prgUpdateLabels_.setUniform(GlUniform<bool>("hideLabeledInstances", drawingOption_["hide labeled instances"]));
 
   // set instance specific stuff.
   prgUpdateLabels_.setUniform(GlUniform<bool>("labelInstances", labelInstances_));
