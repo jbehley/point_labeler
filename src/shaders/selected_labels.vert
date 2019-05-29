@@ -31,6 +31,8 @@ uniform float planeThresholdNormal;
 uniform float planeDirectionNormal;
 uniform mat4 plane_pose;
 
+uniform bool hideLabeledInstances;
+
 
 out POINT
 {
@@ -84,6 +86,9 @@ void main()
     
     visible = visible && (planeDirectionNormal * (scalar_product - planeThresholdNormal) < 0);
   }
+  
+  uint instance = (in_label >> 16) & uint(0xFFFF);
+  visible = visible && (!hideLabeledInstances || (instance == uint(0)));
 
 
   if(visible)

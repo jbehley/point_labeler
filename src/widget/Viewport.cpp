@@ -1522,6 +1522,7 @@ std::vector<uint32_t> Viewport::getSelectedLabels() {
   prgGetSelectedLabels_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
   prgGetSelectedLabels_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
   prgGetSelectedLabels_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
+  prgGetSelectedLabels_.setUniform(GlUniform<bool>("hideLabeledInstances", drawingOption_["hide labeled instances"]));
 
   Eigen::Matrix4f plane_pose = Eigen::Matrix4f::Identity();
   plane_pose(0, 3) = tilePos_.x;

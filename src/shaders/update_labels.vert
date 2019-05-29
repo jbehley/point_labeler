@@ -105,7 +105,7 @@ void main()
     visible = visible && (planeDirectionNormal * (scalar_product - planeThresholdNormal) < 0);
   }
   
-  visible = visible && (!hideLabeledInstances || (instance == 0));
+  visible = visible && (!hideLabeledInstances || (instance == uint(0)));
 
 
   if(visible)

@@ -117,7 +117,7 @@ void main()
   
   // draw instances?
   visible = visible && (!drawInstances || (label == selectedInstanceLabel &&  instance == selectedInstanceId && selectedInstanceLabel > uint(0))); 
-  visible = visible && (!hideLabeledInstances || (instance == 0));
+  visible = visible && (!hideLabeledInstances || (instance == uint(0)));
   
   
 
