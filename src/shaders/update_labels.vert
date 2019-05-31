@@ -120,7 +120,7 @@ void main()
         //     4 -- join instances.
     
         bool consistent_label = (label == selectedInstanceLabel);
-        bool consistent_instanceId = (instanceLabelingMode != 2 || (instance == selectedInstanceId));
+        bool consistent_instanceId = ((instanceLabelingMode != 2 && instanceLabelingMode != 4)  || (instance == selectedInstanceId));
     
         if(consistent_label && consistent_instanceId)
         {

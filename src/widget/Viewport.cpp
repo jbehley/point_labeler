@@ -1057,7 +1057,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
   }
 
   if (labelInstances_) {
-    if (instanceSelected_ || (instanceLabelingMode_ == 3)) {
+    if ((instanceSelected_ && instanceLabelingMode_ != 4) || (instanceLabelingMode_ == 3)) {
       if (event->buttons() & Qt::LeftButton) {
         if (polygonPoints_.size() == 100) {
           polygonPoints_.back().x = event->x();
@@ -1283,12 +1283,13 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
   } else {
     if (labelInstances_) {
       if (instanceSelectionMode_) {
+        std::cout << "instance selection mode." << std::endl;
         uint32_t instance_label = getClickedInstanceId(event->x(), event->y());
 
-        emit instanceSelected(instance_label);
-
         if (instanceLabelingMode_ == 4) {
+          std::cout << "join. " << std::endl;
           if (instanceSelected_) {
+            std::cout << "first already selected." << std::endl;
             instanceSelectionMode_ = false;
 
             uint32_t selectedInstanceId_before = selectedInstanceId_;
@@ -1299,6 +1300,7 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
 
             if (selectedInstanceLabel_ == selectedInstanceLabel_before) {
               // trigger relabeling.
+              std::cout << "relabeling." << std::endl;
               labelPoints(event->x(), event->y(), 0, selectedInstanceId_before, false);
 
               updateBoundingBoxes();
@@ -1335,6 +1337,9 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
             selectedInstanceLabel_ = (instance_label & uint32_t(0xFFFF));
           }
         }
+
+        emit instanceSelected(instance_label);
+
         updateGL();
       } else {
         if (instanceSelected_ || (instanceLabelingMode_ == 3)) {
