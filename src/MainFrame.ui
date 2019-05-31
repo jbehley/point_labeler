@@ -1240,6 +1240,12 @@
            </property>
            <item>
             <widget class="QToolButton" name="btnSelectInstance">
+             <property name="minimumSize">
+              <size>
+               <width>75</width>
+               <height>0</height>
+              </size>
+             </property>
              <property name="text">
               <string>Select</string>
              </property>
@@ -1249,9 +1255,31 @@
             </widget>
            </item>
            <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::MinimumExpanding</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
             <widget class="QToolButton" name="btnAddPoints">
              <property name="enabled">
               <bool>false</bool>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>45</width>
+               <height>0</height>
+              </size>
              </property>
              <property name="text">
               <string>Add</string>
@@ -1269,6 +1297,12 @@
              <property name="enabled">
               <bool>false</bool>
              </property>
+             <property name="minimumSize">
+              <size>
+               <width>45</width>
+               <height>0</height>
+              </size>
+             </property>
              <property name="text">
               <string>Split</string>
              </property>
@@ -1281,6 +1315,12 @@
             <widget class="QToolButton" name="btnDeletePoints">
              <property name="enabled">
               <bool>false</bool>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>45</width>
+               <height>0</height>
+              </size>
              </property>
              <property name="text">
               <string>Del</string>
@@ -1318,8 +1358,30 @@
            </property>
            <item>
             <widget class="QToolButton" name="btnCreateInstance">
+             <property name="minimumSize">
+              <size>
+               <width>75</width>
+               <height>0</height>
+              </size>
+             </property>
              <property name="text">
               <string>Create</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QToolButton" name="btnJoinInstances">
+             <property name="minimumSize">
+              <size>
+               <width>75</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Join</string>
              </property>
              <property name="checkable">
               <bool>true</bool>

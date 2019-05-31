@@ -265,6 +265,18 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
           [this](bool checked) { ui.mViewportXYZ->setInstanceSelectionMode(checked); });
 
   connect(ui.mViewportXYZ, &Viewport::instanceSelected, [this](uint32_t value) {
+
+    if (ui.btnJoinInstances->isChecked()) {
+      if (value > 0) {
+        if (numSelectedInstances_ == 0) {
+          numSelectedInstances_ = 1;
+
+          return;
+        }
+      }
+    }
+
+    whileBlocking(ui.btnJoinInstances)->setChecked(false);
     ui.btnSelectInstance->setChecked(false);
     ui.btnCreateInstance->setChecked(false);
 
@@ -281,6 +293,9 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
       ui.btnDeletePoints->setEnabled(true);
       ui.btnSplitPoints->setEnabled(true);
       ui.btnAddPoints->setEnabled(true);
+      numSelectedInstances_ = 1;
+    } else {
+      numSelectedInstances_ = 0;
     }
   });
 
@@ -309,7 +324,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instances", value); });
 
   connect(ui.chkHideLabeledInstances, &QCheckBox::toggled,
-      [this](bool value) { ui.mViewportXYZ->setDrawingOption("hide labeled instances", value); });
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("hide labeled instances", value); });
 
   connect(ui.chkShowAllMovingInstances, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("show all moving instances", value); });
@@ -347,6 +362,23 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
       ui.mViewportXYZ->setInstanceSelectionMode(false);
       ui.mViewportXYZ->setInstanceLabelingMode(3);
+    }
+  });
+
+  connect(ui.btnJoinInstances, &QToolButton::clicked, [this](bool checked) {
+    ui.mViewportXYZ->setInstanceSelectionMode(checked);
+
+    if (checked) {
+      whileBlocking(ui.btnSelectInstance)->setChecked(false);
+      whileBlocking(ui.btnCreateInstance)->setChecked(false);
+      ui.btnDeletePoints->setEnabled(false);
+      ui.btnAddPoints->setEnabled(false);
+      ui.btnSplitPoints->setEnabled(false);
+
+      ui.mViewportXYZ->setInstanceLabelingMode(4);
+      ui.mViewportXYZ->setInstanceSelectionMode(true);
+
+      std::cout << numSelectedInstances_ << " instances selected." << std::endl;
     }
   });
 
@@ -421,9 +453,8 @@ Mainframe::~Mainframe() {}
 void Mainframe::closeEvent(QCloseEvent* event) {
   if (mChangesSinceLastSave) {
     int32_t ret =
-        QMessageBox::warning(this, tr("Unsaved changes."),
-                             tr("The annotation has been modified.\n"
-                                "Do you want to save your changes?"),
+        QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+                                                              "Do you want to save your changes?"),
                              QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
     if (ret == QMessageBox::Save) {
       save();
@@ -443,9 +474,8 @@ void Mainframe::open() {
 
   if (mChangesSinceLastSave) {
     int32_t ret =
-        QMessageBox::warning(this, tr("Unsaved changes."),
-                             tr("The annotation has been modified.\n"
-                                "Do you want to save your changes?"),
+        QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+                                                              "Do you want to save your changes?"),
                              QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
     if (ret == QMessageBox::Save) {
       save();
@@ -696,9 +726,8 @@ void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   if (readerFuture_.valid()) readerFuture_.wait();
 
   if (mChangesSinceLastSave) {
-    int32_t ret = QMessageBox::warning(this, tr("Unsaved changes."),
-                                       tr("The annotation has been modified.\n"
-                                          "Do you want to save your changes?"),
+    int32_t ret = QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
+                                                                        "Do you want to save your changes?"),
                                        QMessageBox::Save | QMessageBox::Discard, QMessageBox::Save);
     if (ret == QMessageBox::Save) save();
   }

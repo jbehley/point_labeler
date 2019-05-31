@@ -117,39 +117,47 @@ void main()
         //     1 -- split points in selected region from same class, 
         //     2 -- remove points from given class and instance.
         //     3 -- create instance for given class.
+        //     4 -- join instances.
     
         bool consistent_label = (label == selectedInstanceLabel);
         bool consistent_instanceId = (instanceLabelingMode != 2 || (instance == selectedInstanceId));
     
         if(consistent_label && consistent_instanceId)
         {
-	        for(int i = 0; i < numTriangles; ++i)
+            if(instanceLabelingMode == 4)
             {
-              vec2 v1 = texture(triangles, vec2(3 * i + 0.5, 0.5)).xy * vec2(width, height);
-              vec2 v2 = texture(triangles, vec2(3 * i + 1.5, 0.5)).xy * vec2(width, height);
-              vec2 v3 = texture(triangles, vec2(3 * i + 2.5, 0.5)).xy * vec2(width, height);
-    
-              if(insideTriangle(pos.xy, v1, v2, v3))
-              {
-                if(instanceLabelingMode == 0) // add points
-                {
-                    out_label = (selectedInstanceId << 16) | label;
-                }
-                else if(instanceLabelingMode == 1) // split point
-                {
-                    out_label = (newInstanceId << 16) | label;
-                }
-                else if(instanceLabelingMode == 2) // remove points
-                {
-                   out_label = label;
-                }
-                else if(instanceLabelingMode == 3) // new instance
-                {
-                    out_label = (newInstanceId << 16) | label;
-                }
-                
-                break;
-              }
+                out_label = (newInstanceId << 16) | label;
+            }
+            else
+            {
+		        for(int i = 0; i < numTriangles; ++i)
+	            {
+	              vec2 v1 = texture(triangles, vec2(3 * i + 0.5, 0.5)).xy * vec2(width, height);
+	              vec2 v2 = texture(triangles, vec2(3 * i + 1.5, 0.5)).xy * vec2(width, height);
+	              vec2 v3 = texture(triangles, vec2(3 * i + 2.5, 0.5)).xy * vec2(width, height);
+	    
+	              if(insideTriangle(pos.xy, v1, v2, v3))
+	              {
+	                if(instanceLabelingMode == 0) // add points
+	                {
+	                    out_label = (selectedInstanceId << 16) | label;
+	                }
+	                else if(instanceLabelingMode == 1) // split point
+	                {
+	                    out_label = (newInstanceId << 16) | label;
+	                }
+	                else if(instanceLabelingMode == 2) // remove points
+	                {
+	                   out_label = label;
+	                }
+	                else if(instanceLabelingMode == 3) // new instance
+	                {
+	                    out_label = (newInstanceId << 16) | label;
+	                }
+	                
+	                break;
+	              }
+	            }
             }
         }
     }

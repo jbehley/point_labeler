@@ -1010,6 +1010,7 @@ void Viewport::abortPolygonSelection() {
   polygonPoints_.clear();  // start over again.#
   bufPolygonPoints_.assign(polygonPoints_);
   bufTriangles_.resize(0);
+  numTriangles_ = 0;
 }
 
 void Viewport::wheelEvent(QWheelEvent* event) {
@@ -1286,18 +1287,54 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
 
         emit instanceSelected(instance_label);
 
-        instanceSelectionMode_ = false;
+        if (instanceLabelingMode_ == 4) {
+          if (instanceSelected_) {
+            instanceSelectionMode_ = false;
 
-        instanceSelected_ = false;
-        selectedInstanceId_ = 0;
-        selectedInstanceLabel_ = 0;
+            uint32_t selectedInstanceId_before = selectedInstanceId_;
+            uint32_t selectedInstanceLabel_before = selectedInstanceLabel_;
 
-        if (instance_label > 0) {
-          instanceSelected_ = true;
-          selectedInstanceId_ = (instance_label >> 16);
-          selectedInstanceLabel_ = (instance_label & uint32_t(0xFFFF));
+            selectedInstanceId_ = (instance_label >> 16);
+            selectedInstanceLabel_ = (instance_label & uint32_t(0xFFFF));
+
+            if (selectedInstanceLabel_ == selectedInstanceLabel_before) {
+              // trigger relabeling.
+              labelPoints(event->x(), event->y(), 0, selectedInstanceId_before, false);
+
+              updateBoundingBoxes();
+              fillBoundingBoxBuffers();
+              updateInstanceSelectionMap();
+            }
+
+            // select new joined instances.
+            selectedInstanceId_ = selectedInstanceId_before;
+            selectedInstanceLabel_ = selectedInstanceLabel_before;
+
+          } else {
+            if (instance_label > 0) {
+              instanceSelected_ = true;
+              selectedInstanceId_ = (instance_label >> 16);
+              selectedInstanceLabel_ = (instance_label & uint32_t(0xFFFF));
+
+            } else {
+              instanceSelectionMode_ = false;
+              selectedInstanceId_ = 0;
+              selectedInstanceLabel_ = 0;
+            }
+          }
+        } else {
+          instanceSelectionMode_ = false;
+
+          instanceSelected_ = false;
+          selectedInstanceId_ = 0;
+          selectedInstanceLabel_ = 0;
+
+          if (instance_label > 0) {
+            instanceSelected_ = true;
+            selectedInstanceId_ = (instance_label >> 16);
+            selectedInstanceLabel_ = (instance_label & uint32_t(0xFFFF));
+          }
         }
-
         updateGL();
       } else {
         if (instanceSelected_ || (instanceLabelingMode_ == 3)) {
@@ -1628,7 +1665,8 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
     prgUpdateLabels_.setUniform(GlUniform<int32_t>("instanceLabelingMode", instanceLabelingMode_));
     prgUpdateLabels_.setUniform(GlUniform<uint32_t>("selectedInstanceId", selectedInstanceId_));
     prgUpdateLabels_.setUniform(GlUniform<uint32_t>("selectedInstanceLabel", selectedInstanceLabel_));
-    prgUpdateLabels_.setUniform(GlUniform<uint32_t>("newInstanceId", maxInstanceIds_[selectedInstanceLabel_] + 1));
+    prgUpdateLabels_.setUniform(GlUniform<uint32_t>(
+        "newInstanceId", (instanceLabelingMode_ == 4) ? new_label : maxInstanceIds_[selectedInstanceLabel_] + 1));
   }
 
   prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
@@ -1995,12 +2033,12 @@ void Viewport::setInstanceLabelingMode(int32_t value) {
 
 void Viewport::setInstanceSelectionMode(bool value) {
   instanceSelectionMode_ = value;
-  if (instanceSelectionMode_) {
+  if (instanceLabelingMode_) abortPolygonSelection();
+
+  if (instanceSelectionMode_ && instanceLabelingMode_ != 4) {
     instanceSelected_ = false;
     selectedInstanceId_ = 0;
     selectedInstanceLabel_ = 0;
-
-    abortPolygonSelection();
   }
 }
 

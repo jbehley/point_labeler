@@ -106,6 +106,7 @@ class Mainframe : public QMainWindow {
     uint32_t start, end;
   };
   std::vector<ScanRange> loopRanges_;
+  uint32_t numSelectedInstances_{0};
 };
 
 #endif /* MAINFRAME_H_ */
