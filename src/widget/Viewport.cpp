@@ -91,6 +91,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   drawingOption_["draw triangles"] = false;
   drawingOption_["show plane"] = true;
   drawingOption_["draw instances"] = false;
+  drawingOption_["add car points"] = true;
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
@@ -298,6 +299,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     prgFillTilePoints_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
     prgFillTilePoints_.setUniform(GlUniform<float>("tileSize", tileSize_));
     prgFillTilePoints_.setUniform(GlUniform<float>("tileBoundary", tileBoundary_));
+    prgFillTilePoints_.setUniform(GlUniform<bool>("addCarPoints", drawingOption_["add car points"]));
 
     glEnable(GL_RASTERIZER_DISCARD);
 
