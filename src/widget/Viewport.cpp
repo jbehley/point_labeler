@@ -91,7 +91,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   drawingOption_["draw triangles"] = false;
   drawingOption_["show plane"] = true;
   drawingOption_["draw instances"] = false;
-  drawingOption_["add car points"] = true;
+  drawingOption_["add car points"] = false;
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
