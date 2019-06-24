@@ -383,6 +383,9 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     ui.mViewportXYZ->setInstanceSelectionMode(checked);
   });
 
+  connect(ui.chkShowInstanceBoxes, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instance boxes", value); });
+
   /** load labels and colors **/
   std::map<uint32_t, glow::GlColor> label_colors;
 

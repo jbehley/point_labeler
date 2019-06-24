@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1020</width>
+    <width>1218</width>
     <height>970</height>
    </rect>
   </property>
@@ -127,7 +127,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1020</width>
+     <width>1218</width>
      <height>27</height>
     </rect>
    </property>
@@ -532,9 +532,9 @@
             <property name="geometry">
              <rect>
               <x>0</x>
-              <y>0</y>
+              <y>-248</y>
               <width>238</width>
-              <height>713</height>
+              <height>751</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -1201,6 +1201,13 @@
                 </widget>
                </item>
               </layout>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="chkShowInstanceBoxes">
+               <property name="text">
+                <string>show instance boxes</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>
