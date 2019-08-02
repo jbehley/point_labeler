@@ -89,6 +89,9 @@ install_manifest.txt
 .cproject
 .project
 
+### VSCode ###
+.vscode
+
 ### gedit backup ###
 *~
 
