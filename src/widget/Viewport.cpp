@@ -621,7 +621,7 @@ void Viewport::setGroundThreshold(float value) {
 void Viewport::setScanIndex(uint32_t idx) {
   singleScanIdx_ = idx;
   // bounding boxes of moving class must be updated
-  if (labelInstances_) {
+  if (labelInstances_ || drawingOption_["draw instance boxes"]) {
     fillBoundingBoxBuffers();
     updateInstanceSelectionMap();  // re-render selection map.
   }
@@ -803,7 +803,7 @@ void Viewport::paintGL() {
     texMinimumHeightMap_.release();
   }
 
-  if (labelInstances_ && bufBboxPositionsYaw_.size() > 0) {
+  if ((labelInstances_ || drawingOption_["draw instance boxes"]) && bufBboxPositionsYaw_.size() > 0) {
     prgDrawBoundingBoxes_.bind();
     prgDrawBoundingBoxes_.setUniform(glow::GlUniform<Eigen::Matrix4f>("mvp", mvp_));
     prgDrawBoundingBoxes_.setUniform(GlUniform<uint32_t>("selectedInstanceId", selectedInstanceId_));
