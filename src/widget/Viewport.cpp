@@ -1714,7 +1714,8 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   uint32_t buffer_start = 0;
   uint32_t buffer_size = bufLabels_.size();
 
-  if (showSingleScan) {
+  // ignore single scan for joining.
+  if (showSingleScan && !(labelInstances_ && instanceLabelingMode_ == 4)) {
     buffer_start = scanInfos_[singleScanIdx_].start;
     buffer_size = scanInfos_[singleScanIdx_].size;
   } else if (showScanRange) {
