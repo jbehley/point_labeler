@@ -199,6 +199,12 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.chkShowPlane, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("show plane", value); });
 
+  connect(ui.chkFollowPose, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("follow pose", value); });
+  connect(ui.chkFollowPose2, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("follow pose", value); });
+
+
   // ------------------------------------------
   // Camera Projection
   // ------------------------------------------
@@ -261,8 +267,25 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     }
   });
 
-  connect(ui.btnSelectInstance, &QToolButton::clicked,
-          [this](bool checked) { ui.mViewportXYZ->setInstanceSelectionMode(checked); });
+  connect(ui.btnSelectInstance, &QToolButton::clicked, [this](bool checked) {
+    ui.mViewportXYZ->setInstanceSelectionMode(checked);
+    if (checked && ui.btnJoinInstances->isChecked()) {
+      // end join mode:
+
+      whileBlocking(ui.btnJoinInstances)->setChecked(false);
+      ui.btnSelectInstance->setChecked(false);
+      ui.btnCreateInstance->setChecked(false);
+
+      ui.btnDeletePoints->setEnabled(false);
+      ui.btnSplitPoints->setEnabled(false);
+      ui.btnAddPoints->setEnabled(false);
+
+      // update instance labeling mode.
+      if (ui.btnAddPoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(0);
+      if (ui.btnSplitPoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(1);
+      if (ui.btnDeletePoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(2);
+    }
+  });
 
   connect(ui.mViewportXYZ, &Viewport::instanceSelected, [this](uint32_t value) {
     if (ui.btnJoinInstances->isChecked()) {
@@ -1112,6 +1135,7 @@ void Mainframe::keyReleaseEvent(QKeyEvent* event) {
       return;
 
     case Qt::Key_J:
+    case Qt::Key_Insert:
       ui.btnJoinInstances->click();
       return;
 

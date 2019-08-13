@@ -318,7 +318,7 @@ class Viewport : public QGLWidget {
 
   glow::vec2 tilePos_;
   float tileSize_;
-  float tileBoundary_{5.0f};
+  float tileBoundary_{15.0f};
 
   struct ScanInfo {
     uint32_t start;

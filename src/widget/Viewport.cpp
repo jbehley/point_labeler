@@ -579,6 +579,18 @@ void Viewport::setDrawingOption(const std::string& name, bool value) {
     updateInstanceSelectionMap();
   }
 
+  if (name == "follow pose") {
+    //    std::cout << "before \n" << camera_.matrix() << std::endl;
+    if (value == false)  // currently following, but now defollowing:
+    {
+      mCamera->setMatrix(mCamera->matrix() * conversion_ * points_[singleScanIdx_]->pose.inverse() *
+                         conversion_.inverse());
+    } else {
+      mCamera->setMatrix(mCamera->matrix() * conversion_ * points_[singleScanIdx_]->pose * conversion_.inverse());
+    }
+    //    std::cout << "after \n" << camera_.matrix() << std::endl;
+  }
+
   updateGL();
 }
 
@@ -701,6 +713,14 @@ void Viewport::paintGL() {
   glPointSize(pointSize_);
 
   view_ = mCamera->matrix();
+
+  if (drawingOption_["follow pose"]) {
+    //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
+
+    RoSeCamera dummy;
+    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    view_ = view_ * dummy.matrix();
+  }
 
   mvp_ = projection_ * view_ * conversion_;
 
@@ -951,6 +971,15 @@ void Viewport::paintGL() {
 
 void Viewport::updateInstanceSelectionMap() {
   view_ = mCamera->matrix();
+
+  if (drawingOption_["follow pose"]) {
+    //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
+
+    RoSeCamera dummy;
+    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    view_ = view_ * dummy.matrix();
+  }
+
   mvp_ = projection_ * view_ * conversion_;
 
   // store viewport, and clear color:
@@ -1579,7 +1608,17 @@ std::vector<uint32_t> Viewport::getSelectedLabels() {
 
   prgGetSelectedLabels_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
 
-  mvp_ = projection_ * mCamera->matrix() * conversion_;
+  Eigen::Matrix4f view_ = mCamera->matrix();
+
+  if (drawingOption_["follow pose"]) {
+    //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
+
+    RoSeCamera dummy;
+    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    view_ = view_ * dummy.matrix();
+  }
+
+  mvp_ = projection_ * view_ * conversion_;
   prgGetSelectedLabels_.setUniform(mvp_);
   prgGetSelectedLabels_.setUniform(GlUniform<int32_t>("numTriangles", numTriangles_));
 
@@ -1692,7 +1731,18 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 
   prgUpdateLabels_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
 
-  mvp_ = projection_ * mCamera->matrix() * conversion_;
+  Eigen::Matrix4f view_ = mCamera->matrix();
+
+  if (drawingOption_["follow pose"]) {
+    //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
+
+    RoSeCamera dummy;
+    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    view_ = view_ * dummy.matrix();
+  }
+
+  mvp_ = projection_ * view_ * conversion_;
+
   prgUpdateLabels_.setUniform(mvp_);
 
   if (mMode == Viewport::PAINT) prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 0));

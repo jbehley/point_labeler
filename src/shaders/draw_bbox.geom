@@ -20,6 +20,14 @@ uniform vec3 in_color;
 
 out vec4 color;
 
+float hash(float n) { return fract(sin(n) * 1e4); }
+float noise(float x) {
+    float i = floor(x);
+    float f = fract(x);
+    float u = f * f * (3.0 - 2.0 * f);
+    return mix(hash(i), hash(i + 1.0), u);
+}
+
 
 void main()
 {
@@ -31,7 +39,9 @@ void main()
     }
     else
     {
-      vec3 hsv = vec3(fract(float(gs_in[0].id) / float(20)), 1.0, 1.0);
+      float rand = max(min(0.9, fract(float(gs_in[0].id) / float(30))), 0.0);
+
+      vec3 hsv = vec3(rand, 1.0, 1.0);
       color = vec4(hsv2rgb(hsv), 1.0);
     }
     
