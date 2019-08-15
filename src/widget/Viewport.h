@@ -109,8 +109,8 @@ class Viewport : public QGLWidget {
   void setCameraProjection(const CameraProjection& proj);
 
   void setScanRange(uint32_t begin, uint32_t end) {
-    scanRangeBegin_ = begin;
-    scanRangeEnd_ = end;
+    scanRangeBegin_ = std::min<int>(begin, scanInfos_.size() - 1);
+    scanRangeEnd_ = std::min<int>(end, scanInfos_.size() - 1);
     updateGL();
   }
 

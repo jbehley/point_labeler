@@ -48,6 +48,7 @@ if __name__ == "__main__":
     os.makedirs("./labels_merged", exist_ok=True)
     out = os.path.abspath("./labels_merged")
 
+
   if not os.path.exists(out):
     os.makedirs(out)
     print("-- Creating directory {}".format(out))
@@ -71,8 +72,6 @@ if __name__ == "__main__":
   labels1 = get_labelfiles(args.input[0])
   labels2 = get_labelfiles(args.input[1])
 
-  # print(len(labels1))
-  # print(len(labels2))
 
   already_merged = [f for f in os.listdir(out) if f.endswith(".label")]
   print(already_merged[:10])
@@ -85,14 +84,14 @@ if __name__ == "__main__":
   progress = 10
   count = 0
   for (f, f1) in labels1.items():
-    
+
     count += 1
     if 100 * count / len(labels1) > progress:
       print(progress, end=" ", flush=True)
       progress += 10
 
     if f in already_merged: continue
-  
+
     f2 = labels2[f]
     labels = [read_labels(f1), read_labels(f2)]
 
@@ -104,7 +103,8 @@ if __name__ == "__main__":
     if args.keep is None:
       if os.stat(f2).st_mtime > os.stat(f1).st_mtime:
         keep_index = 1
-    if args.keep == f2: keep_index = 1
+    elif args.keep[0] == args.input[1]: keep_index = 1
+
 
     merged = labels[keep_index]
     for i in range(len(merged)):

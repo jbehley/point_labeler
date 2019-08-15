@@ -99,6 +99,7 @@ class Mainframe : public QMainWindow {
   QLabel lblLabelingMode_;
   QLabel lblNumPoints_;
   QLabel lblOverwrite_;
+  QLabel lblTime_;
   QProgressBar progressLabeled_;
   QWidget* info_;
 

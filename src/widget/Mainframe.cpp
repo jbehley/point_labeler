@@ -450,6 +450,9 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   progressLabeled_.setMinimumWidth(75);
   progressLabeled_.setMaximumWidth(75);
   lblOverwrite_.setText(" OVERWRITE ");
+  lblTime_.setText("00:00:00");
+  lblTime_.setAlignment(Qt::AlignCenter);
+  lblTime_.setMinimumWidth(75);
 
   lblLabelingMode_.setText(" POINTS ");
   lblLabelingMode_.setAlignment(Qt::AlignCenter | Qt::AlignVCenter);
@@ -459,6 +462,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   ui.statusbar->addPermanentWidget(&lblOverwrite_);
   ui.statusbar->addPermanentWidget(&lblNumPoints_);
   ui.statusbar->addPermanentWidget(&progressLabeled_);
+  ui.statusbar->addPermanentWidget(&lblTime_);
 
   info_ = new QWidget(this, Qt::FramelessWindowHint);
   info_->setAutoFillBackground(true);
@@ -752,6 +756,8 @@ void Mainframe::labelBtnReleased(QWidget* w) {
 void Mainframe::unsavedChanges() { mChangesSinceLastSave = true; }
 
 void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
+  mLabelTimer_.stop();
+
   if (readerFuture_.valid()) readerFuture_.wait();
 
   if (mChangesSinceLastSave) {
