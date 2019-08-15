@@ -26,6 +26,7 @@
 #include <glow/GlFramebuffer.h>
 #include <glow/GlProgram.h>
 #include <glow/GlRenderbuffer.h>
+#include <glow/GlSampler.h>
 #include <glow/GlShaderCache.h>
 #include <glow/GlTexture.h>
 #include <glow/GlVertexArray.h>
@@ -113,8 +114,25 @@ class Viewport : public QGLWidget {
     updateGL();
   }
 
+  void setGammaCorrection(float gamma) {
+    gammaCorrection_ = gamma;
+    updateGL();
+  }
+
+  void setRemissionColorMap(int32_t idx) {
+    remissionColormap_ = idx;
+    updateGL();
+  }
+
+  void labelInstances(bool value);
+  void setMaximumInstanceIds(const std::map<uint32_t, uint32_t>& maxInstanceIds);
+  std::map<uint32_t, uint32_t> getMaximumInstanceIds() const;
+  void setInstanceSelectionMode(bool value);
+  void setInstanceLabelingMode(int32_t value);
+
  signals:
   void labelingChanged();
+  void instanceSelected(uint32_t value);
 
  public slots:
   /** \brief set axis fixed **/
@@ -125,6 +143,7 @@ class Viewport : public QGLWidget {
   void setLabel(uint32_t label);
   void setLabelColors(const std::map<uint32_t, glow::GlColor>& colors);
   void setPointSize(int value);
+  void setInstanceableLabels(const std::vector<uint32_t>& labels);
 
   void setMode(MODE mode);
   void setFlags(int32_t flags);
@@ -177,6 +196,22 @@ class Viewport : public QGLWidget {
   //  void drawPoints(const std::vector<Point3f>& points, const std::vector<uint32_t>& labels);
   void labelPoints(int32_t x, int32_t y, float radius, uint32_t label, bool remove);
 
+  /** \brief compute new bounding boxes and update maxInstanceIDs **/
+  void updateBoundingBoxes();
+
+  /** \brief fill bounding box buffer with currently visible bounding boxes. **/
+  void fillBoundingBoxBuffers();
+
+  /** \brief render bounding boxes to an image for selection resolution for mouse clicks. **/
+  void updateInstanceSelectionMap();
+
+  /** \brief determine the clicked instance using the instance selection map. see updateInstanceSelectionMap() **/
+  uint32_t getClickedInstanceId(float x, float y);
+
+  void abortPolygonSelection();
+
+  std::vector<uint32_t> getSelectedLabels();
+
   bool contextInitialized_;
   std::map<uint32_t, glow::GlColor> mLabelColors;
 
@@ -225,6 +260,7 @@ class Viewport : public QGLWidget {
   glow::GlBuffer<uint32_t> bufUpdatedVisiblity_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
   glow::GlBuffer<glow::vec2> bufHeightMapPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<glow::vec2> bufInstanceMapPoints_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 
   glow::GlTransformFeedback tfFillTilePoints_;
 
@@ -252,6 +288,8 @@ class Viewport : public QGLWidget {
   glow::GlTexture texTempHeightMap_;
   glow::GlProgram prgMinimumHeightMap_;
   glow::GlProgram prgAverageHeightMap_;
+  glow::GlProgram prgDrawBoundingBoxes_;
+  glow::GlProgram prgDrawSelectedBoundingBox_;
 
   int32_t pointSize_{1};
 
@@ -280,7 +318,7 @@ class Viewport : public QGLWidget {
 
   glow::vec2 tilePos_;
   float tileSize_;
-  float tileBoundary_{2.0f};
+  float tileBoundary_{15.0f};
 
   struct ScanInfo {
     uint32_t start;
@@ -304,6 +342,47 @@ class Viewport : public QGLWidget {
   uint32_t scanRangeBegin_{0}, scanRangeEnd_{100};
 
   CameraProjection projectionMode_{CameraProjection::perspective};
+
+  glow::GlSampler nnSampler_;
+
+  float gammaCorrection_{1.0};
+  uint32_t remissionColormap_{0};
+
+  bool labelInstances_{false};
+  bool instanceSelectionMode_{false};
+  bool instanceSelected_{false};
+  int32_t instanceLabelingMode_{0};
+  uint32_t selectedInstanceId_{0};
+  uint32_t selectedInstanceLabel_{0};
+  uint32_t newInstanceId_{0};
+
+  std::map<uint32_t, uint32_t> maxInstanceIds_;
+  struct BoundingBox {
+   public:
+    glow::vec4 position_yaw;
+    glow::vec4 size_id;
+    uint32_t instance_label;
+  };
+
+  std::map<uint32_t, BoundingBox> bboxes_static_;
+  std::map<uint32_t, std::map<uint32_t, BoundingBox>> bboxes_moving_;  // (instanceid & label) -> (time -> bounding box)
+
+  glow::GlBuffer<glow::vec4> bufBboxPositionsYaw_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<glow::vec4> bufBboxSizeIds_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlBuffer<uint32_t> bufBboxInstanceLabels_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
+  glow::GlVertexArray vao_bboxes_;
+
+  glow::GlFramebuffer fboOffscreen_;
+  glow::GlTexture texOffscreen_;
+  std::vector<float> offscreenContent_;
+  glow::GlProgram prgDrawBoundingBoxesId_;
+
+  std::map<uint32_t, uint32_t> id2idx_;
+
+  std::vector<uint32_t> instanceableLabels_;
+  glow::GlProgram prgGetSelectedLabels_;
+  glow::GlTransformFeedback tfSelectedLabels_;
+  glow::GlBuffer<uint32_t> bufSelectedLabels_{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::DYNAMIC_DRAW};
 };
 
 #endif /* POINTVIEW_H_ */

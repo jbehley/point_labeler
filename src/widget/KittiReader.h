@@ -2,6 +2,7 @@
 #define SRC_WIDGET_KITTIREADER_H_
 
 #include <stdint.h>
+#include <QtCore/QDir>
 #include <QtCore/QString>
 #include <eigen3/Eigen/Dense>
 #include <string>
@@ -26,9 +27,9 @@
 class KittiReader {
  public:
   struct Tile {
-    int32_t i, j; // tile coordinates
-    std::vector<uint32_t> indexes; // scan indexes
-    float x, y, size; // actual world coordinates.
+    int32_t i, j;                   // tile coordinates
+    std::vector<uint32_t> indexes;  // scan indexes
+    float x, y, size;               // actual world coordinates.
   };
 
   /** \brief get poses and filenames of velodyne, labels, etc.
@@ -63,11 +64,16 @@ class KittiReader {
 
   const std::vector<Eigen::Vector2f>& getTileTrajectory() const { return trajectory_; }
 
+  std::map<uint32_t, uint32_t> getMaxInstanceIds() const { return maxInstanceIds_; }
+
+  void updateMetaInformation(const std::map<uint32_t, uint32_t>& maxInstanceIds);
+
  protected:
   void readPoints(const std::string& filename, Laserscan& scan);
   void readLabels(const std::string& filename, std::vector<uint32_t>& labels);
   void readPoses(const std::string& filename, std::vector<Eigen::Matrix4f>& poses);
 
+  QDir base_dir_;
   KITTICalibration calib_;
   std::vector<Eigen::Matrix4f> poses_;
   std::vector<std::string> velodyne_filenames_;
@@ -88,6 +94,8 @@ class KittiReader {
   Eigen::Vector2i numTiles_;
 
   std::vector<Eigen::Vector2f> trajectory_;
+
+  std::map<uint32_t, uint32_t> maxInstanceIds_;
 };
 
 #endif /* SRC_WIDGET_KITTIREADER_H_ */

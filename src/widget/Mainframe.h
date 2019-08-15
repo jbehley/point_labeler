@@ -71,8 +71,6 @@ class Mainframe : public QMainWindow {
   void keyPressEvent(QKeyEvent* event);
   void keyReleaseEvent(QKeyEvent* event);
 
-
-
  protected slots:
   void unsavedChanges();
 
@@ -98,13 +96,18 @@ class Mainframe : public QMainWindow {
 
   ImageViewer* wImgWidget_;
   QTimer mSaveTimer_;
+  QLabel lblLabelingMode_;
   QLabel lblNumPoints_;
   QLabel lblOverwrite_;
   QLabel lblTime_;
   QProgressBar progressLabeled_;
   QWidget* info_;
-  QTimer mLabelTimer_;
-  QTime timeTileStarted_;
+
+  struct ScanRange {
+    uint32_t start, end;
+  };
+  std::vector<ScanRange> loopRanges_;
+  uint32_t numSelectedInstances_{0};
 };
 
 #endif /* MAINFRAME_H_ */

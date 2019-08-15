@@ -8,6 +8,8 @@
 #include <sstream>
 #include "rv/string_utils.h"
 
+#include <boost/lexical_cast.hpp>
+
 void KittiReader::initialize(const QString& directory) {
   velodyne_filenames_.clear();
   label_filenames_.clear();
@@ -18,25 +20,25 @@ void KittiReader::initialize(const QString& directory) {
   labelCache_.clear();
   tiles_.clear();
 
-  QDir base_dir(directory);
-  QDir velodyne_dir(base_dir.filePath("velodyne"));
+  base_dir_ = QDir(directory);
+  QDir velodyne_dir(base_dir_.filePath("velodyne"));
   QStringList entries = velodyne_dir.entryList(QDir::Files, QDir::Name);
   for (int32_t i = 0; i < entries.size(); ++i) {
     velodyne_filenames_.push_back(velodyne_dir.filePath(entries.at(i)).toStdString());
   }
 
-  if (!base_dir.exists("calib.txt"))
-    throw std::runtime_error("Missing calibration file: " + base_dir.filePath("calib.txt").toStdString());
+  if (!base_dir_.exists("calib.txt"))
+    throw std::runtime_error("Missing calibration file: " + base_dir_.filePath("calib.txt").toStdString());
 
-  calib_.initialize(base_dir.filePath("calib.txt").toStdString());
+  calib_.initialize(base_dir_.filePath("calib.txt").toStdString());
 
-  readPoses(base_dir.filePath("poses.txt").toStdString(), poses_);
+  readPoses(base_dir_.filePath("poses.txt").toStdString(), poses_);
 
   // create label dir, etc.
-  QDir labels_dir(base_dir.filePath("labels"));
+  QDir labels_dir(base_dir_.filePath("labels"));
 
   // find corresponding label files.
-  if (!labels_dir.exists()) base_dir.mkdir("labels");
+  if (!labels_dir.exists()) base_dir_.mkdir("labels");
 
   for (uint32_t i = 0; i < velodyne_filenames_.size(); ++i) {
     QString filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".label";
@@ -58,7 +60,7 @@ void KittiReader::initialize(const QString& directory) {
   }
 
   std::string missing_img = QDir::currentPath().toStdString() + "/../assets/missing.png";
-  QDir image_dir(base_dir.filePath("image_2"));
+  QDir image_dir(base_dir_.filePath("image_2"));
   for (uint32_t i = 0; i < velodyne_filenames_.size(); ++i) {
     QString filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".png";
     if (image_dir.exists(filename)) {
@@ -168,6 +170,60 @@ void KittiReader::initialize(const QString& directory) {
   }
 
   std::cout << "#tiles  = " << tileCount << std::endl;
+
+  // meta information for faster loading.
+  if (base_dir_.exists("instances.txt")) {
+    std::cout << "Reading instances.txt..." << std::flush;
+
+    std::ifstream in(base_dir_.filePath("instances.txt").toStdString());
+
+    while (in.good()) {
+      std::string line;
+      std::getline(in, line);
+      if (line.size() == 0) break;
+
+      std::vector<std::string> tokens = rv::split(line, ":");
+      if (tokens.size() != 2) {
+        throw std::runtime_error("Invalid instance meta information found!");
+      }
+
+      uint32_t label = boost::lexical_cast<uint32_t>(tokens[0]);
+      uint32_t maxInstanceId = boost::lexical_cast<uint32_t>(tokens[1]);
+      maxInstanceIds_[label] = maxInstanceId;
+
+      in.peek();
+    }
+
+    in.close();
+    std::cout << "finished." << std::endl;
+  } else {
+    std::cout << "Generating intances.txt" << std::flush;
+    // get the counts from the label files.
+    for (const std::string& filename : label_filenames_) {
+      std::vector<uint32_t> labels;
+      readLabels(filename, labels);
+
+      for (uint32_t instance_label : labels) {
+        uint32_t instanceId = (instance_label >> 16) & uint32_t(0xFFFF);
+        uint32_t label = instance_label & uint32_t(0xFFFF);
+        if (maxInstanceIds_.find(label) == maxInstanceIds_.end())
+          maxInstanceIds_[label] = instanceId;
+        else
+          maxInstanceIds_[label] = std::max(instanceId, maxInstanceIds_[label]);
+      }
+    }
+
+    // directly update meta information:
+    updateMetaInformation(maxInstanceIds_);
+  }
+}
+
+void KittiReader::updateMetaInformation(const std::map<uint32_t, uint32_t>& maxInstanceIds) {
+  std::ofstream out(base_dir_.filePath("instances.txt").toStdString().c_str());
+  for (auto it = maxInstanceIds.begin(); it != maxInstanceIds.end(); ++it) {
+    out << it->first << ":" << it->second << std::endl;
+  }
+  out.close();
 }
 
 void KittiReader::retrieve(const Eigen::Vector3f& position, std::vector<uint32_t>& indexes,
@@ -192,6 +248,7 @@ void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexe
   uint32_t scansRead = 0;
 
   indexes = tiles_[tileIdxToOffset(i, j)].indexes;
+  std::sort(indexes.begin(), indexes.end());
   for (uint32_t t : indexes) {
     indexesAfter.push_back(t);
     if (pointsCache_.find(t) == pointsCache_.end()) {

@@ -30,6 +30,7 @@
 		<macro>vehicle</macro>
 		<category>car</category>
 		<moving>252</moving>
+		<instanceable>true</instanceable>
 	</label>
   <label>
 		<id>11</id>
@@ -39,6 +40,7 @@
 		<root>vehicle</root>
 		<macro>vehicle</macro>
 		<category>bicycle</category>
+		<instanceable>true</instanceable>
 	</label>
   <label>
 		<id>15</id>
@@ -48,6 +50,7 @@
 		<root>vehicle</root>
 		<macro>vehicle</macro>
 		<category>motorcycle</category>
+		<instanceable>true</instanceable>
 	</label>
   <label>
 		<id>16</id>
@@ -58,6 +61,7 @@
 		<macro>vehicle</macro>
 		<category>on rails</category>
 		<moving>256</moving>
+		<instanceable>true</instanceable>
 	</label>
 	<label>
     <id>13</id>
@@ -68,6 +72,7 @@
     <macro>vehicle</macro>
     <category>bus</category>
     <moving>257</moving>
+    <instanceable>true</instanceable>
   </label>
 	<label>
 		<id>18</id>
@@ -78,6 +83,7 @@
 		<macro>vehicle</macro>
 		<category>truck</category>
 		<moving>258</moving>
+		<instanceable>true</instanceable>
 	</label>
 	<label>
 		<id>20</id>
@@ -88,6 +94,7 @@
 		<macro>vehicle</macro>
 		<category>other-vehicle</category>
 		<moving>259</moving>
+		<instanceable>true</instanceable>
 	</label>
 
 	<label>
@@ -99,6 +106,7 @@
 		<macro></macro>
 		<category>person</category>
 		<moving>254</moving>
+		<instanceable>true</instanceable>
 	</label>
 	<label>
 		<id>31</id>
@@ -109,6 +117,7 @@
 		<macro>rider</macro>
 		<category>bicyclist</category>
 		<moving>253</moving>
+		<instanceable>true</instanceable>
 	</label>
 	<label>
 		<id>32</id>
@@ -119,6 +128,7 @@
 		<macro>rider</macro>
 		<category>motorcyclist</category>
 		<moving>255</moving>
+		<instanceable>true</instanceable>
 	</label>
 
 	<label>

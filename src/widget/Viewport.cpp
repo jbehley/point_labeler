@@ -13,6 +13,7 @@
 #include "rv/Stopwatch.h"
 
 #include <glow/GlState.h>
+#include <deque>
 
 using namespace glow;
 using namespace rv;
@@ -30,7 +31,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       fbMinimumHeightMap_(100, 100),
       texMinimumHeightMap_(100, 100, TextureFormat::R_FLOAT),
       texTempHeightMap_(100, 100, TextureFormat::R_FLOAT),
-      texTriangles_(3 * 100, 1, TextureFormat::RGB) {
+      texTriangles_(3 * 100, 1, TextureFormat::RGB),
+      fboOffscreen_(100, 100),
+      texOffscreen_(100, 100, TextureFormat::RG_FLOAT) {
   connect(&timer_, &QTimer::timeout, [this]() { this->updateGL(); });
 
   //  setMouseTracking(true);
@@ -74,6 +77,9 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   tfFillTilePoints_.attach({"out_visible"}, bufVisible_);
   tfFillTilePoints_.attach({"out_scanindex"}, bufScanIndexes_);
 
+  bufSelectedLabels_.resize(maxPointsPerScan_);
+  tfSelectedLabels_.attach({"out_label"}, bufSelectedLabels_);
+
   initPrograms();
   initVertexBuffers();
 
@@ -84,6 +90,8 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   drawingOption_["draw heightmap"] = false;
   drawingOption_["draw triangles"] = false;
   drawingOption_["show plane"] = true;
+  drawingOption_["draw instances"] = false;
+  drawingOption_["add car points"] = false;
 
   texLabelColors_.setMinifyingOperation(TexRectMinOp::NEAREST);
   texLabelColors_.setMagnifyingOperation(TexRectMagOp::NEAREST);
@@ -108,6 +116,12 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   cameras_["CAD"] = std::make_shared<CADCamera>();
   mCamera = cameras_["Default"];
 
+  nnSampler_.setMinifyingOperation(TexMinOp::NEAREST);
+  nnSampler_.setMagnifyingOperation(TexMagOp::NEAREST);
+
+  texOffscreen_.setMagnifyingOperation(TexMagOp::NEAREST);
+  texOffscreen_.setMinifyingOperation(TexMinOp::NEAREST);
+
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
@@ -115,10 +129,18 @@ Viewport::~Viewport() {
   // workaround for strange behaviour with my Nvidia 860m. Even though the buffers fit into memory, they mess up
   // something up. However, I noticed that it does not cause havoc if the buffers are empty or small.
 
-  bufPoints_.assign(std::vector<vec4>());
-  bufLabels_.assign(std::vector<uint32_t>());
-  bufScanIndexes_.assign(std::vector<vec2>());
-  bufVisible_.assign(std::vector<uint32_t>());
+  //  bufPoints_.assign(std::vector<vec4>());
+  //  bufLabels_.assign(std::vector<uint32_t>());
+  //  bufScanIndexes_.assign(std::vector<vec2>());
+  //  bufVisible_.assign(std::vector<uint32_t>());
+
+  texTempHeightMap_.resize(1, 1);
+  texMinimumHeightMap_.resize(1, 1);
+
+  std::vector<PointcloudPtr> points;
+  std::vector<LabelsPtr> labels;
+  setPoints(points, labels);
+  setPoints(points, labels);
 }
 
 void Viewport::initPrograms() {
@@ -175,6 +197,33 @@ void Viewport::initPrograms() {
   prgDrawPlane_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
   prgDrawPlane_.link();
 
+  prgDrawBoundingBoxes_.attach(glow::GlShader::fromCache(glow::ShaderType::VERTEX_SHADER, "shaders/draw_bbox.vert"));
+  prgDrawBoundingBoxes_.attach(glow::GlShader::fromCache(glow::ShaderType::GEOMETRY_SHADER, "shaders/draw_bbox.geom"));
+  prgDrawBoundingBoxes_.attach(
+      glow::GlShader::fromCache(glow::ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
+  prgDrawBoundingBoxes_.link();
+
+  prgDrawBoundingBoxesId_.attach(glow::GlShader::fromCache(glow::ShaderType::VERTEX_SHADER, "shaders/draw_bbox.vert"));
+  prgDrawBoundingBoxesId_.attach(
+      glow::GlShader::fromCache(glow::ShaderType::GEOMETRY_SHADER, "shaders/draw_bbox_id.geom"));
+  prgDrawBoundingBoxesId_.attach(
+      glow::GlShader::fromCache(glow::ShaderType::FRAGMENT_SHADER, "shaders/draw_bbox_id.frag"));
+  prgDrawBoundingBoxesId_.link();
+
+  prgDrawSelectedBoundingBox_.attach(
+      glow::GlShader::fromCache(glow::ShaderType::VERTEX_SHADER, "shaders/draw_bbox.vert"));
+  prgDrawSelectedBoundingBox_.attach(
+      glow::GlShader::fromCache(glow::ShaderType::GEOMETRY_SHADER, "shaders/draw_bbox_id.geom"));
+  prgDrawSelectedBoundingBox_.attach(
+      glow::GlShader::fromCache(glow::ShaderType::FRAGMENT_SHADER, "shaders/passthrough.frag"));
+  prgDrawSelectedBoundingBox_.link();
+
+  prgGetSelectedLabels_.attach(GlShader::fromCache(ShaderType::VERTEX_SHADER, "shaders/selected_labels.vert"));
+  prgGetSelectedLabels_.attach(GlShader::fromCache(ShaderType::GEOMETRY_SHADER, "shaders/selected_labels.geom"));
+  prgGetSelectedLabels_.attach(GlShader::fromCache(ShaderType::FRAGMENT_SHADER, "shaders/empty.frag"));
+  prgGetSelectedLabels_.attach(tfSelectedLabels_);
+  prgGetSelectedLabels_.link();
+
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
@@ -196,6 +245,13 @@ void Viewport::initVertexBuffers() {
 
   vao_heightmap_points_.setVertexAttribute(0, bufHeightMapPoints_, 2, AttributeType::FLOAT, false, sizeof(glow::vec2),
                                            nullptr);
+
+  vao_bboxes_.setVertexAttribute(0, bufBboxPositionsYaw_, 4, glow::AttributeType::FLOAT, false, 4 * sizeof(float),
+                                 nullptr);
+  vao_bboxes_.setVertexAttribute(1, bufBboxSizeIds_, 4, glow::AttributeType::FLOAT, false, 4 * sizeof(float), nullptr);
+
+  vao_bboxes_.setVertexAttribute(2, bufBboxInstanceLabels_, 1, glow::AttributeType::UNSIGNED_INT, false,
+                                 1 * sizeof(uint32_t), nullptr);
 }
 
 /** \brief set axis fixed (x = 1, y = 2, z = 3) **/
@@ -243,6 +299,7 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
     prgFillTilePoints_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
     prgFillTilePoints_.setUniform(GlUniform<float>("tileSize", tileSize_));
     prgFillTilePoints_.setUniform(GlUniform<float>("tileBoundary", tileBoundary_));
+    prgFillTilePoints_.setUniform(GlUniform<bool>("addCarPoints", drawingOption_["add car points"]));
 
     glEnable(GL_RASTERIZER_DISCARD);
 
@@ -322,9 +379,12 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
       ++count;
     }
 
+    // write last entry.
+    if (currentScanIndex > -1) scanInfos_[currentScanIndex] = current;
+
     // ensure that empty indexes get the beginning from before.
     for (uint32_t i = 0; i < scanInfos_.size(); ++i) {
-      if (scanInfos_[i].size == 0 && i > 0) scanInfos_[i].start = scanInfos_[i - 1].start;
+      if (scanInfos_[i].size == 0 && i > 0) scanInfos_[i].start = scanInfos_[i - 1].start + scanInfos_[i - 1].size;
     }
 
     std::cout << "copied " << scanInfos_.size() << " scans with " << numCopiedPoints << " points" << std::endl;
@@ -339,8 +399,13 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
   updateLabels();
 
-  scanRangeBegin_ = std::min<int32_t>(scanRangeBegin_, scanInfos_.size() - 1);
-  scanRangeEnd_ = std::min<int32_t>(scanRangeEnd_, scanInfos_.size() - 1);
+  if (labelInstances_) {
+    updateBoundingBoxes();
+
+    fillBoundingBoxBuffers();
+    updateInstanceSelectionMap();  // re-render selection map.
+  }
+
   updateGL();
 }
 
@@ -350,18 +415,6 @@ void Viewport::updateHeightmap() {
 
   uint32_t width = tileSize_ / groundResolution_;
   uint32_t height = tileSize_ / groundResolution_;
-
-  std::vector<glow::vec2> indexes(width * height);
-  for (uint32_t x = 0; x < width; ++x) {
-    for (uint32_t y = 0; y < height; ++y) {
-      indexes[x + y * width] = vec2(float(x + 0.5f) / width, float(y + 0.5f) / height);
-    }
-  }
-
-  //  std::cout << "w x h: " << width << " x " << height << std::endl;
-
-  //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
-  bufHeightMapPoints_.assign(indexes);
 
   if (fbMinimumHeightMap_.width() != width || fbMinimumHeightMap_.height() != height) {
     fbMinimumHeightMap_.resize(width, height);
@@ -373,13 +426,24 @@ void Viewport::updateHeightmap() {
                                RenderbufferFormat::DEPTH_STENCIL);
     fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texTempHeightMap_);
     fbMinimumHeightMap_.attach(FramebufferAttachment::DEPTH_STENCIL, depthbuffer);
+
+    std::vector<glow::vec2> indexes(width * height);
+    for (uint32_t x = 0; x < width; ++x) {
+      for (uint32_t y = 0; y < height; ++y) {
+        indexes[x + y * width] = vec2(float(x + 0.5f) / width, float(y + 0.5f) / height);
+      }
+    }
+
+    //  std::cout << "w x h: " << width << " x " << height << std::endl;
+
+    //  std::cout << indexes[0] << ", " << indexes[10] << std::endl;
+    bufHeightMapPoints_.assign(indexes);
   }
 
   fbMinimumHeightMap_.attach(FramebufferAttachment::COLOR0, texTempHeightMap_);
 
   GLint vp[4];
   glGetIntegerv(GL_VIEWPORT, vp);
-
   glPointSize(1.0f);
 
   glViewport(0, 0, fbMinimumHeightMap_.width(), fbMinimumHeightMap_.height());
@@ -508,6 +572,25 @@ void Viewport::setOverwrite(bool value) {
 
 void Viewport::setDrawingOption(const std::string& name, bool value) {
   drawingOption_[name] = value;
+
+  // trigger update.
+  if (name == "show all moving instances") {
+    fillBoundingBoxBuffers();
+    updateInstanceSelectionMap();
+  }
+
+  if (name == "follow pose") {
+    //    std::cout << "before \n" << camera_.matrix() << std::endl;
+    if (value == false)  // currently following, but now defollowing:
+    {
+      mCamera->setMatrix(mCamera->matrix() * conversion_ * points_[singleScanIdx_]->pose.inverse() *
+                         conversion_.inverse());
+    } else {
+      mCamera->setMatrix(mCamera->matrix() * conversion_ * points_[singleScanIdx_]->pose * conversion_.inverse());
+    }
+    //    std::cout << "after \n" << camera_.matrix() << std::endl;
+  }
+
   updateGL();
 }
 
@@ -549,6 +632,12 @@ void Viewport::setGroundThreshold(float value) {
 
 void Viewport::setScanIndex(uint32_t idx) {
   singleScanIdx_ = idx;
+  // bounding boxes of moving class must be updated
+  if (labelInstances_ || drawingOption_["draw instance boxes"]) {
+    fillBoundingBoxBuffers();
+    updateInstanceSelectionMap();  // re-render selection map.
+  }
+
   updateGL();
 }
 
@@ -604,6 +693,16 @@ void Viewport::resizeGL(int w, int h) {
     else
       projection_ = glOrthographic(-fov * aspect, fov * aspect, -fov, fov, 0.1, 2000.0f);
   }
+
+  // update selection rendering.
+  fboOffscreen_.resize(width(), height());
+  texOffscreen_.resize(width(), height());
+
+  fboOffscreen_.attach(FramebufferAttachment::COLOR0, texOffscreen_);
+  GlRenderbuffer rb(width(), height(), RenderbufferFormat::DEPTH_STENCIL);
+  fboOffscreen_.attach(FramebufferAttachment::DEPTH_STENCIL, rb);
+
+  updateInstanceSelectionMap();
 }
 
 void Viewport::paintGL() {
@@ -614,6 +713,14 @@ void Viewport::paintGL() {
   glPointSize(pointSize_);
 
   view_ = mCamera->matrix();
+
+  if (drawingOption_["follow pose"]) {
+    //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
+
+    RoSeCamera dummy;
+    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    view_ = view_ * dummy.matrix();
+  }
 
   mvp_ = projection_ * view_ * conversion_;
 
@@ -632,6 +739,9 @@ void Viewport::paintGL() {
   bool showSingleScan = drawingOption_["single scan"];
   bool showScanRange = drawingOption_["show scan range"];
 
+  prgDrawPoints_.setUniform(GlUniform<int32_t>("colormap", remissionColormap_));
+  prgDrawPoints_.setUniform(GlUniform<float>("gamma", gammaCorrection_));
+
   if (points_.size() > 0) {
     glPointSize(pointSize_);
 
@@ -646,21 +756,14 @@ void Viewport::paintGL() {
     prgDrawPoints_.setUniform(GlUniform<float>("tileSize", tileSize_));
     prgDrawPoints_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
     prgDrawPoints_.setUniform(GlUniform<int32_t>("heightMap", 1));
-
-    //    float planeThreshold = planeThreshold_;
-    //    prgDrawPoints_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
-    //    prgDrawPoints_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
-    //    if (planeDimension_ == 0) planeThreshold += tilePos_.x;
-    //    if (planeDimension_ == 1) planeThreshold += tilePos_.y;
-    //    if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
-    //
-    //    prgDrawPoints_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
-    //    prgDrawPoints_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
-
     prgDrawPoints_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
     prgDrawPoints_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
     prgDrawPoints_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
     prgDrawPoints_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
+    prgDrawPoints_.setUniform(GlUniform<bool>("drawInstances", false));
+
+    prgDrawPoints_.setUniform(GlUniform<bool>("hideLabeledInstances", drawingOption_["hide labeled instances"]));
+
     //    prgDrawPoints_.setUniform(GlUniform<bool>("carAsBase", drawingOption_["carAsBase"]));
     Eigen::Matrix4f plane_pose = Eigen::Matrix4f::Identity();
     plane_pose(0, 3) = tilePos_.x;
@@ -691,10 +794,70 @@ void Viewport::paintGL() {
     } else
       glDrawArrays(GL_POINTS, 0, bufPoints_.size());
 
+    if (drawingOption_["draw instances"]) {
+      // draw points of specific instance larger.
+      glPointSize(pointSize_ + 2);
+
+      prgDrawPoints_.setUniform(GlUniform<bool>("drawInstances", true));
+
+      prgDrawPoints_.setUniform(GlUniform<uint32_t>("selectedInstanceId", selectedInstanceId_));
+      prgDrawPoints_.setUniform(GlUniform<uint32_t>("selectedInstanceLabel", selectedInstanceLabel_));
+
+      if (showSingleScan)
+        glDrawArrays(GL_POINTS, scanInfos_[singleScanIdx_].start, scanInfos_[singleScanIdx_].size);
+      else if (showScanRange) {
+        uint32_t start = scanInfos_[scanRangeBegin_].start;
+        uint32_t count =
+            scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size - scanInfos_[scanRangeBegin_].start;
+        glDrawArrays(GL_POINTS, start, count);
+
+      } else
+        glDrawArrays(GL_POINTS, 0, bufPoints_.size());
+
+      glPointSize(pointSize_);
+    }
+
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.release();
     glActiveTexture(GL_TEXTURE1);
     texMinimumHeightMap_.release();
+  }
+
+  if ((labelInstances_ || drawingOption_["draw instance boxes"]) && bufBboxPositionsYaw_.size() > 0) {
+    prgDrawBoundingBoxes_.bind();
+    prgDrawBoundingBoxes_.setUniform(glow::GlUniform<Eigen::Matrix4f>("mvp", mvp_));
+    prgDrawBoundingBoxes_.setUniform(GlUniform<uint32_t>("selectedInstanceId", selectedInstanceId_));
+    prgDrawBoundingBoxes_.setUniform(GlUniform<uint32_t>("selectedInstanceLabel", selectedInstanceLabel_));
+    //    prgDrawBoundingBoxes_.setUniform(glow::GlUniform<glow::vec3>("in_color", glow::vec3(1, 0, 0)));
+    glLineWidth(1.0f);
+
+    vao_bboxes_.bind();
+    glDrawArrays(GL_POINTS, 0, bufBboxPositionsYaw_.size());
+
+    prgDrawBoundingBoxes_.release();
+
+    uint32_t instance_label = (selectedInstanceId_ << 16) | selectedInstanceLabel_;
+    if (id2idx_.find(instance_label) != id2idx_.end()) {
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // FIXME: state changed.
+      prgDrawSelectedBoundingBox_.bind();
+      prgDrawSelectedBoundingBox_.setUniform(glow::GlUniform<Eigen::Matrix4f>("mvp", mvp_));
+      prgDrawSelectedBoundingBox_.setUniform(GlUniform<bool>("use_custom_color", true));
+
+      GlColor selectionColor = GlColor::GOLD;
+      selectionColor.A = 0.5f;
+      prgDrawSelectedBoundingBox_.setUniform(GlUniform<GlColor>("in_color", selectionColor));
+
+      glDrawArrays(GL_POINTS, id2idx_[instance_label], 1);
+      prgDrawSelectedBoundingBox_.release();
+      glDisable(GL_BLEND);
+    }
+
+    vao_bboxes_.release();
+
+    glLineWidth(1.0f);
+
+    prgDrawBoundingBoxes_.release();
   }
 
   if (planeRemovalNormal_ && drawingOption_["show plane"]) {
@@ -705,23 +868,6 @@ void Viewport::paintGL() {
     ScopedBinder<GlVertexArray> vao_binder(vao_no_points_);
 
     prgDrawPlane_.setUniform(mvp_);
-
-    //    prgDrawPlane_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
-    //    if (points_.size() > singleScanIdx_)
-    //      prgDrawPlane_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[singleScanIdx_]->pose));
-
-    //    float planeThreshold = planeThreshold_;
-    //    prgDrawPlane_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
-    //    prgDrawPlane_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
-    //    if (planeDimension_ == 0) planeThreshold += tilePos_.x;
-    //    if (planeDimension_ == 1) planeThreshold += tilePos_.y;
-    //    if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
-    //    prgDrawPlane_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
-    //    prgDrawPlane_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
-    //    prgDrawPlane_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
-    //    prgDrawPlane_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
-    //    prgDrawPlane_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
-    //    prgDrawPlane_.setUniform(GlUniform<float>("tileSize", tileSize_));
 
     prgDrawPlane_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
     prgDrawPlane_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
@@ -787,14 +933,18 @@ void Viewport::paintGL() {
   // Important: QPainter is apparently not working with OpenGL Core Profile < Qt5.9!!!!
   //  http://blog.qt.io/blog/2017/01/27/opengl-core-profile-context-support-qpainter/
   //  QPainter painter(this); // << does not work with OpenGL Core Profile.
-  if (mMode == POLYGON) {
+  if (mMode == POLYGON || (labelInstances_ && instanceSelected_) || instanceLabelingMode_ == 3) {
     ScopedBinder<GlProgram> program_binder(prgPolygonPoints_);
 
     vao_polygon_points_.bind();
 
+    uint32_t label = mCurrentLabel;
+    if (labelInstances_ && instanceSelected_) label = selectedInstanceLabel_;
+    if (instanceLabelingMode_ == 3) label = 0;
+
     prgPolygonPoints_.setUniform(GlUniform<int32_t>("width", width()));
     prgPolygonPoints_.setUniform(GlUniform<int32_t>("height", height()));
-    prgPolygonPoints_.setUniform(GlUniform<uint32_t>("label", mCurrentLabel));
+    prgPolygonPoints_.setUniform(GlUniform<uint32_t>("label", label));
 
     glActiveTexture(GL_TEXTURE0);
     texLabelColors_.bind();
@@ -819,9 +969,79 @@ void Viewport::paintGL() {
   glow::_CheckGlError(__FILE__, __LINE__);
 }
 
+void Viewport::updateInstanceSelectionMap() {
+  view_ = mCamera->matrix();
+
+  if (drawingOption_["follow pose"]) {
+    //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
+
+    RoSeCamera dummy;
+    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    view_ = view_ * dummy.matrix();
+  }
+
+  mvp_ = projection_ * view_ * conversion_;
+
+  // store viewport, and clear color:
+  GLfloat cc[4];
+  GLint vp[4];
+
+  glGetIntegerv(GL_VIEWPORT, vp);
+  glGetFloatv(GL_COLOR_CLEAR_VALUE, cc);
+  glDisable(GL_LINE_SMOOTH);
+  //  glDisable(GL_POINT_SMOOTH);
+  //  glDisable(GL_MULTISAMPLE);
+  glDisable(GL_POLYGON_SMOOTH);
+  glDisable(GL_BLEND);
+  glEnable(GL_DEPTH_TEST);
+
+  fboOffscreen_.bind();
+  prgDrawBoundingBoxesId_.bind();
+  glClearColor(0, 0, 0, 0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  prgDrawBoundingBoxesId_.setUniform(glow::GlUniform<Eigen::Matrix4f>("mvp", mvp_));
+  //    prgDrawBoundingBoxes_.setUniform(glow::GlUniform<glow::vec3>("in_color", glow::vec3(1, 0, 0)));
+
+  vao_bboxes_.bind();
+  glDrawArrays(GL_POINTS, 0, bufBboxPositionsYaw_.size());
+  vao_bboxes_.release();
+
+  prgDrawBoundingBoxesId_.release();
+  fboOffscreen_.release();
+  glViewport(vp[0], vp[1], vp[2], vp[3]);
+  glClearColor(cc[0], cc[1], cc[2], cc[3]);
+  CheckGlError();
+
+  texOffscreen_.download(offscreenContent_);
+
+  glEnable(GL_LINE_SMOOTH);
+  //    glDisable(GL_POINT_SMOOTH);
+  //    glDisable(GL_MULTISAMPLE);
+  //    glDisable(GL_BLEND);
+}
+
+uint32_t Viewport::getClickedInstanceId(float x, float y) {
+  if (x < 0 || y < 0 || x >= texOffscreen_.width() || y >= texOffscreen_.height()) return 0;
+
+  uint32_t instance_id = offscreenContent_[2 * (x + (texOffscreen_.height() - y) * texOffscreen_.width())];
+  uint32_t label_id = offscreenContent_[2 * (x + (texOffscreen_.height() - y) * texOffscreen_.width()) + 1];
+
+  //  std::cout << instance_id << ", " << label_id << " selected" << std::endl;
+
+  return (instance_id << 16 | label_id);
+}
+
 std::ostream& operator<<(std::ostream& os, const vec2& v) {
   os << "(" << v.x << ", " << v.y << ")";
   return os;
+}
+
+void Viewport::abortPolygonSelection() {
+  polygonPoints_.clear();  // start over again.#
+  bufPolygonPoints_.assign(polygonPoints_);
+  bufTriangles_.resize(0);
+  numTriangles_ = 0;
 }
 
 void Viewport::wheelEvent(QWheelEvent* event) {
@@ -840,9 +1060,8 @@ void Viewport::wheelEvent(QWheelEvent* event) {
 
     mCamera->wheelEvent(delta, resolveKeyboardModifier(event->modifiers()));
     mChangeCamera = true;
-    polygonPoints_.clear();  // start over again.#
-    bufPolygonPoints_.assign(polygonPoints_);
-    bufTriangles_.resize(0);
+
+    abortPolygonSelection();
   }
   this->updateGL();
   return;
@@ -861,92 +1080,215 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
       pressedkeys.insert(Qt::Key_F25);  // abuse F25 for mouse events
 
       mChangeCamera = true;
-      polygonPoints_.clear();  // start over again.#
-      bufPolygonPoints_.assign(polygonPoints_);
-      bufTriangles_.resize(0);
+      abortPolygonSelection();
+      updateGL();
+
       return;
     }
-  } else if (mMode == PAINT) {
-    buttonPressed = true;
-    mChangeCamera = false;
-    if (event->buttons() & Qt::LeftButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
-    else if (event->buttons() & Qt::RightButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
+  }
 
-    updateGL();
-  } else if (mMode == POLYGON) {
-    if (event->buttons() & Qt::LeftButton) {
-      if (polygonPoints_.size() == 100) {
-        polygonPoints_.back().x = event->x();
-        polygonPoints_.back().y = event->y();
-      } else {
-        polygonPoints_.push_back(vec2(event->x(), event->y()));
+  if (labelInstances_) {
+    if ((instanceSelected_ && instanceLabelingMode_ != 4) || (instanceLabelingMode_ == 3)) {
+      if (event->buttons() & Qt::LeftButton) {
+        if (polygonPoints_.size() == 100) {
+          polygonPoints_.back().x = event->x();
+          polygonPoints_.back().y = event->y();
+        } else {
+          polygonPoints_.push_back(vec2(event->x(), event->y()));
+        }
+
+      } else if (event->buttons() & Qt::RightButton) {
+        if (polygonPoints_.size() > 2) {
+          // finish polygon and label points.
+
+          // 1. determine winding: https://blog.element84.com/polygon-winding-post.html
+
+          std::vector<vec2> points = polygonPoints_;
+          for (uint32_t i = 0; i < points.size(); ++i) {
+            points[i].y = height() - points[i].y;  // flip y.
+          }
+
+          float winding = 0.0f;
+
+          // important: take also last edge into account!
+          for (uint32_t i = 0; i < points.size(); ++i) {
+            const auto& p = points[(i + 1) % points.size()];
+            const auto& q = points[i];
+
+            winding += (p.x - q.x) * (q.y + p.y);
+          }
+
+          // invert  order if CW order.
+          if (winding > 0) std::reverse(points.begin(), points.end());
+
+          //        if (winding > 0) std::cout << "winding: CW" << std::endl;
+          //        else std::cout << "winding: CCW" << std::endl;
+
+          std::vector<Triangle> triangles;
+          std::vector<glow::vec2> tris_verts;
+
+          triangulate(points, triangles);
+
+          //        std::cout << "#triangles: " << triangles.size() << std::endl;
+
+          std::vector<vec3> texContent(3 * 100);
+          for (uint32_t i = 0; i < triangles.size(); ++i) {
+            auto t = triangles[i];
+            texContent[3 * i + 0] = vec3(t.i.x / width(), (height() - t.i.y) / height(), 0);
+            texContent[3 * i + 1] = vec3(t.j.x / width(), (height() - t.j.y) / height(), 0);
+            texContent[3 * i + 2] = vec3(t.k.x / width(), (height() - t.k.y) / height(), 0);
+
+            tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+            tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+            tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+            tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+            tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+            tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+          }
+
+          numTriangles_ = triangles.size();
+          // note: colors are in range [0,1] for FLOAT!
+          texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
+          bufTriangles_.assign(tris_verts);
+
+          if (instanceLabelingMode_ == 3)  // create instance.
+          {
+            std::vector<uint32_t> selected = getSelectedLabels();
+            //            std::cout << selected.size() << " points selected." << std::endl;
+
+            std::map<uint32_t, uint32_t> counts;
+            for (auto label : instanceableLabels_) counts[label] = 0;
+
+            for (auto label : selected) {
+              if (counts.find(label) != counts.end()) counts[label] += 1;
+            }
+
+            // we first have to determine the "instanceable" label inside the selection.
+            uint32_t maxLabel = 0;
+            uint32_t maxCount = 0;
+            for (auto it = counts.begin(); it != counts.end(); ++it) {
+              //              std::cout << it->first << ": " << it->second << std::endl;
+              if (it->second > maxCount) {
+                maxLabel = it->first;
+                maxCount = it->second;
+              }
+            }
+
+            uint32_t selectedInstanceId = 0;
+            if (maxLabel > 0) {
+              selectedInstanceLabel_ = maxLabel;
+
+              labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
+
+              updateBoundingBoxes();
+              fillBoundingBoxBuffers();
+              updateInstanceSelectionMap();
+
+              instanceSelected_ = true;
+              selectedInstanceId_ = maxInstanceIds_[selectedInstanceLabel_];
+              selectedInstanceId = selectedInstanceId_;
+            }
+
+            emit instanceSelected(selectedInstanceId);
+          } else {
+            labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
+
+            updateBoundingBoxes();
+            fillBoundingBoxBuffers();
+            updateInstanceSelectionMap();
+          }
+        }
+
+        polygonPoints_.clear();
       }
 
-    } else if (event->buttons() & Qt::RightButton) {
-      if (polygonPoints_.size() > 2) {
-        // finish polygon and label points.
+      bufPolygonPoints_.assign(polygonPoints_);
 
-        // 1. determine winding: https://blog.element84.com/polygon-winding-post.html
-
-        std::vector<vec2> points = polygonPoints_;
-        for (uint32_t i = 0; i < points.size(); ++i) {
-          points[i].y = height() - points[i].y;  // flip y.
-        }
-
-        float winding = 0.0f;
-
-        // important: take also last edge into account!
-        for (uint32_t i = 0; i < points.size(); ++i) {
-          const auto& p = points[(i + 1) % points.size()];
-          const auto& q = points[i];
-
-          winding += (p.x - q.x) * (q.y + p.y);
-        }
-
-        // invert  order if CW order.
-        if (winding > 0) std::reverse(points.begin(), points.end());
-
-        //        if (winding > 0) std::cout << "winding: CW" << std::endl;
-        //        else std::cout << "winding: CCW" << std::endl;
-
-        std::vector<Triangle> triangles;
-        std::vector<glow::vec2> tris_verts;
-
-        triangulate(points, triangles);
-
-        //        std::cout << "#triangles: " << triangles.size() << std::endl;
-
-        std::vector<vec3> texContent(3 * 100);
-        for (uint32_t i = 0; i < triangles.size(); ++i) {
-          auto t = triangles[i];
-          texContent[3 * i + 0] = vec3(t.i.x / width(), (height() - t.i.y) / height(), 0);
-          texContent[3 * i + 1] = vec3(t.j.x / width(), (height() - t.j.y) / height(), 0);
-          texContent[3 * i + 2] = vec3(t.k.x / width(), (height() - t.k.y) / height(), 0);
-
-          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
-          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
-          tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
-          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
-          tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
-          tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
-        }
-
-        numTriangles_ = triangles.size();
-        // note: colors are in range [0,1] for FLOAT!
-        texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
-        bufTriangles_.assign(tris_verts);
-
-        labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
-      }
-
-      polygonPoints_.clear();
+      repaint();
     }
+  } else {
+    if (mMode == PAINT) {
+      buttonPressed = true;
+      mChangeCamera = false;
+      if (event->buttons() & Qt::LeftButton)
+        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
+      else if (event->buttons() & Qt::RightButton)
+        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
 
-    bufPolygonPoints_.assign(polygonPoints_);
+      updateGL();
+    } else if (mMode == POLYGON) {
+      if (event->buttons() & Qt::LeftButton) {
+        if (polygonPoints_.size() == 100) {
+          polygonPoints_.back().x = event->x();
+          polygonPoints_.back().y = event->y();
+        } else {
+          polygonPoints_.push_back(vec2(event->x(), event->y()));
+        }
 
-    repaint();
+      } else if (event->buttons() & Qt::RightButton) {
+        if (polygonPoints_.size() > 2) {
+          // finish polygon and label points.
+
+          // 1. determine winding: https://blog.element84.com/polygon-winding-post.html
+
+          std::vector<vec2> points = polygonPoints_;
+          for (uint32_t i = 0; i < points.size(); ++i) {
+            points[i].y = height() - points[i].y;  // flip y.
+          }
+
+          float winding = 0.0f;
+
+          // important: take also last edge into account!
+          for (uint32_t i = 0; i < points.size(); ++i) {
+            const auto& p = points[(i + 1) % points.size()];
+            const auto& q = points[i];
+
+            winding += (p.x - q.x) * (q.y + p.y);
+          }
+
+          // invert  order if CW order.
+          if (winding > 0) std::reverse(points.begin(), points.end());
+
+          //        if (winding > 0) std::cout << "winding: CW" << std::endl;
+          //        else std::cout << "winding: CCW" << std::endl;
+
+          std::vector<Triangle> triangles;
+          std::vector<glow::vec2> tris_verts;
+
+          triangulate(points, triangles);
+
+          //        std::cout << "#triangles: " << triangles.size() << std::endl;
+
+          std::vector<vec3> texContent(3 * 100);
+          for (uint32_t i = 0; i < triangles.size(); ++i) {
+            auto t = triangles[i];
+            texContent[3 * i + 0] = vec3(t.i.x / width(), (height() - t.i.y) / height(), 0);
+            texContent[3 * i + 1] = vec3(t.j.x / width(), (height() - t.j.y) / height(), 0);
+            texContent[3 * i + 2] = vec3(t.k.x / width(), (height() - t.k.y) / height(), 0);
+
+            tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+            tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+            tris_verts.push_back(vec2(t.j.x, height() - t.j.y));
+            tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+            tris_verts.push_back(vec2(t.k.x, height() - t.k.y));
+            tris_verts.push_back(vec2(t.i.x, height() - t.i.y));
+          }
+
+          numTriangles_ = triangles.size();
+          // note: colors are in range [0,1] for FLOAT!
+          texTriangles_.assign(PixelFormat::RGB, PixelType::FLOAT, &texContent[0]);
+          bufTriangles_.assign(tris_verts);
+
+          labelPoints(event->x(), event->y(), 0, mCurrentLabel, false);
+        }
+
+        polygonPoints_.clear();
+      }
+
+      bufPolygonPoints_.assign(polygonPoints_);
+
+      repaint();
+    }
   }
 
   event->accept();
@@ -965,26 +1307,104 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event) {
       // timer_.stop();
       updateGL();  // get the last action.
 
+      updateInstanceSelectionMap();
+
       return;
     }
-  } else if (mMode == PAINT) {
-    buttonPressed = false;
+  } else {
+    if (labelInstances_) {
+      if (instanceSelectionMode_) {
+        std::cout << "instance selection mode." << std::endl;
+        uint32_t instance_label = getClickedInstanceId(event->x(), event->y());
 
-    if (event->buttons() & Qt::LeftButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
-    else if (event->buttons() & Qt::RightButton)
-      labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
+        if (instanceLabelingMode_ == 4) {
+          std::cout << "join. " << std::endl;
+          if (instanceSelected_) {
+            std::cout << "first already selected." << std::endl;
+            instanceSelectionMode_ = false;
 
-    updateGL();
-  } else if (mMode == POLYGON) {
-    if (polygonPoints_.size() > 0) {
-      polygonPoints_.back().x = event->x();
-      polygonPoints_.back().y = event->y();
+            uint32_t selectedInstanceId_before = selectedInstanceId_;
+            uint32_t selectedInstanceLabel_before = selectedInstanceLabel_;
 
-      bufPolygonPoints_.assign(polygonPoints_);
+            selectedInstanceId_ = (instance_label >> 16);
+            selectedInstanceLabel_ = (instance_label & uint32_t(0xFFFF));
+
+            if (selectedInstanceLabel_ == selectedInstanceLabel_before) {
+              // trigger relabeling.
+              std::cout << "relabeling." << std::endl;
+              labelPoints(event->x(), event->y(), 0, selectedInstanceId_before, false);
+
+              updateBoundingBoxes();
+              fillBoundingBoxBuffers();
+              updateInstanceSelectionMap();
+            }
+
+            // select new joined instances.
+            selectedInstanceId_ = selectedInstanceId_before;
+            selectedInstanceLabel_ = selectedInstanceLabel_before;
+
+          } else {
+            if (instance_label > 0) {
+              instanceSelected_ = true;
+              selectedInstanceId_ = (instance_label >> 16);
+              selectedInstanceLabel_ = (instance_label & uint32_t(0xFFFF));
+
+            } else {
+              instanceSelectionMode_ = false;
+              selectedInstanceId_ = 0;
+              selectedInstanceLabel_ = 0;
+            }
+          }
+        } else {
+          instanceSelectionMode_ = false;
+
+          instanceSelected_ = false;
+          selectedInstanceId_ = 0;
+          selectedInstanceLabel_ = 0;
+
+          if (instance_label > 0) {
+            instanceSelected_ = true;
+            selectedInstanceId_ = (instance_label >> 16);
+            selectedInstanceLabel_ = (instance_label & uint32_t(0xFFFF));
+          }
+        }
+
+        emit instanceSelected(instance_label);
+
+        updateGL();
+      } else {
+        if (instanceSelected_ || (instanceLabelingMode_ == 3)) {
+          if (polygonPoints_.size() > 0) {
+            polygonPoints_.back().x = event->x();
+            polygonPoints_.back().y = event->y();
+
+            bufPolygonPoints_.assign(polygonPoints_);
+          }
+
+          repaint();
+        }
+      }
+    } else {
+      if (mMode == PAINT) {
+        buttonPressed = false;
+
+        if (event->buttons() & Qt::LeftButton)
+          labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
+        else if (event->buttons() & Qt::RightButton)
+          labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
+
+        updateGL();
+      } else if (mMode == POLYGON) {
+        if (polygonPoints_.size() > 0) {
+          polygonPoints_.back().x = event->x();
+          polygonPoints_.back().y = event->y();
+
+          bufPolygonPoints_.assign(polygonPoints_);
+        }
+
+        repaint();
+      }
     }
-
-    repaint();
   }
 
   event->accept();
@@ -997,22 +1417,37 @@ void Viewport::mouseMoveEvent(QMouseEvent* event) {
                             resolveKeyboardModifier(event->modifiers()))) {
       return;
     }
-  } else if (mMode == PAINT) {
-    if (buttonPressed) {
-      if (event->buttons() & Qt::LeftButton)
-        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
-      else
-        labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
+  }
+
+  if (labelInstances_) {
+    if ((instanceSelected_ && !instanceSelectionMode_) || (instanceLabelingMode_ == 3)) {
+      if (polygonPoints_.size() > 0) {
+        polygonPoints_.back().x = event->x();
+        polygonPoints_.back().y = event->y();
+
+        bufPolygonPoints_.assign(polygonPoints_);
+
+        repaint();
+      }
     }
-    updateGL();
-  } else if (mMode == POLYGON) {
-    if (polygonPoints_.size() > 0) {
-      polygonPoints_.back().x = event->x();
-      polygonPoints_.back().y = event->y();
+  } else {
+    if (mMode == PAINT) {
+      if (buttonPressed) {
+        if (event->buttons() & Qt::LeftButton)
+          labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, false);
+        else
+          labelPoints(event->x(), event->y(), mRadius, mCurrentLabel, true);
+      }
+      updateGL();
+    } else if (mMode == POLYGON) {
+      if (polygonPoints_.size() > 0) {
+        polygonPoints_.back().x = event->x();
+        polygonPoints_.back().y = event->y();
 
-      bufPolygonPoints_.assign(polygonPoints_);
+        bufPolygonPoints_.assign(polygonPoints_);
 
-      repaint();
+        repaint();
+      }
     }
   }
 
@@ -1127,8 +1562,119 @@ void Viewport::setTileInfo(float x, float y, float tileSize) {
   tileSize_ = tileSize;
 }
 
+std::vector<uint32_t> Viewport::getSelectedLabels() {
+  std::vector<uint32_t> selected;
+
+  if (points_.size() == 0 || labels_.size() == 0) return selected;
+
+  //  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::flush;
+  //  Stopwatch::tic();
+
+  bool showSingleScan = drawingOption_["single scan"];
+  bool showScanRange = drawingOption_["show scan range"];
+
+  ScopedBinder<GlVertexArray> vaoBinder(vao_points_);
+  ScopedBinder<GlProgram> programBinder(prgGetSelectedLabels_);
+  ScopedBinder<GlTransformFeedback> feedbackBinder(tfSelectedLabels_);
+
+  prgGetSelectedLabels_.setUniform(GlUniform<Eigen::Matrix4f>("pose", Eigen::Matrix4f::Identity()));
+  if (points_.size() > singleScanIdx_)
+    prgGetSelectedLabels_.setUniform(GlUniform<Eigen::Matrix4f>("pose", points_[singleScanIdx_]->pose));
+
+  prgGetSelectedLabels_.setUniform(GlUniform<int32_t>("width", width()));
+  prgGetSelectedLabels_.setUniform(GlUniform<int32_t>("height", height()));
+
+  prgGetSelectedLabels_.setUniform(GlUniform<bool>("removeGround", removeGround_));
+  prgGetSelectedLabels_.setUniform(GlUniform<float>("groundThreshold", groundThreshold_));
+  prgGetSelectedLabels_.setUniform(GlUniform<vec2>("tilePos", tilePos_));
+  prgGetSelectedLabels_.setUniform(GlUniform<float>("tileSize", tileSize_));
+  prgGetSelectedLabels_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
+  prgGetSelectedLabels_.setUniform(GlUniform<int32_t>("heightMap", 1));
+
+  prgGetSelectedLabels_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
+  prgGetSelectedLabels_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
+  prgGetSelectedLabels_.setUniform(GlUniform<float>("planeThresholdNormal", planeThresholdNormal_));
+  prgGetSelectedLabels_.setUniform(GlUniform<float>("planeDirectionNormal", planeDirectionNormal_));
+  prgGetSelectedLabels_.setUniform(GlUniform<bool>("hideLabeledInstances", drawingOption_["hide labeled instances"]));
+
+  Eigen::Matrix4f plane_pose = Eigen::Matrix4f::Identity();
+  plane_pose(0, 3) = tilePos_.x;
+  plane_pose(1, 3) = tilePos_.y;
+  plane_pose(2, 3) = points_[0]->pose(2, 3);
+  if (drawingOption_["carAsBase"] && points_.size() > singleScanIdx_) {
+    plane_pose = points_[singleScanIdx_]->pose;
+    //    plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
+  }
+
+  prgGetSelectedLabels_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
+
+  Eigen::Matrix4f view_ = mCamera->matrix();
+
+  if (drawingOption_["follow pose"]) {
+    //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
+
+    RoSeCamera dummy;
+    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    view_ = view_ * dummy.matrix();
+  }
+
+  mvp_ = projection_ * view_ * conversion_;
+  prgGetSelectedLabels_.setUniform(mvp_);
+  prgGetSelectedLabels_.setUniform(GlUniform<int32_t>("numTriangles", numTriangles_));
+
+  glActiveTexture(GL_TEXTURE0);
+  texTriangles_.bind();
+
+  glActiveTexture(GL_TEXTURE1);
+  texMinimumHeightMap_.bind();
+
+  glEnable(GL_RASTERIZER_DISCARD);
+
+  uint32_t count = 0;
+  uint32_t max_size = bufSelectedLabels_.size();
+  uint32_t buffer_start = 0;
+  uint32_t buffer_size = bufLabels_.size();
+
+  if (showSingleScan) {
+    buffer_start = scanInfos_[singleScanIdx_].start;
+    buffer_size = scanInfos_[singleScanIdx_].size;
+  } else if (showScanRange) {
+    buffer_start = scanInfos_[scanRangeBegin_].start;
+    buffer_size = scanInfos_[scanRangeEnd_].start + scanInfos_[scanRangeEnd_].size - scanInfos_[scanRangeBegin_].start;
+  }
+
+  while (count * max_size < buffer_size) {
+    uint32_t size = std::min<uint32_t>(max_size, buffer_size - count * max_size);
+
+    tfSelectedLabels_.begin(TransformFeedbackMode::POINTS);
+    glDrawArrays(GL_POINTS, buffer_start + count * max_size, size);
+    uint32_t num_captured = tfSelectedLabels_.end();
+
+    std::vector<uint32_t> temp;
+    bufSelectedLabels_.get(temp);
+    temp.resize(num_captured);
+    selected.insert(selected.end(), temp.begin(), temp.end());
+
+    count++;
+  }
+
+  glDisable(GL_RASTERIZER_DISCARD);
+
+  glActiveTexture(GL_TEXTURE0);
+  texTriangles_.release();
+  glActiveTexture(GL_TEXTURE1);
+  texMinimumHeightMap_.release();
+  //  std::cout << Stopwatch::toc() << " s." << std::endl;
+
+  return selected;
+}
+
 void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_label, bool remove) {
   if (points_.size() == 0 || labels_.size() == 0) return;
+  if (labelInstances_ && !instanceSelected_ && (instanceLabelingMode_ != 3)) {
+    std::cout << "no instance selected!" << std::endl;
+    return;
+  }
 
   //  std::cout << "called labelPoints(" << x << ", " << y << ", " << radius << ", " << new_label << ")" << std::flush;
   //  Stopwatch::tic();
@@ -1157,16 +1703,17 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   prgUpdateLabels_.setUniform(GlUniform<bool>("showAllPoints", drawingOption_["show all points"]));
   prgUpdateLabels_.setUniform(GlUniform<int32_t>("heightMap", 1));
   prgUpdateLabels_.setUniform(GlUniform<bool>("removeLabel", remove));
+  prgUpdateLabels_.setUniform(GlUniform<bool>("hideLabeledInstances", drawingOption_["hide labeled instances"]));
 
-  //  float planeThreshold = planeThreshold_;
-  //  prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemoval", planeRemoval_));
-  //  prgUpdateLabels_.setUniform(GlUniform<int32_t>("planeDimension", planeDimension_));
-  //  if (planeDimension_ == 0) planeThreshold += tilePos_.x;
-  //  if (planeDimension_ == 1) planeThreshold += tilePos_.y;
-  //  if (planeDimension_ == 2 && points_.size() > 0) planeThreshold += points_[0]->pose(3, 3);
-  //  prgUpdateLabels_.setUniform(GlUniform<float>("planeThreshold", planeThreshold));
-  //  prgUpdateLabels_.setUniform(GlUniform<float>("planeDirection", planeDirection_));
-  //  prgUpdateLabels_.setUniform(GlUniform<bool>("carAsBase", drawingOption_["carAsBase"]));
+  // set instance specific stuff.
+  prgUpdateLabels_.setUniform(GlUniform<bool>("labelInstances", labelInstances_));
+  if (labelInstances_) {
+    prgUpdateLabels_.setUniform(GlUniform<int32_t>("instanceLabelingMode", instanceLabelingMode_));
+    prgUpdateLabels_.setUniform(GlUniform<uint32_t>("selectedInstanceId", selectedInstanceId_));
+    prgUpdateLabels_.setUniform(GlUniform<uint32_t>("selectedInstanceLabel", selectedInstanceLabel_));
+    prgUpdateLabels_.setUniform(GlUniform<uint32_t>(
+        "newInstanceId", (instanceLabelingMode_ == 4) ? new_label : maxInstanceIds_[selectedInstanceLabel_] + 1));
+  }
 
   prgUpdateLabels_.setUniform(GlUniform<bool>("planeRemovalNormal", planeRemovalNormal_));
   prgUpdateLabels_.setUniform(GlUniform<Eigen::Vector3f>("planeNormal", planeNormal_));
@@ -1184,11 +1731,22 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
 
   prgUpdateLabels_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
 
-  mvp_ = projection_ * mCamera->matrix() * conversion_;
+  Eigen::Matrix4f view_ = mCamera->matrix();
+
+  if (drawingOption_["follow pose"]) {
+    //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
+
+    RoSeCamera dummy;
+    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    view_ = view_ * dummy.matrix();
+  }
+
+  mvp_ = projection_ * view_ * conversion_;
+
   prgUpdateLabels_.setUniform(mvp_);
 
   if (mMode == Viewport::PAINT) prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 0));
-  if (mMode == Viewport::POLYGON) {
+  if (mMode == Viewport::POLYGON || labelInstances_) {
     prgUpdateLabels_.setUniform(GlUniform<int32_t>("labelingMode", 1));
     prgUpdateLabels_.setUniform(GlUniform<int32_t>("numTriangles", numTriangles_));
   }
@@ -1206,7 +1764,8 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
   uint32_t buffer_start = 0;
   uint32_t buffer_size = bufLabels_.size();
 
-  if (showSingleScan) {
+  // ignore single scan for joining.
+  if (showSingleScan && !(labelInstances_ && instanceLabelingMode_ == 4)) {
     buffer_start = scanInfos_[singleScanIdx_].start;
     buffer_size = scanInfos_[singleScanIdx_].size;
   } else if (showScanRange) {
@@ -1431,7 +1990,6 @@ void Viewport::setPlaneRemovalNormal(bool value) {
   updateGL();
 }
 
-const double PI = std::acos(-1);
 void Viewport::setPlaneRemovalNormalParams(float threshold, float A1, float A2, float A3, float direction) {
   planeThresholdNormal_ = threshold;
   Eigen::Vector4f unit_vect(1.0, 0, 0, 0);
@@ -1440,7 +1998,7 @@ void Viewport::setPlaneRemovalNormalParams(float threshold, float A1, float A2, 
   //  auto rotZ = glow::glRotateZ(A3 * PI / 180);
 
   //  auto normal_vect = rotX * rotY * rotZ * unit_vect;
-
+  const double PI = std::acos(-1);
   float theta = A1 * PI / 180;
   float phi = A2 * PI / 180;
 
@@ -1504,4 +2062,220 @@ void Viewport::setCameraByName(const std::string& name) {
   if (cameras_.find(name) == cameras_.end()) return;
 
   setCamera(cameras_[name]);
+}
+
+void Viewport::setInstanceableLabels(const std::vector<uint32_t>& labels) { instanceableLabels_ = labels; }
+
+void Viewport::labelInstances(bool value) {
+  labelInstances_ = value;
+  if (labelInstances_) {
+    updateBoundingBoxes();
+    updateInstanceSelectionMap();
+  }
+
+  updateGL();
+}
+
+void Viewport::setMaximumInstanceIds(const std::map<uint32_t, uint32_t>& maxInstanceIds) {
+  maxInstanceIds_ = maxInstanceIds;
+}
+
+std::map<uint32_t, uint32_t> Viewport::getMaximumInstanceIds() const { return maxInstanceIds_; }
+
+void Viewport::setInstanceLabelingMode(int32_t value) {
+  instanceLabelingMode_ = value;
+  abortPolygonSelection();
+
+  updateGL();
+}
+
+void Viewport::setInstanceSelectionMode(bool value) {
+  instanceSelectionMode_ = value;
+  if (instanceLabelingMode_) abortPolygonSelection();
+
+  if (instanceSelectionMode_ && instanceLabelingMode_ != 4) {
+    instanceSelected_ = false;
+    selectedInstanceId_ = 0;
+    selectedInstanceLabel_ = 0;
+  }
+}
+
+void Viewport::updateBoundingBoxes() {
+  if (points_.size() == 0) return;
+  std::cout << "updating bounding boxes. " << std::flush;
+
+  glow::GlBuffer<vec4> bufReadPoints{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  glow::GlBuffer<uint32_t> bufReadLabels{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  glow::GlBuffer<vec2> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+
+  bufReadPoints.resize(maxPointsPerScan_);
+  bufReadLabels.resize(maxPointsPerScan_);
+  bufReadIndexes.resize(maxPointsPerScan_);
+
+  std::vector<vec4> points(bufReadLabels.size());
+  std::vector<uint32_t> labels(bufReadLabels.size());
+  std::vector<vec2> indexes(bufReadIndexes.size());
+
+  uint32_t count = 0;
+  uint32_t max_size = bufReadLabels.size();
+  uint32_t buffer_size = bufLabels_.size();
+
+  labeledCount_ = 0;
+
+  bboxes_static_.clear();
+  bboxes_moving_.clear();
+
+  std::cout << "Collecting min/max: [" << std::flush;
+  float progress = 0.1;
+  while (count * max_size < bufLabels_.size()) {
+    if (count * max_size > progress * bufLabels_.size()) {
+      std::cout << "=" << std::flush;
+      progress += 0.1;
+    }
+
+    uint32_t size = std::min<uint32_t>(max_size, buffer_size - count * max_size);
+
+    bufLabels_.copyTo(count * max_size, size, bufReadLabels, 0);
+    bufPoints_.copyTo(count * max_size, size, bufReadPoints, 0);
+    bufScanIndexes_.copyTo(count * max_size, size, bufReadIndexes, 0);
+
+    bufReadLabels.get(labels, 0, size);
+    bufReadPoints.get(points, 0, size);
+    bufReadIndexes.get(indexes, 0, size);
+
+    for (uint32_t i = 0; i < size; ++i) {
+      // store only info for real instances.
+      uint32_t instanceId = ((labels[i] >> 16) & uint32_t(0xFFFF));
+      uint32_t label = (labels[i] & uint32_t(0xFFFF));
+      uint32_t t = uint32_t(indexes[i].x);
+      bool is_moving = (label > 200);
+      maxInstanceIds_[label] = std::max(maxInstanceIds_[label], instanceId);
+
+      if (instanceId > 0) {
+        if (is_moving) {
+          if (bboxes_moving_.find(labels[i]) == bboxes_moving_.end())
+            bboxes_moving_[labels[i]] = std::map<uint32_t, BoundingBox>();
+
+          if (bboxes_moving_[labels[i]].find(t) == bboxes_moving_[labels[i]].end()) {
+            bboxes_moving_[labels[i]][t] = BoundingBox();
+            bboxes_moving_[labels[i]][t].position_yaw = bboxes_moving_[labels[i]][t].size_id = points[i];
+          } else {
+            bboxes_moving_[labels[i]][t].position_yaw.x =
+                std::min(points[i].x, bboxes_moving_[labels[i]][t].position_yaw.x);
+            bboxes_moving_[labels[i]][t].position_yaw.y =
+                std::min(points[i].y, bboxes_moving_[labels[i]][t].position_yaw.y);
+            bboxes_moving_[labels[i]][t].position_yaw.z =
+                std::min(points[i].z, bboxes_moving_[labels[i]][t].position_yaw.z);
+
+            bboxes_moving_[labels[i]][t].size_id.x = std::max(points[i].x, bboxes_moving_[labels[i]][t].size_id.x);
+            bboxes_moving_[labels[i]][t].size_id.y = std::max(points[i].y, bboxes_moving_[labels[i]][t].size_id.y);
+            bboxes_moving_[labels[i]][t].size_id.z = std::max(points[i].z, bboxes_moving_[labels[i]][t].size_id.z);
+          }
+
+        } else {
+          if (bboxes_static_.find(labels[i]) == bboxes_static_.end()) {
+            bboxes_static_[labels[i]] = BoundingBox();
+            bboxes_static_[labels[i]].position_yaw = bboxes_static_[labels[i]].size_id = points[i];
+          } else {
+            bboxes_static_[labels[i]].position_yaw.x = std::min(points[i].x, bboxes_static_[labels[i]].position_yaw.x);
+            bboxes_static_[labels[i]].position_yaw.y = std::min(points[i].y, bboxes_static_[labels[i]].position_yaw.y);
+            bboxes_static_[labels[i]].position_yaw.z = std::min(points[i].z, bboxes_static_[labels[i]].position_yaw.z);
+
+            bboxes_static_[labels[i]].size_id.x = std::max(points[i].x, bboxes_static_[labels[i]].size_id.x);
+            bboxes_static_[labels[i]].size_id.y = std::max(points[i].y, bboxes_static_[labels[i]].size_id.y);
+            bboxes_static_[labels[i]].size_id.z = std::max(points[i].z, bboxes_static_[labels[i]].size_id.z);
+          }
+        }
+      }
+    }
+    count++;
+  }
+
+  std::cout << "]" << std::flush;
+
+  std::vector<vec4> position_yaw;
+  std::vector<vec4> size_id;
+  id2idx_.clear();
+
+  // compute bounding boxes from temp information.
+  for (auto it = bboxes_static_.begin(); it != bboxes_static_.end(); ++it) {
+    Eigen::Vector3f minimum(it->second.position_yaw.x, it->second.position_yaw.y, it->second.position_yaw.z);
+    Eigen::Vector3f maximum(it->second.size_id.x, it->second.size_id.y, it->second.size_id.z);
+    Eigen::Vector3f size = (maximum - minimum);
+    Eigen::Vector3f mid = (minimum + 0.5 * size);
+
+    it->second.position_yaw.x = mid.x();
+    it->second.position_yaw.y = mid.y();
+    it->second.position_yaw.z = mid.z();
+    it->second.position_yaw.w = 0.0f;
+    it->second.size_id.x = size.x();
+    it->second.size_id.y = size.y();
+    it->second.size_id.z = size.z();
+  }
+
+  // for each labeled instance:
+  for (auto iit = bboxes_moving_.begin(); iit != bboxes_moving_.end(); ++iit) {
+    // for each timestep:
+    for (auto it = iit->second.begin(); it != iit->second.end(); ++it) {
+      Eigen::Vector3f minimum(it->second.position_yaw.x, it->second.position_yaw.y, it->second.position_yaw.z);
+      Eigen::Vector3f maximum(it->second.size_id.x, it->second.size_id.y, it->second.size_id.z);
+      Eigen::Vector3f size = (maximum - minimum);
+      Eigen::Vector3f mid = (minimum + 0.5 * size);
+
+      it->second.position_yaw.x = mid.x();
+      it->second.position_yaw.y = mid.y();
+      it->second.position_yaw.z = mid.z();
+      it->second.position_yaw.w = 0.0f;
+      it->second.size_id.x = size.x();
+      it->second.size_id.y = size.y();
+      it->second.size_id.z = size.z();
+    }
+  }
+
+  // ... and fill buffer.
+  fillBoundingBoxBuffers();
+  std::cout << " finished." << std::endl;
+
+  updateGL();
+}
+
+void Viewport::fillBoundingBoxBuffers() {
+  id2idx_.clear();
+
+  std::vector<vec4> position_yaw;
+  std::vector<vec4> size_id;
+  std::vector<uint32_t> instance_label;
+
+  for (auto it = bboxes_static_.begin(); it != bboxes_static_.end(); ++it) {
+    id2idx_[it->first] = position_yaw.size();
+    position_yaw.push_back(it->second.position_yaw);
+    size_id.push_back(it->second.size_id);
+    instance_label.push_back(it->first);
+  }
+
+  if (drawingOption_["show all moving instances"]) {
+    for (auto it = bboxes_moving_.begin(); it != bboxes_moving_.end(); ++it) {
+      for (auto iit = it->second.begin(); iit != it->second.end(); ++iit) {
+        id2idx_[it->first] = position_yaw.size();
+        position_yaw.push_back(iit->second.position_yaw);
+        size_id.push_back(iit->second.size_id);
+        instance_label.push_back(it->first);
+      }
+    }
+  } else {
+    for (auto it = bboxes_moving_.begin(); it != bboxes_moving_.end(); ++it) {
+      if (it->second.find(singleScanIdx_) != it->second.end()) {
+        id2idx_[it->first] = position_yaw.size();
+        position_yaw.push_back(it->second.find(singleScanIdx_)->second.position_yaw);
+        size_id.push_back(it->second.find(singleScanIdx_)->second.size_id);
+        instance_label.push_back(it->first);
+      }
+    }
+  }
+
+  bufBboxPositionsYaw_.assign(position_yaw);
+  bufBboxSizeIds_.assign(size_id);
+  bufBboxInstanceLabels_.assign(instance_label);
+
+  glow::_CheckGlError(__FILE__, __LINE__);
 }

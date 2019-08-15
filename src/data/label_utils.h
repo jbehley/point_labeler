@@ -34,6 +34,7 @@ struct Label {
   uint32_t id_moving;   // id if the object is moving.
   std::string rootCategory;
   bool potentiallyMoving{false};
+  bool instanceable{false};
 };
 
 /** \brief retrieve label names from given xml file.

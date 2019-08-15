@@ -19,6 +19,23 @@
 
 using namespace glow;
 
+// see https://stackoverflow.com/a/24349347
+template <class T>
+class Blocker {
+  T* blocked;
+  bool previous;
+
+ public:
+  Blocker(T* blocked) : blocked(blocked), previous(blocked->blockSignals(true)) {}
+  ~Blocker() { blocked->blockSignals(previous); }
+  T* operator->() { return blocked; }
+};
+
+template <class T>
+inline Blocker<T> whileBlocking(T* blocked) {
+  return Blocker<T>(blocked);
+}
+
 Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   ui.setupUi(this);
 
@@ -72,8 +89,15 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.spinGroundThreshold, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
           [this](double value) { ui.mViewportXYZ->setGroundThreshold(value); });
 
-  connect(ui.chkShowSingleScan, &QCheckBox::toggled,
-          [this](bool value) { ui.mViewportXYZ->setDrawingOption("single scan", value); });
+  connect(ui.chkShowSingleScan, &QCheckBox::toggled, [this](bool value) {
+    ui.mViewportXYZ->setDrawingOption("single scan", value);
+    ui.chkShowSingleScan_instance->setChecked(value);
+  });
+
+  connect(ui.chkShowSingleScan_instance, &QCheckBox::toggled, [this](bool value) {
+    ui.mViewportXYZ->setDrawingOption("single scan", value);
+    ui.chkShowSingleScan->setChecked(value);
+  });
 
   connect(ui.wgtTileSelector, &TileSelectorWidget::tileSelected, [this](int32_t i, int32_t j) { setTileIndex(i, j); });
 
@@ -119,66 +143,6 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   });
 
   connect(&mSaveTimer_, SIGNAL(timeout()), this, SLOT(save()));
-
-  connect(&mLabelTimer_, &QTimer::timeout, [this]() {
-    int32_t ms = timeTileStarted_.elapsed();
-    int32_t hours = int32_t(ms / (60 * 60 * 1000));
-    int32_t minutes = (ms - hours * 60 * 60 * 1000) / (60 * 1000);
-    int32_t seconds = (ms - hours * 60 * 60 * 1000 - minutes * 60 * 1000) / (1000);
-    QString timeString = QString("%1:%2:%3")
-                             .arg(int32_t(hours), 2, 10, QChar('0'))
-                             .arg(int32_t(minutes), 2, 10, QChar('0'))
-                             .arg(int32_t(seconds), 2, 10, QChar('0'));
-    lblTime_.setText(timeString);
-  });
-  // ------------------------------------------
-  // Removal with plane in coordinate directions
-  // ------------------------------------------
-
-  // Checkbox for removal of points in x, y or z-direction
-  //  connect(ui.chkPlaneRemoval, &QCheckBox::toggled, [this](bool value) { ui.mViewportXYZ->setPlaneRemoval(value);
-  //  });
-  //
-  //  connect(ui.sldPlaneThreshold, &QSlider::valueChanged, [this]() {
-  //    int32_t dim = (ui.rdoPlaneX->isChecked()) ? 0 : (ui.rdoPlaneY->isChecked() ? 1 : 2);
-  //    ui.mViewportXYZ->setPlaneRemovalParams(ui.sldPlaneThreshold->value() / 100.0f, dim,
-  //                                           ui.rdoPlaneBelow->isChecked() ? -1.0f : 1.0f);
-  //  });
-  //
-  //  // Radio buttons to select coordinate direction
-  //  connect(ui.rdoPlaneX, &QRadioButton::released, [this]() {
-  //    ui.rdoPlaneY->setChecked(false);
-  //    ui.rdoPlaneZ->setChecked(false);
-  //    ui.mViewportXYZ->setPlaneRemovalParams(ui.sldPlaneThreshold->value() / 100.0f, 0,
-  //                                           ui.rdoPlaneBelow->isChecked() ? -1.0f : 1.0f);
-  //  });
-  //
-  //  connect(ui.rdoPlaneY, &QRadioButton::released, [this]() {
-  //    ui.rdoPlaneX->setChecked(false);
-  //    ui.rdoPlaneZ->setChecked(false);
-  //    ui.mViewportXYZ->setPlaneRemovalParams(ui.sldPlaneThreshold->value() / 100.0f, 1,
-  //                                           ui.rdoPlaneBelow->isChecked() ? -1.0f : 1.0f);
-  //  });
-  //
-  //  connect(ui.rdoPlaneZ, &QRadioButton::released, [this]() {
-  //    ui.rdoPlaneX->setChecked(false);
-  //    ui.rdoPlaneY->setChecked(false);
-  //    ui.mViewportXYZ->setPlaneRemovalParams(ui.sldPlaneThreshold->value() / 100.0f, 2,
-  //                                           ui.rdoPlaneBelow->isChecked() ? -1.0f : 1.0f);
-  //  });
-  //
-  //  // Radio buttons to select orientation
-  //  connect(ui.rdoPlaneAbove, &QRadioButton::released, [this]() {
-  //    ui.rdoPlaneBelow->setChecked(false);
-  //    int32_t dim = (ui.rdoPlaneX->isChecked()) ? 0 : (ui.rdoPlaneY->isChecked() ? 1 : 2);
-  //    ui.mViewportXYZ->setPlaneRemovalParams(ui.sldPlaneThreshold->value() / 100.0f, dim, 1.0f);
-  //  });
-  //
-  //  connect(ui.rdoPlaneBelow, &QRadioButton::released, [this]() {
-  //    ui.rdoPlaneAbove->setChecked(false);
-  //    int32_t dim = (ui.rdoPlaneX->isChecked()) ? 0 : (ui.rdoPlaneY->isChecked() ? 1 : 2);
-  //    ui.mViewportXYZ->setPlaneRemovalParams(ui.sldPlaneThreshold->value() / 100.0f, dim, -1.0f);
-  //  });
 
   connect(ui.chkShowScanRange, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("show scan range", value); });
@@ -235,6 +199,12 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.chkShowPlane, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("show plane", value); });
 
+  connect(ui.chkFollowPose, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("follow pose", value); });
+  connect(ui.chkFollowPose2, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("follow pose", value); });
+
+
   // ------------------------------------------
   // Camera Projection
   // ------------------------------------------
@@ -271,13 +241,194 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     ui.mViewportXYZ->setCameraProjection(Viewport::CameraProjection::orthographic);
   });
 
+  //  connect(ui.btnInitalizeInstances, &QPushButton::released, [this]() { ui.mViewportXYZ->initializeInstanceLables();
+  //  });
+  //  connect(ui.chkDrawInstanceMap, &QCheckBox::toggled,
+  //          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instancemap", value); });
+  //  connect(ui.chkDrawInstances, &QCheckBox::toggled,
+  //          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instances", value); });
+
+  connect(ui.sldGamma, &QSlider::valueChanged, [this](int32_t value) {
+    float gamma = float(value) / 10.0f;
+    ui.lblGammaValue->setText(QString::number(gamma));
+    ui.mViewportXYZ->setGammaCorrection(gamma);
+  });
+
+  connect(ui.cmbColormap, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+          [this](int32_t idx) { ui.mViewportXYZ->setRemissionColorMap(idx); });
+
+  connect(ui.tabWidget, &QTabWidget::currentChanged, [this](int32_t idx) {
+    if (idx == 2) {
+      ui.mViewportXYZ->labelInstances(true);
+      lblLabelingMode_.setText(" INSTANCES ");
+    } else {
+      ui.mViewportXYZ->labelInstances(false);
+      lblLabelingMode_.setText(" POINTS ");
+    }
+  });
+
+  connect(ui.btnSelectInstance, &QToolButton::clicked, [this](bool checked) {
+    ui.mViewportXYZ->setInstanceSelectionMode(checked);
+    if (checked && ui.btnJoinInstances->isChecked()) {
+      // end join mode:
+
+      whileBlocking(ui.btnJoinInstances)->setChecked(false);
+      ui.btnSelectInstance->setChecked(false);
+      ui.btnCreateInstance->setChecked(false);
+
+      ui.btnDeletePoints->setEnabled(false);
+      ui.btnSplitPoints->setEnabled(false);
+      ui.btnAddPoints->setEnabled(false);
+
+      // update instance labeling mode.
+      if (ui.btnAddPoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(0);
+      if (ui.btnSplitPoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(1);
+      if (ui.btnDeletePoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(2);
+    }
+  });
+
+  connect(ui.mViewportXYZ, &Viewport::instanceSelected, [this](uint32_t value) {
+    if (ui.btnJoinInstances->isChecked()) {
+      if (value > 0) {
+        if (numSelectedInstances_ == 0) {
+          numSelectedInstances_ = 1;
+
+          return;
+        }
+      }
+    }
+
+    whileBlocking(ui.btnJoinInstances)->setChecked(false);
+    ui.btnSelectInstance->setChecked(false);
+    ui.btnCreateInstance->setChecked(false);
+
+    ui.btnDeletePoints->setEnabled(false);
+    ui.btnSplitPoints->setEnabled(false);
+    ui.btnAddPoints->setEnabled(false);
+
+    // update instance labeling mode.
+    if (ui.btnAddPoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(0);
+    if (ui.btnSplitPoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(1);
+    if (ui.btnDeletePoints->isChecked()) ui.mViewportXYZ->setInstanceLabelingMode(2);
+
+    if (value > 0) {
+      ui.btnDeletePoints->setEnabled(true);
+      ui.btnSplitPoints->setEnabled(true);
+      ui.btnAddPoints->setEnabled(true);
+      numSelectedInstances_ = 1;
+    } else {
+      numSelectedInstances_ = 0;
+    }
+  });
+
+  connect(ui.btnAddPoints, &QToolButton::clicked, [this](bool checked) {
+    ui.btnDeletePoints->setChecked(false);
+    ui.btnSplitPoints->setChecked(false);
+    ui.btnAddPoints->setChecked(true);
+    ui.mViewportXYZ->setInstanceLabelingMode(0);
+  });
+
+  connect(ui.btnDeletePoints, &QToolButton::clicked, [this](bool checked) {
+    ui.btnAddPoints->setChecked(false);
+    ui.btnSplitPoints->setChecked(false);
+    ui.btnDeletePoints->setChecked(true);
+    ui.mViewportXYZ->setInstanceLabelingMode(2);
+  });
+
+  connect(ui.btnSplitPoints, &QToolButton::clicked, [this](bool checked) {
+    ui.btnDeletePoints->setChecked(false);
+    ui.btnAddPoints->setChecked(false);
+    ui.btnSplitPoints->setChecked(true);
+    ui.mViewportXYZ->setInstanceLabelingMode(1);
+  });
+
+  connect(ui.chkDrawInstances, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instances", value); });
+
+  connect(ui.chkHideLabeledInstances, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("hide labeled instances", value); });
+
+  connect(ui.chkShowAllMovingInstances, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("show all moving instances", value); });
+
+  connect(ui.cmbLoop_instances, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+          [this](int32_t idx) { ui.cmbLoops->setCurrentIndex(idx); });
+
+  connect(ui.cmbLoops, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this](int32_t idx) {
+    if (idx == 0) {
+      ui.mViewportXYZ->setDrawingOption("show scan range", false);
+
+      whileBlocking(ui.spinRangeBegin)->setValue(0);
+      whileBlocking(ui.spinRangeEnd)->setValue(ui.spinRangeEnd->maximum());
+      whileBlocking(ui.chkShowScanRange)->setChecked(false);
+
+    } else {
+      if (idx - 1 < int32_t(loopRanges_.size())) {
+        ui.mViewportXYZ->setScanRange(loopRanges_[idx - 1].start, loopRanges_[idx - 1].end);
+        whileBlocking(ui.mViewportXYZ)->setDrawingOption("show scan range", true);
+        whileBlocking(ui.chkShowScanRange)->setChecked(true);
+        whileBlocking(ui.spinRangeBegin)->setValue(loopRanges_[idx - 1].start);
+        whileBlocking(ui.spinRangeEnd)->setValue(loopRanges_[idx - 1].end);
+      }
+    }
+
+    whileBlocking(ui.cmbLoop_instances)->setCurrentIndex(idx);
+  });
+
+  connect(ui.btnCreateInstance, &QToolButton::clicked, [this](bool checked) {
+    if (checked) {
+      ui.btnSelectInstance->setChecked(false);
+      ui.btnDeletePoints->setEnabled(false);
+      ui.btnAddPoints->setEnabled(false);
+      ui.btnSplitPoints->setEnabled(false);
+
+      ui.mViewportXYZ->setInstanceSelectionMode(false);
+      ui.mViewportXYZ->setInstanceLabelingMode(3);
+    }
+  });
+
+  connect(ui.btnJoinInstances, &QToolButton::clicked, [this](bool checked) {
+    if (checked) {
+      whileBlocking(ui.btnSelectInstance)->setChecked(false);
+      whileBlocking(ui.btnCreateInstance)->setChecked(false);
+      ui.btnDeletePoints->setEnabled(false);
+      ui.btnAddPoints->setEnabled(false);
+      ui.btnSplitPoints->setEnabled(false);
+
+      ui.mViewportXYZ->setInstanceLabelingMode(4);
+
+      std::cout << numSelectedInstances_ << " instances selected." << std::endl;
+    }
+
+    connect(ui.chkAddCarPoints, &QCheckBox::toggled,
+            [this](bool value) { ui.mViewportXYZ->setDrawingOption("add car points", value); });
+
+    ui.mViewportXYZ->setInstanceSelectionMode(checked);
+  });
+
+  connect(ui.chkShowInstanceBoxes, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instance boxes", value); });
+
   /** load labels and colors **/
   std::map<uint32_t, glow::GlColor> label_colors;
 
   getLabelNames("labels.xml", label_names);
   getLabelColors("labels.xml", label_colors);
 
+  std::vector<uint32_t> instanceableLabels;
+  std::vector<Label> annotations;
+  getLabels("labels.xml", annotations);
+  for (auto ann : annotations) {
+    if (ann.instanceable) {
+      instanceableLabels.push_back(ann.id);
+      instanceableLabels.push_back(ann.id_moving);
+    }
+  }
+
+  std::cout << "Found " << instanceableLabels.size() << " instanceable labels." << std::endl;
+
   ui.mViewportXYZ->setLabelColors(label_colors);
+  ui.mViewportXYZ->setInstanceableLabels(instanceableLabels);
   ui.mViewportXYZ->setGroundThreshold(ui.spinGroundThreshold->value());
 
   generateLabelButtons();
@@ -303,6 +454,11 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   lblTime_.setAlignment(Qt::AlignCenter);
   lblTime_.setMinimumWidth(75);
 
+  lblLabelingMode_.setText(" POINTS ");
+  lblLabelingMode_.setAlignment(Qt::AlignCenter | Qt::AlignVCenter);
+  lblLabelingMode_.setMinimumWidth(100);
+
+  ui.statusbar->addPermanentWidget(&lblLabelingMode_);
   ui.statusbar->addPermanentWidget(&lblOverwrite_);
   ui.statusbar->addPermanentWidget(&lblNumPoints_);
   ui.statusbar->addPermanentWidget(&progressLabeled_);
@@ -328,8 +484,9 @@ Mainframe::~Mainframe() {}
 void Mainframe::closeEvent(QCloseEvent* event) {
   if (mChangesSinceLastSave) {
     int32_t ret =
-        QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
-                                                              "Do you want to save your changes?"),
+        QMessageBox::warning(this, tr("Unsaved changes."),
+                             tr("The annotation has been modified.\n"
+                                "Do you want to save your changes?"),
                              QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
     if (ret == QMessageBox::Save) {
       save();
@@ -349,8 +506,9 @@ void Mainframe::open() {
 
   if (mChangesSinceLastSave) {
     int32_t ret =
-        QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
-                                                              "Do you want to save your changes?"),
+        QMessageBox::warning(this, tr("Unsaved changes."),
+                             tr("The annotation has been modified.\n"
+                                "Do you want to save your changes?"),
                              QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
     if (ret == QMessageBox::Save) {
       save();
@@ -371,6 +529,8 @@ void Mainframe::open() {
     }
 
     reader_.initialize(retValue);
+
+    ui.mViewportXYZ->setMaximumInstanceIds(reader_.getMaxInstanceIds());
 
     //    ui.sldTimeline->setMaximum(reader_.count());
     ui.btnBackward->setEnabled(false);
@@ -406,6 +566,7 @@ void Mainframe::save() {
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
   reader_.update(indexes_, labels_);
+  reader_.updateMetaInformation(ui.mViewportXYZ->getMaximumInstanceIds());
 
   progressLabeled_.setValue(100.0f * ui.mViewportXYZ->labeledPointCount() / ui.mViewportXYZ->loadedPointCount());
 
@@ -600,8 +761,9 @@ void Mainframe::setTileIndex(uint32_t i, uint32_t j) {
   if (readerFuture_.valid()) readerFuture_.wait();
 
   if (mChangesSinceLastSave) {
-    int32_t ret = QMessageBox::warning(this, tr("Unsaved changes."), tr("The annotation has been modified.\n"
-                                                                        "Do you want to save your changes?"),
+    int32_t ret = QMessageBox::warning(this, tr("Unsaved changes."),
+                                       tr("The annotation has been modified.\n"
+                                          "Do you want to save your changes?"),
                                        QMessageBox::Save | QMessageBox::Discard, QMessageBox::Save);
     if (ret == QMessageBox::Save) save();
   }
@@ -690,23 +852,62 @@ void Mainframe::updateScans() {
   lblNumPoints_.setText(dotted_number + " ");
   progressLabeled_.setValue(100.0f * ui.mViewportXYZ->labeledPointCount() / ui.mViewportXYZ->loadedPointCount());
 
-  ui.spinRangeBegin->setValue(std::min<int32_t>(ui.spinRangeBegin->value(), indexes_.size() - 1));
-  ui.spinRangeBegin->setMaximum(indexes_.size() - 1);
-  ui.spinRangeEnd->setValue(std::min<int32_t>(ui.spinRangeEnd->value(), indexes_.size() - 1));
-  ui.spinRangeEnd->setMaximum(indexes_.size() - 1);
+  {
+    // update scan range selection and loop selection.
 
-  uint32_t start_idx = 0;
-  for (uint32_t i = 1; i < indexes_.size(); ++i) {
-    if (indexes_[i - 1] + 1 != indexes_[i]) {
-      std::cout << "Found loop from " << start_idx << " to " << i - 1 << std::endl;
-      start_idx = i;
+    ui.chkShowScanRange->setChecked(false);
+    ui.mViewportXYZ->setDrawingOption("show scan range", false);
+    ui.mViewportXYZ->setScanRange(0, indexes_.size() - 1);  // ensure valid values.
+
+    ui.spinRangeBegin->setMaximum(indexes_.size() - 1);
+    ui.spinRangeEnd->setMaximum(indexes_.size() - 1);
+
+    whileBlocking(ui.spinRangeBegin)->setValue(0);
+    whileBlocking(ui.spinRangeEnd)->setValue(indexes_.size() - 1);
+
+    const std::vector<uint32_t>& sorted_indexes = indexes_;
+
+    loopRanges_.clear();
+
+    uint32_t lastLoopEnd = 0;
+    for (uint32_t i = 1; i < sorted_indexes.size(); ++i) {
+      // note: difference of at most min_loop_difference scans is considered to be inside the same loop.
+      uint32_t min_loop_difference = 10;
+      if (sorted_indexes[i] - sorted_indexes[i - 1] > min_loop_difference) {
+        ScanRange range;
+        range.start = lastLoopEnd;
+        range.end = i - 1;
+        lastLoopEnd = i;
+        loopRanges_.push_back(range);
+      }
     }
+
+    if (lastLoopEnd > 0) {
+      ScanRange range;
+      range.start = lastLoopEnd;
+      range.end = indexes_.size() - 1;
+      loopRanges_.push_back(range);
+    }
+
+    ui.cmbLoop_instances->blockSignals(true);
+    ui.cmbLoops->blockSignals(true);
+
+    ui.cmbLoops->clear();
+    ui.cmbLoop_instances->clear();
+
+    ui.cmbLoop_instances->insertItem(0, "all loops");
+    ui.cmbLoops->addItem("all loops");
+    for (auto range : loopRanges_) {
+      ui.cmbLoop_instances->addItem(QString::number(range.start) + QString(" - ") + QString::number(range.end));
+      ui.cmbLoops->addItem(QString::number(range.start) + QString(" - ") + QString::number(range.end));
+    }
+
+    ui.cmbLoop_instances->setCurrentIndex(0);
+    ui.cmbLoops->setCurrentIndex(0);
+
+    ui.cmbLoops->blockSignals(false);
+    ui.cmbLoop_instances->blockSignals(false);
   }
-
-  if (indexes_.size() > 0) std::cout << "Found loop from " << start_idx << " to " << indexes_.size() - 1 << std::endl;
-
-  timeTileStarted_.start();
-  mLabelTimer_.start(1000);
 }
 
 void Mainframe::forward() {
@@ -898,6 +1099,7 @@ void Mainframe::keyPressEvent(QKeyEvent* event) {
     case Qt::Key_R:
       ui.chkRemoveGround->toggle();
       return;
+
     default:
       if (!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyPressEvent(event);
       return;
@@ -933,6 +1135,16 @@ void Mainframe::keyReleaseEvent(QKeyEvent* event) {
     case Qt::Key_Q:
       ui.spinGroundThreshold->setValue(value - step);
       return;
+
+    case Qt::Key_Space:
+      if (!ui.btnSelectInstance->isChecked()) ui.btnSelectInstance->click();
+      return;
+
+    case Qt::Key_J:
+    case Qt::Key_Insert:
+      ui.btnJoinInstances->click();
+      return;
+
     default:
       if (!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyReleaseEvent(event);
       return;

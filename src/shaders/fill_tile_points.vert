@@ -16,6 +16,8 @@ uniform vec2 tilePos;
 uniform float tileSize;
 uniform float tileBoundary;
 
+uniform bool addCarPoints;
+
 out POINT
 {
   bool valid;
@@ -39,7 +41,7 @@ void main()
    
   vs_out.valid = false;
   
-  if(inside_tile && !out_of_range && !is_car_point)
+  if(inside_tile && !out_of_range && (addCarPoints || !is_car_point ))
   {
     vs_out.valid = true;
     vs_out.point = vec4(v_global.xyz, in_remission);
