@@ -108,6 +108,8 @@ class Mainframe : public QMainWindow {
   };
   std::vector<ScanRange> loopRanges_;
   uint32_t numSelectedInstances_{0};
+  QTime mStartLabelTime_;
+  QTimer mLabelTimer_;
 };
 
 #endif /* MAINFRAME_H_ */

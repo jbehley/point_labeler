@@ -204,7 +204,6 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
   connect(ui.chkFollowPose2, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("follow pose", value); });
 
-
   // ------------------------------------------
   // Camera Projection
   // ------------------------------------------
@@ -240,13 +239,6 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     ui.actionOrthographic->setChecked(true);
     ui.mViewportXYZ->setCameraProjection(Viewport::CameraProjection::orthographic);
   });
-
-  //  connect(ui.btnInitalizeInstances, &QPushButton::released, [this]() { ui.mViewportXYZ->initializeInstanceLables();
-  //  });
-  //  connect(ui.chkDrawInstanceMap, &QCheckBox::toggled,
-  //          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instancemap", value); });
-  //  connect(ui.chkDrawInstances, &QCheckBox::toggled,
-  //          [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instances", value); });
 
   connect(ui.sldGamma, &QSlider::valueChanged, [this](int32_t value) {
     float gamma = float(value) / 10.0f;
@@ -408,6 +400,20 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.chkShowInstanceBoxes, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instance boxes", value); });
+
+  connect(&mLabelTimer_, &QTimer::timeout, [this]() {
+    int32_t remainder = mStartLabelTime_.elapsed();
+    int32_t hours = remainder / (60 * 60 * 1000);
+    remainder -= hours * (60 * 60 * 1000);
+    int32_t minutes = remainder / (60 * 1000);
+    remainder -= minutes * (60 * 1000);
+    int32_t seconds = remainder / (1000);
+
+    lblTime_.setText(QString("%1:%2:%3")
+                         .arg(QString::number(hours), 2, '0')
+                         .arg(QString::number(minutes), 2, '0')
+                         .arg(QString::number(seconds), 2, '0'));
+  });
 
   /** load labels and colors **/
   std::map<uint32_t, glow::GlColor> label_colors;
@@ -908,6 +914,9 @@ void Mainframe::updateScans() {
     ui.cmbLoops->blockSignals(false);
     ui.cmbLoop_instances->blockSignals(false);
   }
+
+  mStartLabelTime_.start();
+  mLabelTimer_.start(1000);
 }
 
 void Mainframe::forward() {

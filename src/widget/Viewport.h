@@ -1,7 +1,3 @@
-/* \brief a view, which can be used to label points.
- *
- *
- */
 #ifndef POINTVIEW_H_
 #define POINTVIEW_H_
 
