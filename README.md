@@ -1,18 +1,16 @@
-# point cloud annotator (PCA)
+# Point Cloud Labeling Tool
 
- Tool for labeling of single point clouds or a stream of point clouds. 
+ Tool for labeling of a single point clouds or a stream of point clouds. 
  
- Given the poses of a KITTI point cloud dataset, we load tiles of overlapping point clouds. Thus, multiple point clouds 
- are labeled at once in a certain area. 
-
+ Given the poses of a KITTI point cloud dataset, we load tiles of overlapping point clouds. Thus, multiple point clouds are labeled at once in a certain area. 
 
 ## Features
  - Support for KITTI Vision Benchmark Point Clouds.
  - Human-readable label description files in xml allow to define label names, ids, and colors.
  - Modern OpenGL shaders for rendering of even millions of points.
- - Tools for labeling of individual points, areas, and filling segments.
+ - Tools for labeling of individual points and polygons.
  - Filtering of labels makes it easy to label even complicated structures with ease.
- 
+
 ## Dependencies
 
 * catkin
@@ -95,12 +93,28 @@ point cloud folder
 ├── velodyne/             -- directory containing ".bin" files with Velodyne point clouds.   
 ├── labels/   [optional]  -- label directory, will be generated if not present.  
 ├── image_2/  [optional]  -- directory containing ".png" files from the color   camera.  
-├── calib.txt [optional]  -- calibration of velodyne vs. camera. needed for projection of point cloud into camera.  
+├── calib.txt             -- calibration of velodyne vs. camera. needed for projection of point cloud into camera.  
 └── poses.txt             -- file containing the poses of every scan.
 </pre>
 
  
 
-## TODO
+## Documentation
 
- See TODO.md.
+See the for more information on the interface.
+
+
+ ## Citation
+
+If you're using the tool in your research, it would be nice if you cite our [paper](https://arxiv.org/abs/1904.01416):
+
+```
+@inproceedings{behley2019iccv,
+    author = {J. Behley and M. Garbade and A. Milioto and J. Quenzel and S. Behnke and C. Stachniss and J. Gall},
+     title = {{SemanticKITTI: A Dataset for Semantic Scene Understanding of LiDAR Sequences}},
+ booktitle = {Proc. of the IEEE/CVF International Conf.~on Computer Vision (ICCV)},
+      year = {2019}
+}
+```
+
+We used the tool to label SemanticKITTI, which contains overall over 40.000 scans organized in 20 sequences. 
