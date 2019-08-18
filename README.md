@@ -58,7 +58,6 @@ catkin build point_labeler
 ```
 Now the project root directory (e.g. `~/catkin_ws/src/point_labeler`) should contain a `bin` directory containing the labeler.
 
- TODO: have more convinent `setup.sh` doing the whole stuff... 
 
 ## Usage
 
@@ -73,9 +72,9 @@ In the `settings.cfg` files you can change the followings options:
 
 <pre>
 
-tile size: 50.0   # size of a tile (the smaller the less scans get loaded.
+tile size: 100.0   # size of a tile (the smaller the less scans get loaded.)
 max scans: 500    # number of scans to load for a tile. (should be maybe 1000), but this currently very memory consuming.
-min range: 2.5    # minimum distance of points to consider.
+min range: 0.0    # minimum distance of points to consider.
 max range: 50.0   # maximum distance of points in the point cloud.
 
 </pre>
@@ -101,7 +100,7 @@ point cloud folder
 
 ## Documentation
 
-See the for more information on the interface.
+See the wiki for more information on the usage and other details.
 
 
  ## Citation
