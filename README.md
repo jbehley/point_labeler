@@ -2,6 +2,8 @@
 
  Tool for labeling of a single point clouds or a stream of point clouds. 
  
+<img src="https://user-images.githubusercontent.com/11506664/63230808-340d5680-c212-11e9-8902-bc08f0f64dc8.png" width=500>
+
  Given the poses of a KITTI point cloud dataset, we load tiles of overlapping point clouds. Thus, multiple point clouds are labeled at once in a certain area. 
 
 ## Features
@@ -22,7 +24,7 @@
  
 ## Build
   
-On Ubuntu 16.04, most of the dependencies can be installed from the package manager:
+On Ubuntu 16.04 and 18.04, most of the dependencies can be installed from the package manager:
 ```bash
 sudo apt install git libeigen3-dev libboost-all-dev qtbase5-dev libglew-dev catkin
 ```
