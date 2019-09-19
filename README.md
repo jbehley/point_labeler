@@ -19,7 +19,7 @@
 * Eigen >= 3.2
 * boost >= 1.54
 * QT >= 5.2
-* OpenGL >= 3.3
+* OpenGL Core Profile >= 4.0
 * [glow](https://github.com/jbehley/glow) (catkin package)
  
 ## Build
