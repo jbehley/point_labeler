@@ -102,7 +102,7 @@ point cloud folder
 
 ## Documentation
 
-See the wiki for more information on the usage and other details.
+See the [wiki](https://github.com/jbehley/point_labeler/wiki) for more information on the usage and other details.
 
 
  ## Citation
