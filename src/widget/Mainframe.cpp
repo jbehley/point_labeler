@@ -392,11 +392,11 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
       std::cout << numSelectedInstances_ << " instances selected." << std::endl;
     }
 
-    connect(ui.chkAddCarPoints, &QCheckBox::toggled,
-            [this](bool value) { ui.mViewportXYZ->setDrawingOption("add car points", value); });
-
     ui.mViewportXYZ->setInstanceSelectionMode(checked);
   });
+
+  connect(ui.chkAddCarPoints, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("add car points", value); });
 
   connect(ui.chkShowInstanceBoxes, &QCheckBox::toggled,
           [this](bool value) { ui.mViewportXYZ->setDrawingOption("draw instance boxes", value); });
