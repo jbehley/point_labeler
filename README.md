@@ -19,7 +19,7 @@
 * Eigen >= 3.2
 * boost >= 1.54
 * QT >= 5.2
-* OpenGL >= 3.3
+* OpenGL Core Profile >= 4.0
 * [glow](https://github.com/jbehley/glow) (catkin package)
  
 ## Build
@@ -102,7 +102,7 @@ point cloud folder
 
 ## Documentation
 
-See the wiki for more information on the usage and other details.
+See the [wiki](https://github.com/jbehley/point_labeler/wiki) for more information on the usage and other details.
 
 
  ## Citation
