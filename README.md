@@ -78,6 +78,7 @@ tile size: 100.0   # size of a tile (the smaller the less scans get loaded.)
 max scans: 500    # number of scans to load for a tile. (should be maybe 1000), but this currently very memory consuming.
 min range: 0.0    # minimum distance of points to consider.
 max range: 50.0   # maximum distance of points in the point cloud.
+add car points: true # add points at the origin of the sensor possibly caused by the car itself. Default: false.
 
 </pre>
 
