@@ -927,7 +927,7 @@ void Mainframe::forward() {
   if (ui.chkShowScanRange->isChecked()) {
     int start_value = ui.spinRangeBegin->value();
     int end_value = ui.spinRangeEnd->value();
-    int difference = end_value - ui.spinRangeBegin->value() + 1;
+    int difference = end_value - start_value + 1;
     ui.spinRangeBegin->setValue(end_value + 1);
     ui.spinRangeEnd->setValue(end_value + difference);
   }
