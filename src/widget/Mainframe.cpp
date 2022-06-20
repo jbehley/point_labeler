@@ -930,6 +930,7 @@ void Mainframe::forward() {
     int difference = end_value - start_value + 1;
     ui.spinRangeBegin->setValue(end_value + 1);
     ui.spinRangeEnd->setValue(end_value + difference);
+    ui.sldTimeline->setValue(end_value + 1);
   }
 }
 
@@ -942,10 +943,19 @@ void Mainframe::backward() {
     int start_value = ui.spinRangeBegin->value();
     int end_value = ui.spinRangeEnd->value();
     int difference = end_value - start_value + 1;
-    ui.spinRangeBegin->setValue(start_value - difference);
-    ui.spinRangeEnd->setValue(start_value - 1);
+    if (start_value - difference < 0) {
+      ui.spinRangeBegin->setValue(0);
+      ui.spinRangeEnd->setValue(difference);
+      ui.sldTimeline->setValue(0);
+      ui.btnBackward->setEnabled(false);
+    } else {
+      ui.spinRangeBegin->setValue(start_value - difference);
+      ui.spinRangeEnd->setValue(start_value - 1);
+      ui.sldTimeline->setValue(start_value - difference);
+    }
   }
 }
+
 void Mainframe::readConfig() {
   std::ifstream in("settings.cfg");
 
