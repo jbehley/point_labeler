@@ -924,13 +924,21 @@ void Mainframe::forward() {
   if (value < int32_t(reader_.count())) ui.sldTimeline->setValue(value);
   ui.btnBackward->setEnabled(true);
   if (value == int32_t(reader_.count()) - 1) ui.btnForward->setEnabled(false);
+
   if (ui.chkShowScanRange->isChecked()) {
     int start_value = ui.spinRangeBegin->value();
     int end_value = ui.spinRangeEnd->value();
     int difference = end_value - start_value + 1;
-    ui.spinRangeBegin->setValue(end_value + 1);
-    ui.spinRangeEnd->setValue(end_value + difference);
-    ui.sldTimeline->setValue(end_value + 1);
+    if (end_value + 1 >= ui.spinRangeEnd->maximum()) {
+      ui.spinRangeBegin->setValue(ui.spinRangeEnd->maximum() - difference);
+      ui.spinRangeEnd->setValue(ui.spinRangeEnd->maximum());
+      ui.sldTimeline->setValue(ui.spinRangeEnd->maximum());
+      ui.btnForward->setEnabled(false);
+    } else {
+      ui.spinRangeBegin->setValue(end_value + 1);
+      ui.spinRangeEnd->setValue(end_value + difference);
+      ui.sldTimeline->setValue(end_value + 1);
+    }
   }
 }
 
@@ -939,11 +947,12 @@ void Mainframe::backward() {
   if (value >= 0) ui.sldTimeline->setValue(value);
   ui.btnForward->setEnabled(true);
   if (value == 0) ui.btnBackward->setEnabled(false);
+
   if (ui.chkShowScanRange->isChecked()) {
     int start_value = ui.spinRangeBegin->value();
     int end_value = ui.spinRangeEnd->value();
     int difference = end_value - start_value + 1;
-    if (start_value - difference < 0) {
+    if (start_value - difference <= 0) {
       ui.spinRangeBegin->setValue(0);
       ui.spinRangeEnd->setValue(difference);
       ui.sldTimeline->setValue(0);
