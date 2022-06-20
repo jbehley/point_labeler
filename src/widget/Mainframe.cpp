@@ -924,6 +924,13 @@ void Mainframe::forward() {
   if (value < int32_t(reader_.count())) ui.sldTimeline->setValue(value);
   ui.btnBackward->setEnabled(true);
   if (value == int32_t(reader_.count()) - 1) ui.btnForward->setEnabled(false);
+  if (ui.chkShowScanRange->isChecked()) {
+    int start_value = ui.spinRangeBegin->value();
+    int end_value = ui.spinRangeEnd->value();
+    int difference = end_value - start_value + 1;
+    ui.spinRangeBegin->setValue(end_value + 1);
+    ui.spinRangeEnd->setValue(end_value + difference);
+  }
 }
 
 void Mainframe::backward() {
@@ -931,6 +938,13 @@ void Mainframe::backward() {
   if (value >= 0) ui.sldTimeline->setValue(value);
   ui.btnForward->setEnabled(true);
   if (value == 0) ui.btnBackward->setEnabled(false);
+  if (ui.chkShowScanRange->isChecked()) {
+    int start_value = ui.spinRangeBegin->value();
+    int end_value = ui.spinRangeEnd->value();
+    int difference = end_value - start_value + 1;
+    ui.spinRangeBegin->setValue(start_value - difference);
+    ui.spinRangeEnd->setValue(start_value - 1);
+  }
 }
 void Mainframe::readConfig() {
   std::ifstream in("settings.cfg");
