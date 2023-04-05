@@ -16,8 +16,10 @@
 
 #include <QtGui/QClipboard>
 #include <boost/lexical_cast.hpp>
+#include <boost/filesystem.hpp>
 
 using namespace glow;
+namespace fs = boost::filesystem;
 
 // see https://stackoverflow.com/a/24349347
 template <class T>
@@ -51,6 +53,9 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
           [this]() { changeMode(Viewport::PAINT, ui.actionPaintMode->isChecked()); });
   connect(ui.actionPolygonMode, &QAction::triggered,
           [this]() { changeMode(Viewport::POLYGON, ui.actionPolygonMode->isChecked()); });
+
+  connect(ui.actionToggleDarkBackground, &QAction::triggered,
+          [this]() { ui.mViewportXYZ->toggleBackground(); });
 
   ui.btnOverwrite->setDefaultAction(ui.actionOverwrite);
   ui.btnFilter->setDefaultAction(ui.actionFilter);
@@ -480,6 +485,7 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.actionScreenshot, &QAction::triggered, [this]() {
     QImage img = ui.mViewportXYZ->grabFrameBuffer();
+    std::cout << "-- Saving screenshot to screenshot.png" << std::endl;
     img.save("screenshot.png");
     QApplication::clipboard()->setImage(img);
   });
@@ -1000,11 +1006,11 @@ void Mainframe::readConfig() {
 }
 
 void Mainframe::initializeIcons() {
-  std::string assertDir = QDir::currentPath().toStdString() + "/../assets/";
+  fs::path assetDir = fs::path(ASSETS_PATH);
   std::cout << QDir::currentPath().toStdString() << std::endl;
   {
     QIcon icon;
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "brush.png")));
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "brush.png").string())));
 
     ui.actionPaintMode->setIcon(icon);
     ui.btnBrushMode->setIcon(icon);
@@ -1012,71 +1018,85 @@ void Mainframe::initializeIcons() {
 
   {
     QIcon icon;
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "polygon.png")));
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "polygon.png").string())));
     ui.actionPolygonMode->setIcon(icon);
     ui.btnPolygonMode->setIcon(icon);
   }
 
   {
     QIcon icon;
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "filter.png")));
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "filter.png").string())));
     ui.actionFilter->setIcon(icon);
   }
 
   {
     QIcon icon;
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "overwrite_on.png")), QIcon::Normal, QIcon::On);
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "overwrite_off.png")), QIcon::Normal, QIcon::Off);
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "overwrite_on.png").string())), QIcon::Normal, QIcon::On);
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "overwrite_off.png").string())), QIcon::Normal, QIcon::Off);
     ui.actionOverwrite->setIcon(icon);
   }
 
   {
     QIcon icon;
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "open.png")));
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "open.png").string())));
 
     ui.actionOpen->setIcon(icon);
   }
 
   {
     QIcon icon;
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "save.png")));
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "save.png").string())));
 
     ui.actionSave->setIcon(icon);
   }
 
   {
     QIcon icon;
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "reload.png")));
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "reload.png").string())));
 
     ui.actionReload->setIcon(icon);
   }
 
   {
     QIcon icon;
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "centerview.png")));
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "centerview.png").string())));
 
     ui.actionCenterView->setIcon(icon);
   }
 
   {
     QIcon icon;
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "image.png")));
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "insert_picture_icon_2.png").string())));
 
     ui.actionShowImage->setIcon(icon);
   }
 
   {
     QIcon icon;
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "layoutA.png")));
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "layoutA.png").string())));
 
     ui.btnButtonLayoutA->setIcon(icon);
   }
 
   {
     QIcon icon;
-    icon.addPixmap(QPixmap(QString::fromStdString(assertDir + "layoutB.png")));
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "layoutB.png").string())));
 
     ui.btnButtonLayoutB->setIcon(icon);
+  }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "dark_mode.png").string())));
+
+    ui.actionToggleDarkBackground->setIcon(icon);
+  }
+
+  {
+    QIcon icon;
+    icon.addPixmap(QPixmap(QString::fromStdString((assetDir / "camera.png").string())));
+
+    ui.actionScreenshot->setIcon(icon);
   }
 }
 

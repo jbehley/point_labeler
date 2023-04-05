@@ -361,7 +361,7 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>200</width>
+               <width>253</width>
                <height>706</height>
               </rect>
              </property>
@@ -1466,6 +1466,7 @@
    <addaction name="actionShowImage"/>
    <addaction name="actionScreenshot"/>
    <addaction name="separator"/>
+   <addaction name="actionToggleDarkBackground"/>
   </widget>
   <action name="actionOpen">
    <property name="text">
@@ -1579,6 +1580,11 @@
   <action name="actionScreenshot">
    <property name="text">
     <string>screenshot</string>
+   </property>
+  </action>
+  <action name="actionToggleDarkBackground">
+   <property name="text">
+    <string>Toggle Dark Background</string>
    </property>
   </action>
  </widget>

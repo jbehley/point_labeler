@@ -23,6 +23,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
       contextInitialized_(initContext()),
       mAxis(XYZ),
       mMode(NONE),
+      mBackground(LIGHT),
       mFlags(FLAG_OVERWRITE),
       mCurrentLabel(0),
       mRadius(5),
@@ -561,6 +562,17 @@ void Viewport::setMode(MODE mode) {
   updateGL();
 }
 
+void Viewport::toggleBackground() {
+  if (mBackground == BACKGROUND::LIGHT)
+  {
+    mBackground = BACKGROUND::DARK;
+  } else {
+    mBackground = BACKGROUND::LIGHT;
+  }
+
+  updateGL();
+}
+
 void Viewport::setFlags(int32_t flags) { mFlags = flags; }
 
 void Viewport::setOverwrite(bool value) {
@@ -670,12 +682,20 @@ void Viewport::setLabelVisibility(uint32_t label, bool visible) {
 }
 
 void Viewport::initializeGL() {
-  glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+  applyBackground();
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
   glEnable(GL_LINE_SMOOTH);
 
   mCamera->lookAt(5.0f, 5.0f, 5.0f, 0.0f, 0.0f, 0.0f);
+}
+
+void Viewport::applyBackground() {
+  if (mBackground == LIGHT) {
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+  } else { 
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  }
 }
 
 void Viewport::resizeGL(int w, int h) {
@@ -708,6 +728,7 @@ void Viewport::resizeGL(int w, int h) {
 void Viewport::paintGL() {
   glow::_CheckGlError(__FILE__, __LINE__);
 
+  applyBackground();
   glEnable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPointSize(pointSize_);

@@ -9,6 +9,9 @@
 #include "rv/string_utils.h"
 
 #include <boost/lexical_cast.hpp>
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
 
 void KittiReader::initialize(const QString& directory) {
   velodyne_filenames_.clear();
@@ -37,8 +40,13 @@ void KittiReader::initialize(const QString& directory) {
   // create label dir, etc.
   QDir labels_dir(base_dir_.filePath("labels"));
 
+
   // find corresponding label files.
-  if (!labels_dir.exists()) base_dir_.mkdir("labels");
+  if (!labels_dir.exists()) 
+  {
+    std::cout << "Found no labels. Creating labels directory\n";
+    base_dir_.mkdir("labels");
+  }
 
   for (uint32_t i = 0; i < velodyne_filenames_.size(); ++i) {
     QString filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".label";
@@ -55,18 +63,17 @@ void KittiReader::initialize(const QString& directory) {
 
       out.close();
     }
-
     label_filenames_.push_back(labels_dir.filePath(filename).toStdString());
   }
 
-  std::string missing_img = QDir::currentPath().toStdString() + "/../assets/missing.png";
+  fs::path missing_img = fs::path(ASSETS_PATH) / "missing.png";
   QDir image_dir(base_dir_.filePath("image_2"));
   for (uint32_t i = 0; i < velodyne_filenames_.size(); ++i) {
     QString filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".png";
     if (image_dir.exists(filename)) {
       image_filenames_.push_back(image_dir.filePath(filename).toStdString());
     } else {
-      image_filenames_.push_back(missing_img);
+      image_filenames_.push_back(missing_img.string());
     }
   }
 
@@ -207,9 +214,15 @@ void KittiReader::initialize(const QString& directory) {
         uint32_t instanceId = (instance_label >> 16) & uint32_t(0xFFFF);
         uint32_t label = instance_label & uint32_t(0xFFFF);
         if (maxInstanceIds_.find(label) == maxInstanceIds_.end())
+        {
           maxInstanceIds_[label] = instanceId;
+          std::cout << "a: " << label << "\n";
+        }
         else
+        {
           maxInstanceIds_[label] = std::max(instanceId, maxInstanceIds_[label]);
+          std::cout << "b: " << label << "\n";
+        }
       }
     }
 
