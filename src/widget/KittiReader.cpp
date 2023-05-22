@@ -216,12 +216,10 @@ void KittiReader::initialize(const QString& directory) {
         if (maxInstanceIds_.find(label) == maxInstanceIds_.end())
         {
           maxInstanceIds_[label] = instanceId;
-          std::cout << "a: " << label << "\n";
         }
         else
         {
           maxInstanceIds_[label] = std::max(instanceId, maxInstanceIds_[label]);
-          std::cout << "b: " << label << "\n";
         }
       }
     }
