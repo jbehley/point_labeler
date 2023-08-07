@@ -26,7 +26,7 @@
   
 On Ubuntu 16.04 and 18.04, most of the dependencies can be installed from the package manager:
 ```bash
-sudo apt install git libeigen3-dev libboost-all-dev qtbase5-dev libglew-dev catkin
+sudo apt install git libeigen3-dev libboost-all-dev qtbase5-dev libglew-dev catkin google-mock
 ```
 
 Additionally, make sure you have [catkin-tools](https://catkin-tools.readthedocs.io/en/latest/) and the [fetch](https://github.com/Photogrammetry-Robotics-Bonn/catkin_tools_fetch) verb installed:
