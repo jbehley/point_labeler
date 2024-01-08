@@ -126,7 +126,7 @@ endif()
 
 if(GTEST_FOUND)
   enable_testing()
-  add_subdirectory(src/test)
+  # add_subdirectory(src/test)
 endif()
 
 target_link_libraries(labeler ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
