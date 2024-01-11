@@ -51,6 +51,8 @@ class Viewport : public QGLWidget {
 
   enum MODE { NONE, PAINT, POLYGON };
 
+  enum BACKGROUND { LIGHT, DARK };
+
   enum FLAGS { FLAG_OVERWRITE = 1, FLAG_OTHER = 2 };
 
   enum class CameraProjection { perspective, orthographic };
@@ -142,6 +144,7 @@ class Viewport : public QGLWidget {
   void setInstanceableLabels(const std::vector<uint32_t>& labels);
 
   void setMode(MODE mode);
+  void toggleBackground();
   void setFlags(int32_t flags);
   void setOverwrite(bool value);
 
@@ -178,6 +181,7 @@ class Viewport : public QGLWidget {
   void initializeGL();
   void resizeGL(int width, int height);
   void paintGL();
+  void applyBackground();
 
   void wheelEvent(QWheelEvent*);
   void mousePressEvent(QMouseEvent*);
@@ -221,6 +225,7 @@ class Viewport : public QGLWidget {
 
   AXIS mAxis;
   MODE mMode;
+  BACKGROUND mBackground;
   int32_t mFlags;
 
   uint32_t mCurrentLabel;

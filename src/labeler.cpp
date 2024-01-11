@@ -11,7 +11,10 @@ int main(int argc, char** argv) {
   frame.show();
   frame.resize(1200, 900);
 
-//  std::cout << glow::GlCapabilities::getInstance() << std::endl;
+  // QPalette pal = app.palette();
+  // pal.setColor(QPalette::Window, Qt::black);
+  // app.setPalette(pal);
 
+//  std::cout << glow::GlCapabilities::getInstance() << std::endl;
   return app.exec();
 }

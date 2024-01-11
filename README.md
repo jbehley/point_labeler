@@ -120,3 +120,7 @@ If you're using the tool in your research, it would be nice if you cite our [pap
 ```
 
 We used the tool to label SemanticKITTI, which contains overall over 40.000 scans organized in 20 sequences. 
+
+## Asset Attribution
+
+Camera icon made by [Ilham Fitrotul Hayat](https://www.flaticon.com/authors/ilham-fitrotul-hayat) from [www.flaticon.com](https://www.flaticon.com/). Dark/Light background toggle icon made by [Icon-Hubs](https://www.flaticon.com/authors/icon-hubs) from [www.flaticon.com](https://www.flaticon.com/). Image icon made by [feen](https://www.flaticon.com/authors/feen) from [www.flaticon.com](https://www.flaticon.com/).
