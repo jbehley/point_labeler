@@ -353,8 +353,8 @@ void Viewport::setPoints(const std::vector<PointcloudPtr>& p, std::vector<Labels
 
     glow::_CheckGlError(__FILE__, __LINE__);
 
-    std::vector<glow::vec2> scanIndexes;
-    glow::GlBuffer<glow::vec2> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+    std::vector<glow::uvec2> scanIndexes;
+    glow::GlBuffer<glow::uvec2> bufReadBuffer{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
     bufReadBuffer.resize(maxPointsPerScan_);
 
     ScanInfo current;
@@ -496,12 +496,12 @@ void Viewport::updateLabels() {
   if (labels_.size() == 0) return;
 
   glow::GlBuffer<uint32_t> bufReadLabels{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
-  glow::GlBuffer<vec2> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  glow::GlBuffer<uvec2> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
   bufReadLabels.resize(maxPointsPerScan_);
   bufReadIndexes.resize(bufReadLabels.size());
 
   std::vector<uint32_t> labels(bufReadLabels.size());
-  std::vector<vec2> indexes(bufReadIndexes.size());
+  std::vector<uvec2> indexes(bufReadIndexes.size());
 
   uint32_t count = 0;
   uint32_t max_size = bufReadLabels.size();
@@ -1030,11 +1030,6 @@ uint32_t Viewport::getClickedInstanceId(float x, float y) {
   //  std::cout << instance_id << ", " << label_id << " selected" << std::endl;
 
   return (instance_id << 16 | label_id);
-}
-
-std::ostream& operator<<(std::ostream& os, const vec2& v) {
-  os << "(" << v.x << ", " << v.y << ")";
-  return os;
 }
 
 void Viewport::abortPolygonSelection() {
@@ -2106,7 +2101,7 @@ void Viewport::updateBoundingBoxes() {
 
   glow::GlBuffer<vec4> bufReadPoints{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
   glow::GlBuffer<uint32_t> bufReadLabels{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
-  glow::GlBuffer<vec2> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
+  glow::GlBuffer<uvec2> bufReadIndexes{glow::BufferTarget::ARRAY_BUFFER, glow::BufferUsage::STREAM_READ};
 
   bufReadPoints.resize(maxPointsPerScan_);
   bufReadLabels.resize(maxPointsPerScan_);
@@ -2114,7 +2109,7 @@ void Viewport::updateBoundingBoxes() {
 
   std::vector<vec4> points(bufReadLabels.size());
   std::vector<uint32_t> labels(bufReadLabels.size());
-  std::vector<vec2> indexes(bufReadIndexes.size());
+  std::vector<uvec2> indexes(bufReadIndexes.size());
 
   uint32_t count = 0;
   uint32_t max_size = bufReadLabels.size();

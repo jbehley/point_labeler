@@ -1,21 +1,18 @@
 #include "Mainframe.h"
 
+#include <QtCore/QDir>
+#include <QtCore/QFile>
+#include <QtCore/QFileInfo>
+#include <QtGui/QClipboard>
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QMessageBox>
+#include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <iostream>
 #include <map>
 
-#include <QtCore/QDir>
-#include <QtCore/QFile>
-#include <QtCore/QFileInfo>
-#include <QtWidgets/QFileDialog>
-
 #include "../data/label_utils.h"
 #include "../data/misc.h"
-
-#include <QtWidgets/QMessageBox>
-
-#include <QtGui/QClipboard>
-#include <boost/lexical_cast.hpp>
 
 using namespace glow;
 
@@ -571,6 +568,7 @@ void Mainframe::save() {
 
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
+
   reader_.update(indexes_, labels_);
   reader_.updateMetaInformation(ui.mViewportXYZ->getMaximumInstanceIds());
 

@@ -24,7 +24,7 @@ out POINT
   vec4 point;
   uint label;
   uint visible;
-  vec2 scanindex;
+  uvec2 scanindex;
 } vs_out;
 
 
@@ -47,6 +47,6 @@ void main()
     vs_out.point = vec4(v_global.xyz, in_remission);
     vs_out.label = in_label;
     vs_out.visible = in_visible;
-    vs_out.scanindex = vec2(scan, gl_VertexID);
+    vs_out.scanindex = uvec2(scan, gl_VertexID);
   }
 }

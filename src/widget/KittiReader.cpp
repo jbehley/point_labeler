@@ -1,14 +1,14 @@
 #include <stdint.h>
 #include <widget/KittiReader.h>
+
 #include <QtCore/QDir>
 #include <boost/lexical_cast.hpp>
 #include <boost/tokenizer.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include "rv/string_utils.h"
 
-#include <boost/lexical_cast.hpp>
+#include "rv/string_utils.h"
 
 void KittiReader::initialize(const QString& directory) {
   velodyne_filenames_.clear();
@@ -305,6 +305,7 @@ const KittiReader::Tile& KittiReader::getTile(uint32_t i, uint32_t j) const { re
 void KittiReader::setTileSize(float size) { tileSize_ = size; }
 
 void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels) {
+
   for (uint32_t i = 0; i < indexes.size(); ++i) {
     if (labels[i]->size() == 0) {
       std::cout << "Warning: 0 labels?" << std::endl;

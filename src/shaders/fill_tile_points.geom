@@ -9,14 +9,14 @@ in POINT
   vec4 point;
   uint label;
   uint visible;
-  vec2 scanindex;
+  uvec2 scanindex;
 } gs_in[];
 
 
 out vec4  out_point;
 out uint  out_label;
 out uint  out_visible;
-out vec2  out_scanindex;
+out uvec2  out_scanindex;
 
 
 void main()
