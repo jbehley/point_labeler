@@ -106,7 +106,7 @@ class Viewport : public QGLWidget {
 
   void setScanRange(uint32_t begin, uint32_t end) {
     scanRangeBegin_ = std::min<int>(begin, scanInfos_.size() - 1);
-    scanRangeEnd_ = std::min<int>(end, scanInfos_.size() - 1);
+    scanRangeEnd_ = std::max<int>(std::min<int>(end, scanInfos_.size() - 1), scanRangeBegin_);
     updateGL();
   }
 
