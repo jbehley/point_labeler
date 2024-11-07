@@ -1115,6 +1115,11 @@ void Mainframe::keyPressEvent(QKeyEvent* event) {
       ui.chkRemoveGround->toggle();
       return;
 
+      // shortcut key(I) for show single scan
+      case Qt::Key_I:
+       ui.chkShowSingleScan->toggle(); 
+       return;
+
     default:
       if (!ui.mViewportXYZ->hasFocus()) ui.mViewportXYZ->keyPressEvent(event);
       return;
