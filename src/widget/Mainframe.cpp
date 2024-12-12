@@ -9,10 +9,17 @@
 #include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <iostream>
+#include <unistd.h>
+#include <limits.h>
 #include <map>
 
 #include "../data/label_utils.h"
 #include "../data/misc.h"
+
+#include <iostream>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
 
 using namespace glow;
 
@@ -477,6 +484,17 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.actionScreenshot, &QAction::triggered, [this]() {
     QImage img = ui.mViewportXYZ->grabFrameBuffer();
+
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+
+    // Convert to tm struct for formatting
+    std::tm now_tm = *std::localtime(&now_time_t);
+
+    // Create a stringstream to format the timestamp
+    std::ostringstream oss;
+    oss << "screenshot-" << std::put_time(&now_tm, "%Y-%m-%dT%H:%M:%S") << ".png";
+    img.save(QString::fromStdString(oss.str()));
     img.save("screenshot.png");
     QApplication::clipboard()->setImage(img);
   });
@@ -505,6 +523,10 @@ void Mainframe::closeEvent(QCloseEvent* event) {
 }
 
 void Mainframe::open() {
+  this->open(nullptr);
+}
+
+void Mainframe::open(QString dir) {
   if (readerFuture_.valid()) readerFuture_.wait();
 
   if (mChangesSinceLastSave) {
@@ -520,8 +542,13 @@ void Mainframe::open() {
     }
   }
 
-  QString retValue =
+  QString retValue;
+  if (dir == nullptr) {
+    retValue =
       QFileDialog::getExistingDirectory(this, "Select scan directory", lastDirectory, QFileDialog::ShowDirsOnly);
+  } else {
+    retValue = dir;
+  }
 
   if (!retValue.isNull()) {
     QDir base_dir(retValue);
@@ -1252,4 +1279,8 @@ void Mainframe::updateLabelButtons() {
     ui.labelsGroupBox->addWidget(btn, std::floor((double)index / btnsPerRow),
                                  index - std::floor((double)index / btnsPerRow) * btnsPerRow);
   }
+}
+
+void Mainframe::setLastDirectory(QString lastDirectory) {
+  this->lastDirectory = lastDirectory;
 }
