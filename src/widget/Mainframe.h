@@ -25,12 +25,14 @@ class Mainframe : public QMainWindow {
 
  public slots:
   void open();
+  void open(QString dir);
   void save();
   void changeRadius(int radius);
   void changeMode(int mode, bool checked);
 
   void updateFiltering(bool value);
   void labelBtnReleased(QWidget*);
+  void setLastDirectory(QString lastDirectory);
 
  signals:
   void readerStarted();
@@ -53,7 +55,6 @@ class Mainframe : public QMainWindow {
   void closeEvent(QCloseEvent* event);
 
   void readConfig();
-
   void initializeIcons();
 
   void updateMovingStatus(bool isMoving);

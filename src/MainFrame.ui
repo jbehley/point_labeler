@@ -1525,6 +1525,9 @@
    <property name="text">
     <string>Center view</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+g</string>
+   </property>
   </action>
   <action name="actionShowImage">
    <property name="text">
@@ -1579,6 +1582,9 @@
   <action name="actionScreenshot">
    <property name="text">
     <string>screenshot</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+B</string>
    </property>
   </action>
  </widget>
